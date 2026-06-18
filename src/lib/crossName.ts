@@ -386,6 +386,13 @@ export type GrowthEstimate = {
   note: string;
 };
 
+export type SelfingRecommendation = {
+  priority: "High" | "Medium" | "Low";
+  title: string;
+  note: string;
+  caution: string;
+};
+
 export type SingleSeedProfile = {
   seed: Seed;
   terpenes: TerpeneStat[];
@@ -393,6 +400,7 @@ export type SingleSeedProfile = {
   heritage: string[];
   breederBlurb: string;
   terpeneBlurb: string;
+  selfing: SelfingRecommendation;
   flags: string[];
   goals: TraitGoal[];
 };
@@ -440,7 +448,45 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
   ];
 }
 
-export function getSingleSeedProfile(seed: Seed): SingleSeedProfile {
+function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecommendation {
+  const flags = detectFlags(seed);
+  const countText = seedCount === undefined ? "unknown stock" : `${seedCount} seeds logged`;
+  const isLowStock = seedCount === undefined || seedCount <= 3;
+  const isMediumStock = seedCount !== undefined && seedCount > 3 && seedCount <= 6;
+
+  if (isLowStock) {
+    return {
+      priority: "High",
+      title: "Strong preservation candidate",
+      note: `${seed.name} has ${countText}. If you find a standout keeper, self/S1 preservation may be worth considering before using it heavily in outcrosses.`,
+      caution: flags.includes("S-line")
+        ? "Already shows S-line/selfed material in the name, so expect more exposed recessives and select carefully."
+        : "Treat S1 work as a preservation option, then select away from weak or unwanted expressions.",
+    };
+  }
+
+  if (isMediumStock) {
+    return {
+      priority: "Medium",
+      title: "Optional preservation backup",
+      note: `${seed.name} has ${countText}. You have enough to hunt lightly, but self/S1 backup could protect a rare keeper.`,
+      caution: flags.includes("Auto")
+        ? "Auto influence may complicate selection goals, so keep notes on which traits you are preserving."
+        : "Best used after you confirm the plant is actually worth preserving.",
+    };
+  }
+
+  return {
+    priority: "Low",
+    title: "Breed/hunt first",
+    note: `${seed.name} has ${countText}. Stock is healthy enough that hunting and normal breeding decisions can come first.`,
+    caution: flags.includes("Mutant/ABC")
+      ? "Mutant or ABC traits may still justify preservation if a rare morphology appears."
+      : "S1 preservation is optional unless a special keeper shows up.",
+  };
+}
+
+export function getSingleSeedProfile(seed: Seed, seedCount?: number): SingleSeedProfile {
   const profile = buildProfile(seed);
   const counts = new Map<TerpeneKey, number>();
   for (const terpene of profile.terpenes) {
@@ -476,6 +522,7 @@ export function getSingleSeedProfile(seed: Seed): SingleSeedProfile {
     heritage,
     breederBlurb,
     terpeneBlurb,
+    selfing: getSelfingRecommendation(seed, seedCount),
     flags,
     goals: profile.goals,
   };

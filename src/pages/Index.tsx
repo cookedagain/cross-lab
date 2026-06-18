@@ -279,8 +279,8 @@ const Index = () => {
 
   const singleProfile = useMemo(() => {
     if (!singleSeed) return null;
-    return getSingleSeedProfile(singleSeed);
-  }, [singleSeed]);
+    return getSingleSeedProfile(singleSeed, seedCounts[singleSeed.id]);
+  }, [singleSeed, seedCounts]);
 
   const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
   const ready = Boolean(parentA && parentB);
@@ -666,6 +666,27 @@ const Index = () => {
                 </div>
                 <p className="text-sm leading-relaxed text-foreground/80">{singleProfile.terpeneBlurb}</p>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{singleProfile.breederBlurb}</p>
+                <div className="mt-4 rounded-3xl bg-muted p-4">
+                  <div className="mb-2 flex items-center justify-between gap-3">
+                    <p className="font-display text-lg font-bold">Self/S1 preservation</p>
+                    <span
+                      className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase ${
+                        singleProfile.selfing.priority === "High"
+                          ? "bg-red-100 text-red-700"
+                          : singleProfile.selfing.priority === "Medium"
+                            ? "bg-amber-100 text-amber-800"
+                            : "bg-primary/10 text-primary"
+                      }`}
+                    >
+                      {singleProfile.selfing.priority} priority
+                    </span>
+                  </div>
+                  <p className="text-sm font-semibold">{singleProfile.selfing.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{singleProfile.selfing.note}</p>
+                  <p className="mt-2 text-[11px] leading-relaxed text-muted-foreground">
+                    {singleProfile.selfing.caution} This is a planning note only — no reversal or chemical-use instructions are included.
+                  </p>
+                </div>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {singleProfile.flags.map((flag) => (
                     <span key={flag} className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">

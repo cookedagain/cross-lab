@@ -1,97 +1,286 @@
-import { ChevronDown, Search, Shield, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Dices, FlaskConical, Leaf, PackagePlus, ShieldAlert, Sparkles, Target } from "lucide-react";
+import SeedSelect from "@/components/SeedSelect";
+import { Button } from "@/components/ui/button";
+import {
+  BURN_PILE_TOTAL,
+  DEFAULT_SEED_COUNTS,
+  GRAND_TOTAL,
+  MAIN_VAULT_TOTAL,
+  SEEDS,
+  VAULT_TOTALS,
+  VAULT_TYPE_TOTALS,
+  type Seed,
+  type SeedType,
+} from "@/data/seeds";
+import {
+  TRAIT_GOALS,
+  generateCrossNames,
+  getCrossReport,
+  groupNamesByCategory,
+  type TraitGoal,
+} from "@/lib/crossName";
+import { MadeWithDyad } from "@/components/made-with-dyad";
 
-const navItems = [
-  { label: "Home", active: true },
-  { label: "Members" },
-  { label: "Progress", hasDropdown: true },
-  { label: "Events", hasDropdown: true },
-];
+const typeShort: Record<SeedType, string> = {
+  Feminized: "FEM",
+  Regular: "REG",
+  Autoflower: "AUTO",
+  "Unknown Photo": "PHOTO ?",
+};
 
-const ClanCrest = ({ compact = false }: { compact?: boolean }) => (
-  <div
-    className={`relative grid place-items-center overflow-hidden rounded-full border border-[#d8c9ad]/70 bg-[#11100d] shadow-[0_0_0_2px_rgba(0,0,0,0.7),0_0_18px_rgba(216,201,173,0.18)] ${
-      compact ? "h-7 w-7" : "h-20 w-20"
+const typeStyles: Record<SeedType, string> = {
+  Feminized: "bg-pink-100 text-pink-800 border-pink-200",
+  Regular: "bg-blue-100 text-blue-800 border-blue-200",
+  Autoflower: "bg-lime-100 text-lime-800 border-lime-200",
+  "Unknown Photo": "bg-slate-100 text-slate-700 border-slate-200",
+};
+
+const TypeBadge = ({ type }: { type: SeedType }) => (
+  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${typeStyles[type]}`}>
+    {typeShort[type]}
+  </span>
+);
+
+const ToggleChip = ({ goal, active, onClick }: { goal: TraitGoal; active: boolean; onClick: () => void }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`rounded-full border-2 px-3 py-1.5 text-xs font-bold transition ${
+      active
+        ? "border-primary bg-primary text-primary-foreground"
+        : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
     }`}
-    aria-label="Clan crest"
   >
-    <div className="absolute inset-1 rounded-full border border-[#7e1b17]/80 bg-[#e3dac5]" />
-    <div className="absolute bottom-0 h-1/2 w-3/5 rounded-t-full bg-[#b32622]" />
-    <Shield className={`relative z-10 text-[#11100d] ${compact ? "h-4 w-4" : "h-10 w-10"}`} strokeWidth={1.6} />
-    <span
-      className={`absolute z-20 rounded-full bg-[#11100d] font-serif font-bold text-[#e3dac5] ${
-        compact ? "right-1 top-1 h-2 w-2 text-[5px]" : "right-4 top-4 h-4 w-4 text-[10px]"
-      }`}
-    >
-      K
-    </span>
-  </div>
+    {goal}
+  </button>
 );
 
 const Index = () => {
+  const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
+  const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
+  const [salt, setSalt] = useState(0);
+  const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+
+  const report = useMemo(() => {
+    if (!parentA || !parentB) return null;
+    return getCrossReport(parentA, parentB, selectedGoals);
+  }, [parentA, parentB, selectedGoals]);
+
+  const names = useMemo(() => {
+    if (!parentA || !parentB) return [];
+    return generateCrossNames(parentA, parentB, salt, selectedGoals);
+  }, [parentA, parentB, salt, selectedGoals]);
+
+  const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
+
+  const breederTypeTotals = useMemo(
+    () =>
+      VAULT_TOTALS.map((group) => {
+        const seeds = SEEDS.filter((seed) => seed.breeder === group.breeder);
+        const byType = (["Feminized", "Regular", "Autoflower", "Unknown Photo"] as SeedType[])
+          .map((type) => ({
+            type,
+            total: seeds.filter((seed) => seed.type === type).reduce((sum, seed) => sum + (seed.count ?? 0), 0),
+          }))
+          .filter((entry) => entry.total > 0);
+        return { ...group, byType };
+      }),
+    [],
+  );
+
+  const randomPair = () => {
+    const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    let b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    while (b.id === a.id) b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    setParentA(a);
+    setParentB(b);
+    setSalt((value) => value + 1);
+  };
+
+  const toggleGoal = (goal: TraitGoal) => {
+    setSelectedGoals((current) => (current.includes(goal) ? current.filter((item) => item !== goal) : [...current, goal]));
+  };
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[#07090b] text-[#cdbf9e]">
-      <header className="fixed left-0 right-0 top-0 z-50 border-b border-[#1d2023] bg-[#0b0d0f]/95 shadow-[0_1px_0_rgba(255,255,255,0.03)] backdrop-blur-sm">
-        <div className="flex h-[38px] items-center justify-between px-2 sm:px-4">
-          <a href="#" className="flex items-center gap-2" aria-label="Kravy home">
-            <ClanCrest compact />
-            <span className="font-serif text-[11px] font-bold uppercase tracking-[0.28em] text-[#e0d3b2] drop-shadow-[0_1px_0_rgba(0,0,0,0.8)]">
-              Kravy
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="border-b border-border/70 bg-card/90 backdrop-blur">
+        <div className="container flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+              <Leaf className="h-6 w-6" />
             </span>
-          </a>
-
-          <nav className="absolute left-1/2 hidden h-full -translate-x-1/2 items-center md:flex">
-            {navItems.map((item) => (
-              <a
-                key={item.label}
-                href="#"
-                className={`group relative flex h-full items-center gap-1 px-5 font-serif text-[10px] uppercase tracking-[0.16em] transition-colors ${
-                  item.active ? "text-[#dfd0ad]" : "text-[#8d856f] hover:text-[#d6c8a8]"
-                }`}
-              >
-                {item.label}
-                {item.hasDropdown && <ChevronDown className="h-3 w-3 opacity-70" />}
-                {item.active && <span className="absolute bottom-0 left-4 right-4 h-px bg-[#d5c6a3]" />}
-              </a>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-2">
-            <label className="hidden h-[24px] w-[156px] items-center rounded-sm border border-[#252a2e] bg-[#07090b] px-2 text-[#646a70] lg:flex">
-              <input
-                className="min-w-0 flex-1 bg-transparent text-[10px] text-[#8e949a] outline-none placeholder:text-[#3c4248]"
-                placeholder="Search player..."
-                aria-label="Search player"
-              />
-              <Search className="h-3 w-3 text-[#66635a]" />
-            </label>
-            <button className="flex h-[24px] items-center gap-2 rounded-sm border border-[#24282c] bg-[#17191c] px-3 font-serif text-[10px] font-bold uppercase tracking-[0.13em] text-[#d8c9a8] shadow-inner shadow-white/5 transition-colors hover:bg-[#202328]">
-              <Users className="h-3.5 w-3.5" />
-              Login
-            </button>
+            <div>
+              <p className="font-display text-2xl font-black tracking-tight">CrossLab</p>
+              <p className="text-sm text-muted-foreground">Vault-aware breeder planning with FEM / REG / AUTO labels</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {MAIN_VAULT_TOTAL}</span>
+            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {BURN_PILE_TOTAL}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {GRAND_TOTAL}</span>
           </div>
         </div>
       </header>
 
-      <section className="relative min-h-screen pt-[38px]">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.035),transparent_46%),linear-gradient(90deg,rgba(255,255,255,0.018)_1px,transparent_1px),linear-gradient(rgba(255,255,255,0.014)_1px,transparent_1px)] bg-[length:100%_100%,4px_4px,4px_4px]" />
-        <div className="relative h-[142px] bg-[#07090b]" />
-        <div className="relative h-[132px] bg-[#27292b] shadow-[inset_0_1px_0_rgba(255,255,255,0.02),inset_0_-1px_0_rgba(0,0,0,0.55)]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.028),transparent_58%)]" />
-        </div>
-        <div className="relative flex h-[152px] items-end justify-center bg-[#07090b] pb-0 shadow-[inset_0_1px_0_rgba(0,0,0,0.8)]">
-          <div className="translate-y-1/2">
-            <ClanCrest />
-          </div>
-        </div>
-        <div className="relative h-[132px] bg-[#27292b] shadow-[inset_0_1px_0_rgba(255,255,255,0.02),inset_0_-1px_0_rgba(0,0,0,0.55)]">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.028),transparent_58%)]" />
-        </div>
-        <div className="relative h-[150px] bg-[#07090b]" />
-        <div className="relative h-[54px] bg-[#27292b] shadow-[inset_0_1px_0_rgba(255,255,255,0.02)]" />
-      </section>
+      <main className="container max-w-6xl pb-20 pt-8">
+        <section className="grid gap-4 md:grid-cols-3">
+          {VAULT_TYPE_TOTALS.filter((entry) => entry.total > 0).map((entry) => (
+            <div key={entry.type} className={`rounded-[1.75rem] border-2 p-5 shadow-sm ${typeStyles[entry.type]}`}>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <p className="text-xs font-black uppercase tracking-[0.22em]">{entry.type}</p>
+                <TypeBadge type={entry.type} />
+              </div>
+              <p className="font-display text-4xl font-black">{entry.total}</p>
+              <p className="mt-1 text-sm font-semibold opacity-80">{entry.strains} main-vault strains</p>
+            </div>
+          ))}
+        </section>
 
-      <img src="/assets/placeholder.svg" alt="placeholder" className="sr-only" />
-    </main>
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-start gap-3">
+            <PackagePlus className="mt-1 h-5 w-5 text-primary" />
+            <div>
+              <h1 className="font-display text-3xl font-black tracking-tight">Revised vault breakdown</h1>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Burn Pile remains separated from preservation pressure.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 lg:grid-cols-2">
+            {breederTypeTotals.map((group) => (
+              <div key={group.breeder} className="rounded-3xl border border-border bg-background p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-display text-lg font-bold">{group.breeder}</h2>
+                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {group.byType.map((entry) => (
+                    <span key={entry.type} className={`rounded-full border px-3 py-1 text-xs font-black ${typeStyles[entry.type]}`}>
+                      {typeShort[entry.type]}: {entry.total}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 rounded-3xl bg-orange-50 p-4 text-orange-800">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="mt-0.5 h-5 w-5" />
+              <div>
+                <p className="font-bold">Burn Pile rule</p>
+                <p className="mt-1 text-sm leading-relaxed">
+                  Burn Pile seeds are utility stock. They can be grown, failed, tossed, or very rarely bred if something earns the space — they are not preservation candidates.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-2">
+            <Sparkles className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-2xl font-black">Cross planner</h2>
+          </div>
+
+          <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+            <div className="grid place-items-center">
+              <span className="grid h-10 w-10 place-items-center rounded-full bg-muted font-display text-xl font-black text-muted-foreground">×</span>
+            </div>
+            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+          </div>
+
+          {parentA && parentB && (
+            <div className="mt-5 grid gap-3 rounded-3xl bg-muted/50 p-4 sm:grid-cols-2">
+              {[parentA, parentB].map((seed) => (
+                <div key={seed.id} className="rounded-2xl bg-card p-4">
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <p className="font-display text-lg font-bold leading-tight">{seed.name}</p>
+                    <TypeBadge type={seed.type} />
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {seed.breeder} · {seed.type} · {seed.count ?? 0} seeds
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-5 rounded-3xl bg-muted/60 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              <p className="text-sm font-black uppercase tracking-wide">Trait goals</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {TRAIT_GOALS.map((goal) => (
+                <ToggleChip key={goal} goal={goal} active={selectedGoals.includes(goal)} onClick={() => toggleGoal(goal)} />
+              ))}
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row">
+            <Button className="h-12 flex-1 rounded-2xl text-base font-bold" onClick={() => setSalt((value) => value + 1)}>
+              <Sparkles className="mr-2 h-4 w-4" />
+              Generate names
+            </Button>
+            <Button variant="outline" className="h-12 rounded-2xl border-2 text-base font-bold" onClick={randomPair}>
+              <Dices className="mr-2 h-4 w-4" />
+              Random pair
+            </Button>
+          </div>
+        </section>
+
+        {report && (
+          <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
+            <div className="rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-sm sm:p-7">
+              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Cross potential</p>
+              <p className="font-display text-5xl font-black text-primary">{report.scores.overall}/100</p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{report.breederNote}</p>
+              <div className="mt-5 space-y-3">
+                {report.profile.terpenes.map((terpene) => (
+                  <div key={terpene.key}>
+                    <div className="mb-1 flex items-center justify-between text-xs font-bold">
+                      <span>{terpene.info.name}</span>
+                      <span>{terpene.share}%</span>
+                    </div>
+                    <div className="h-2 overflow-hidden rounded-full bg-muted">
+                      <div className="h-full rounded-full" style={{ width: `${terpene.share}%`, backgroundColor: terpene.info.color }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+              <div className="mb-4 flex items-center gap-2">
+                <FlaskConical className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-xl font-black">Name ideas</h2>
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {groupedNames.map((group) => (
+                  <div key={group.category} className="rounded-3xl bg-background p-4">
+                    <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">{group.category}</p>
+                    <div className="space-y-2">
+                      {group.names.map((item) => (
+                        <div key={item.name} className="rounded-2xl border border-border bg-card p-3">
+                          <p className="font-display text-lg font-bold leading-tight">{item.name}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.note}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+      </main>
+
+      <MadeWithDyad />
+    </div>
   );
 };
 

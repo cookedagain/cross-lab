@@ -1,7 +1,10 @@
+export type SeedType = "Feminized" | "Regular" | "Autoflower" | "Unknown Photo";
+
 export type Seed = {
   id: string;
   name: string;
   breeder: string;
+  type: SeedType;
   count?: number;
 };
 
@@ -192,11 +195,69 @@ const raw: { breeder: string; seeds: SeedEntry[] }[] = [
   },
 ];
 
+const ETHOS_REGULAR = new Set([
+  "Temple Kush F2 × Temple of the Dog BX",
+  "Temple Kush F2 × California Black Rozé #10",
+  "Quattro Kush F3 × OG Kush BX3",
+  "Quattro Kush F3 × Zweet Inzanity",
+  "Temple Kush F2 × Mandarin Cookies R2 #7",
+  "Quattro Kush F3",
+  "Cherry TK F2",
+  "Quattro Kush F3 × Sour Diesel BX3",
+  "Quattro Kush F3 × Granddaddy Purple",
+  "Temple Kush F2 × Zkittlez BX1",
+  "Fruity Pebbles OG × Lilac Diesel BX3",
+  "Temple Kush F2 × Blueberry Muffin Bubba",
+  "Granddaddy Purple × Quattro Kush",
+  "Permanent Marker × OG Kush BX4",
+  "Lilac Diesel BX3",
+  "Temple Kush F2 × Peach CrescendØ #2",
+  "Temple Kush F2 × Purple Zkittlez",
+  "Punch Line RBX × Grandpa's Stash #12",
+  "Purple Sunset × Lilac Diesel BX3",
+  "Quattro Kush F3 × Purple Majik #10",
+  "Temple Kush F3",
+  "GMO Cookies × Lilac Diesel BX3",
+  "Temple Kush F2 × CrescendØ #16",
+  "Temple Kush F2",
+  "NYCD × Lilac Diesel BX3",
+  "Temple Kush F2 × Heirloom Purple",
+  "CrescendØ #6 × Lilac Diesel BX3",
+  "Quattro Kush F3 × Lilac Diesel",
+  "Temple Kush F2 × Wedding Cake",
+  "Temple Kush F2 × CrescendØ #6",
+  "Temple Kush F2 × OG D Lux",
+  "Josh D OG BX3",
+  "Grandpa's Cookies #3 × Josh D OG BX3",
+]);
+
+const FEMINIZED_BREEDERS = new Set([
+  "Black Leaf Genetics",
+  "Humboldt Seed Company",
+  "WolfPack Selections",
+  "Happy Valley Genetics",
+  "Brothers Grimm",
+]);
+
+const REGULAR_BREEDERS = new Set(["Binchickens Genetics", "Terpyz Mutant Genetics"]);
+
+const getSeedType = (breeder: string, seed: SeedEntry): SeedType => {
+  if (/\bauto\b/i.test(seed.name)) return "Autoflower";
+  if (breeder === "Ethos Genetics") return ETHOS_REGULAR.has(seed.name) ? "Regular" : "Feminized";
+  if (REGULAR_BREEDERS.has(breeder)) return "Regular";
+  if (FEMINIZED_BREEDERS.has(breeder)) return "Feminized";
+  if (breeder === "In-House Genetics") return seed.name === "Random Platinum Cross" ? "Regular" : "Feminized";
+  if (breeder === "Greenspace AU") return "Feminized";
+  if (breeder === "Burn Pile") return seed.name === "Jack Herer Photo" ? "Unknown Photo" : "Feminized";
+  return "Feminized";
+};
+
 export const SEEDS: Seed[] = raw.flatMap((group) =>
   group.seeds.map((seed, i) => ({
     id: `${group.breeder}-${i}-${seed.name}`,
     name: seed.name,
     breeder: group.breeder,
+    type: getSeedType(group.breeder, seed),
     count: seed.count,
   })),
 );
@@ -210,6 +271,15 @@ export const BREEDERS = raw.map((g) => g.breeder);
 export const VAULT_TOTALS = raw.map((group) => ({
   breeder: group.breeder,
   total: group.seeds.reduce((sum, seed) => sum + seed.count, 0),
+}));
+
+export const VAULT_TYPE_TOTALS = (["Feminized", "Regular", "Autoflower", "Unknown Photo"] as const).map((type) => ({
+  type,
+  total: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).reduce(
+    (sum, seed) => sum + (seed.count ?? 0),
+    0,
+  ),
+  strains: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
 }));
 
 export const MAIN_VAULT_TOTAL = VAULT_TOTALS.filter((group) => group.breeder !== "Burn Pile").reduce(

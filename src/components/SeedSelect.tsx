@@ -38,6 +38,15 @@ const accentStyles = {
   },
 };
 
+const typeLabel = (seed: Seed) =>
+  seed.type === "Autoflower"
+    ? "AUTO"
+    : seed.type === "Regular"
+      ? "REG"
+      : seed.type === "Unknown Photo"
+        ? "PHOTO ?"
+        : "FEM";
+
 const countLabel = (seed: Seed, seedCounts: Record<string, number>) => {
   const count = seedCounts[seed.id];
   if (seed.breeder === "Burn Pile") return count === undefined ? "burn pile · utility" : `${count} seeds · burn pile`;
@@ -92,11 +101,14 @@ const SeedSelect = ({
           >
             {value ? (
               <span className="flex min-w-0 flex-col">
-                <span className="truncate text-base font-semibold leading-tight">
-                  {value.name}
+                <span className="flex min-w-0 items-center gap-2 text-base font-semibold leading-tight">
+                  <span className="truncate">{value.name}</span>
+                  <span className="shrink-0 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
+                    {typeLabel(value)}
+                  </span>
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {value.breeder} · {countLabel(value, seedCounts)}
+                  {value.breeder} · {value.type} · {countLabel(value, seedCounts)}
                 </span>
               </span>
             ) : (
@@ -140,10 +152,15 @@ const SeedSelect = ({
                             value?.id === seed.id ? "opacity-100" : "opacity-0",
                           )}
                         />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="truncate">{seed.name}</span>
+                        <span className="flex min-w-0 flex-1 flex-col">
+                          <span className="flex min-w-0 items-center gap-2">
+                            <span className="truncate">{seed.name}</span>
+                            <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                              {typeLabel(seed)}
+                            </span>
+                          </span>
                           <span className="text-[11px] text-muted-foreground">
-                            {countLabel(seed, seedCounts)}
+                            {seed.type} · {countLabel(seed, seedCounts)}
                           </span>
                         </span>
                       </CommandItem>

@@ -50,6 +50,8 @@ const FAVORITES_KEY = "crosslab:favorites";
 const JOURNAL_KEY = "crosslab:journal";
 const CUSTOM_SEEDS_KEY = "crosslab:ethos-multipass";
 const SEED_COUNTS_KEY = "crosslab:seed-counts";
+const SEED_COUNTS_VERSION_KEY = "crosslab:seed-counts-version";
+const CURRENT_VAULT_VERSION = "2026-06-18-revised-902";
 const THEME_KEY = "crosslab:theme";
 const MULTIPASS_BREEDER = "Ethos Multipass";
 
@@ -84,6 +86,18 @@ function loadStored<T>(key: string, fallback: T): T {
   } catch {
     return fallback;
   }
+}
+
+function loadSeedCounts() {
+  const stored = loadStored<Record<string, number>>(SEED_COUNTS_KEY, {});
+  if (typeof window !== "undefined" && window.localStorage.getItem(SEED_COUNTS_VERSION_KEY) === CURRENT_VAULT_VERSION) {
+    return { ...DEFAULT_SEED_COUNTS, ...stored };
+  }
+
+  const customCounts = Object.fromEntries(
+    Object.entries(stored).filter(([id]) => !(id in DEFAULT_SEED_COUNTS)),
+  );
+  return { ...DEFAULT_SEED_COUNTS, ...customCounts };
 }
 
 function makeId() {
@@ -224,10 +238,7 @@ const Index = () => {
   const [customSeeds, setCustomSeeds] = useState<Seed[]>(() =>
     loadStored<Seed[]>(CUSTOM_SEEDS_KEY, []),
   );
-  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => ({
-    ...DEFAULT_SEED_COUNTS,
-    ...loadStored<Record<string, number>>(SEED_COUNTS_KEY, {}),
-  }));
+  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => loadSeedCounts());
   const [favorites, setFavorites] = useState<FavoriteName[]>(() =>
     loadStored<FavoriteName[]>(FAVORITES_KEY, []),
   );
@@ -246,6 +257,7 @@ const Index = () => {
 
   useEffect(() => {
     window.localStorage.setItem(SEED_COUNTS_KEY, JSON.stringify(seedCounts));
+    window.localStorage.setItem(SEED_COUNTS_VERSION_KEY, CURRENT_VAULT_VERSION);
   }, [seedCounts]);
 
   useEffect(() => {

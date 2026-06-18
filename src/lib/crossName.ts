@@ -745,7 +745,7 @@ export function generateCrossNames(
 
   const seen = new Set<string>();
   const results: CrossName[] = [];
-  const rareRuneScapeRoll = Math.floor(rnd() * 512) === 0;
+  const rareRuneScapeRoll = Math.floor(rnd() * 64) === 0;
 
   if (rareRuneScapeRoll) {
     const reference = pick(RUNESCAPE_REFERENCES, rnd);
@@ -755,7 +755,7 @@ export function generateCrossNames(
     results.push({
       name,
       category: "Keeper Weirdos",
-      note: "1/512 rare drop: a RuneScape easter egg rolled into this name set.",
+      note: "1/64 rare drop: a RuneScape easter egg rolled into this name set.",
     });
   }
 

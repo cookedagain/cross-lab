@@ -363,7 +363,7 @@ export function generateCrossNames(
   const seen = new Set<string>();
   const results: CrossName[] = [];
   let attempts = 0;
-  while (results.length < 10 && attempts < 160) {
+  while (results.length < 6 && attempts < 80) {
     attempts++;
     const out = pick(strategies, rnd)();
     if (!out) continue;

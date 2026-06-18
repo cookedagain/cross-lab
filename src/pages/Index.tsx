@@ -90,7 +90,14 @@ function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function stockStatus(count: number | undefined) {
+function stockStatus(count: number | undefined, seed?: Seed) {
+  if (seed?.breeder === "Burn Pile") {
+    return {
+      label: "Burn pile",
+      tone: "bg-orange-100 text-orange-800",
+      advice: "Utility stock — grow, fail, discard, or rarely breed without preservation pressure.",
+    };
+  }
   if (count === undefined) return { label: "Unknown", tone: "bg-muted text-muted-foreground", advice: "Treat as preserve-first until counted." };
   if (count <= 3) return { label: "Preserve", tone: "bg-red-100 text-red-700", advice: "3 or fewer seeds — keep or hunt before breeding." };
   if (count <= 6) return { label: "Cautious", tone: "bg-amber-100 text-amber-800", advice: "Limited stock — breed only if the cross is a priority." };
@@ -252,17 +259,19 @@ const Index = () => {
   const allSeeds = useMemo(() => [...SEEDS, ...customSeeds], [customSeeds]);
 
   const inventory = useMemo(() => {
-    const knownIds = allSeeds.filter((seed) => seedCounts[seed.id] !== undefined);
-    const preserve = knownIds.filter((seed) => seedCounts[seed.id] <= 3).length;
-    const cautious = knownIds.filter((seed) => seedCounts[seed.id] > 3 && seedCounts[seed.id] <= 6).length;
-    const breedable = knownIds.filter((seed) => seedCounts[seed.id] > 6).length;
+    const mainSeeds = allSeeds.filter((seed) => seed.breeder !== "Burn Pile");
+    const knownMainSeeds = mainSeeds.filter((seed) => seedCounts[seed.id] !== undefined);
+    const preserve = knownMainSeeds.filter((seed) => seedCounts[seed.id] <= 3).length;
+    const cautious = knownMainSeeds.filter((seed) => seedCounts[seed.id] > 3 && seedCounts[seed.id] <= 6).length;
+    const breedable = knownMainSeeds.filter((seed) => seedCounts[seed.id] > 6).length;
     return {
       totalStrains: allSeeds.length,
       knownSeeds: allSeeds.reduce((sum, seed) => sum + (seedCounts[seed.id] ?? 0), 0),
-      unknown: allSeeds.length - knownIds.length,
+      unknown: mainSeeds.length - knownMainSeeds.length,
       preserve,
       cautious,
       breedable,
+      burnPile: allSeeds.filter((seed) => seed.breeder === "Burn Pile").length,
       multipass: customSeeds.length,
     };
   }, [allSeeds, customSeeds.length, seedCounts]);
@@ -583,11 +592,17 @@ const Index = () => {
               <p className="font-display text-2xl font-black">{inventory.breedable}</p>
             </div>
           </div>
+          <div className="mt-3 rounded-2xl bg-orange-50 p-4 text-orange-800">
+            <p className="text-sm font-bold">Burn Pile rule</p>
+            <p className="mt-1 text-xs leading-relaxed">
+              Burn Pile strains are utility stock: grow them, bin them, let them fail, or occasionally use them in a one-off cross. They are excluded from preserve-first pressure even when counts are low.
+            </p>
+          </div>
 
           {customSeeds.length > 0 && (
             <div className="mt-5 grid gap-3 lg:grid-cols-2">
               {customSeeds.map((seed) => {
-                const status = stockStatus(seedCounts[seed.id]);
+                const status = stockStatus(seedCounts[seed.id], seed);
                 return (
                   <div key={seed.id} className="rounded-2xl border border-border bg-background p-4">
                     <div className="flex items-start justify-between gap-3">
@@ -656,7 +671,7 @@ const Index = () => {
                     <h3 className="font-display text-2xl font-black leading-tight">{singleSeed.name}</h3>
                   </div>
                   {(() => {
-                    const status = stockStatus(seedCounts[singleSeed.id]);
+                    const status = stockStatus(seedCounts[singleSeed.id], singleSeed);
                     return (
                       <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase ${status.tone}`}>
                         {status.label}
@@ -799,7 +814,7 @@ const Index = () => {
                 <div className="grid gap-3 sm:grid-cols-2">
                   {[parentA, parentB].map((seed) => {
                     const count = seedCounts[seed.id];
-                    const status = stockStatus(count);
+                    const status = stockStatus(count, seed);
                     return (
                       <div key={seed.id} className="rounded-2xl bg-muted p-4">
                         <div className="mb-2 flex items-start justify-between gap-2">

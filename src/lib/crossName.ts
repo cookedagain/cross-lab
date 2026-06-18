@@ -454,6 +454,15 @@ function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecomm
   const isLowStock = seedCount === undefined || seedCount <= 3;
   const isMediumStock = seedCount !== undefined && seedCount > 3 && seedCount <= 6;
 
+  if (seed.breeder === "Burn Pile") {
+    return {
+      priority: "Low",
+      title: "Utility / burn-pile stock",
+      note: `${seed.name} is in the Burn Pile. It does not need preservation pressure — grow it, discard it, or use it experimentally if it earns the space.`,
+      caution: "Breeding from Burn Pile should stay rare and intentional; treat any useful result as a bonus, not a project priority.",
+    };
+  }
+
   if (isLowStock) {
     return {
       priority: "High",
@@ -604,6 +613,10 @@ export function getCrossReport(
 
   const geneticNotes: GeneticNote[] = [];
   const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
+  const includesBurnPile = parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile";
+  if (includesBurnPile) {
+    geneticNotes.push({ label: "Burn Pile utility", note: "This pairing includes Burn Pile stock. Treat it as experimental/disposable material; breeding from it should be rare, intentional, and never a preservation priority." });
+  }
   if (flags.includes("Auto")) {
     geneticNotes.push({ label: "Auto traits", note: "Auto genetics detected. Expect segregation unless the auto trait is selected and stabilized in later generations." });
   }
@@ -623,7 +636,9 @@ export function getCrossReport(
     geneticNotes.push({ label: "Selection note", note: "No special auto/mutant/BX flags detected. Focus selection on terpene intensity, resin, structure, and vigor." });
   }
 
-  const breederNote = `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions. ${parentA.breeder === parentB.breeder ? `Both parents come from ${parentA.breeder}, so the naming and selection can stay close to that breeder's style.` : `It combines ${parentA.breeder}'s ${shortName(parentA.name)} with ${parentB.breeder}'s ${shortName(parentB.name)}, which should make the hunt more varied and brandable.`}`;
+  const breederNote = includesBurnPile
+    ? `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions, but it includes Burn Pile stock. Treat it as a low-stakes utility experiment: fine to grow, fail, discard, or very occasionally breed if it clearly earns the space.`
+    : `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions. ${parentA.breeder === parentB.breeder ? `Both parents come from ${parentA.breeder}, so the naming and selection can stay close to that breeder's style.` : `It combines ${parentA.breeder}'s ${shortName(parentA.name)} with ${parentB.breeder}'s ${shortName(parentB.name)}, which should make the hunt more varied and brandable.`}`;
 
   return {
     profile,

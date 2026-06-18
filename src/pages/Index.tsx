@@ -1,16 +1,168 @@
-// Update this page (the content is just a fallback if you fail to update the page)
-
+import { useMemo, useState } from "react";
+import { Copy, Dices, Leaf, Sparkles, Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import SeedSelect from "@/components/SeedSelect";
+import { SEEDS, type Seed } from "@/data/seeds";
+import { generateCrossNames } from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
+  const [parentA, setParentA] = useState<Seed | null>(null);
+  const [parentB, setParentB] = useState<Seed | null>(null);
+  const [salt, setSalt] = useState(0);
+  const [copied, setCopied] = useState<string | null>(null);
+
+  const names = useMemo(() => {
+    if (!parentA || !parentB) return [];
+    return generateCrossNames(parentA.name, parentB.name, salt);
+  }, [parentA, parentB, salt]);
+
+  const surprise = () => {
+    const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    let b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    while (b.id === a.id) b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    setParentA(a);
+    setParentB(b);
+    setSalt((s) => s + 1);
+  };
+
+  const copy = async (name: string) => {
+    await navigator.clipboard.writeText(name);
+    setCopied(name);
+    toast.success("Copied to clipboard", { description: name });
+    setTimeout(() => setCopied(null), 1500);
+  };
+
+  const ready = parentA && parentB;
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-gray-600">
-          Start building your amazing project here!
-        </p>
-      </div>
+    <div className="min-h-screen bg-background">
+      {/* Header */}
+      <header className="border-b border-border/60 bg-card/60 backdrop-blur">
+        <div className="container flex items-center justify-between py-5">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+              <Leaf className="h-5 w-5" />
+            </span>
+            <div className="leading-tight">
+              <p className="font-display text-xl font-extrabold tracking-tight">
+                CrossLab
+              </p>
+              <p className="text-xs text-muted-foreground">
+                Strain cross-name generator
+              </p>
+            </div>
+          </div>
+          <span className="hidden rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground sm:inline">
+            {SEEDS.length} seeds in your vault
+          </span>
+        </div>
+      </header>
+
+      <main className="container max-w-3xl pb-24 pt-10">
+        {/* Hero */}
+        <div className="mb-10 text-center">
+          <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-secondary px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
+            <Sparkles className="h-3.5 w-3.5" />
+            Breed something new
+          </span>
+          <h1 className="font-display text-4xl font-black leading-tight tracking-tight sm:text-5xl">
+            Name your next{" "}
+            <span className="text-primary">cross</span>
+          </h1>
+          <p className="mx-auto mt-3 max-w-md text-base text-muted-foreground">
+            Pick two seeds from your collection and we'll dream up names for the
+            offspring.
+          </p>
+        </div>
+
+        {/* Selectors */}
+        <div className="rounded-3xl border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
+            <SeedSelect
+              label="A"
+              accent="green"
+              value={parentA}
+              onChange={setParentA}
+            />
+            <div className="flex items-center justify-center">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-display text-lg font-bold text-muted-foreground">
+                ×
+              </span>
+            </div>
+            <SeedSelect
+              label="B"
+              accent="purple"
+              value={parentB}
+              onChange={setParentB}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row">
+            <Button
+              size="lg"
+              className="h-12 flex-1 rounded-2xl text-base font-semibold"
+              disabled={!ready}
+              onClick={() => setSalt((s) => s + 1)}
+            >
+              <Sparkles className="mr-2 h-4 w-4" />
+              {names.length ? "Regenerate names" : "Generate names"}
+            </Button>
+            <Button
+              size="lg"
+              variant="outline"
+              className="h-12 rounded-2xl border-2 text-base font-semibold"
+              onClick={surprise}
+            >
+              <Dices className="mr-2 h-4 w-4" />
+              Surprise me
+            </Button>
+          </div>
+        </div>
+
+        {/* Results */}
+        {ready && names.length > 0 && (
+          <div className="mt-8">
+            <div className="mb-3 flex items-center justify-between px-1">
+              <h2 className="font-display text-lg font-bold">Suggested names</h2>
+              <span className="text-xs text-muted-foreground">
+                Tap a name to copy
+              </span>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              {names.map((name, i) => (
+                <button
+                  key={name}
+                  onClick={() => copy(name)}
+                  className="group flex items-center justify-between gap-3 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-accent">
+                      {i + 1}
+                    </span>
+                    <span className="font-display text-lg font-bold leading-tight">
+                      {name}
+                    </span>
+                  </div>
+                  {copied === name ? (
+                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <Copy className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {!ready && (
+          <p className="mt-8 text-center text-sm text-muted-foreground">
+            Choose both parents to start generating names.
+          </p>
+        )}
+      </main>
+
       <MadeWithDyad />
     </div>
   );

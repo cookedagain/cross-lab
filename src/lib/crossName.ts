@@ -309,6 +309,16 @@ function growthVigor(seed: Seed): number {
   return Math.min(1.25, Math.max(0.72, score));
 }
 
+function yieldVigor(seed: Seed): number {
+  const lower = seed.name.toLowerCase();
+  let score = growthVigor(seed);
+  if (lower.includes("heavy bud") || lower.includes("super bud") || lower.includes("big") || lower.includes("gorilla")) score += 0.14;
+  if (lower.includes("cookies") || lower.includes("gelato") || lower.includes("runtz") || lower.includes("zkittlez")) score -= 0.04;
+  if (lower.includes("deep chunk") || lower.includes("abc") || lower.includes("mutant")) score -= 0.1;
+  if (lower.includes("auto")) score -= 0.06;
+  return Math.min(1.28, Math.max(0.62, score));
+}
+
 function range(min: number, max: number, factor: number) {
   return {
     min: Math.round(min * factor),
@@ -372,6 +382,7 @@ export type GrowthEstimate = {
   wattage: "<100W" | "220W" | "500W";
   heightCm: { min: number; max: number };
   widthCm: { min: number; max: number };
+  yieldG: { min: number; max: number };
   note: string;
 };
 
@@ -387,7 +398,8 @@ export type CrossReport = {
 };
 
 function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
-  const factor = (growthVigor(parentA) + growthVigor(parentB)) / 2;
+  const sizeFactor = (growthVigor(parentA) + growthVigor(parentB)) / 2;
+  const yieldFactor = (yieldVigor(parentA) + yieldVigor(parentB)) / 2;
   const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
   const autoNote = flags.includes("Auto") ? " Auto influence may keep some phenos shorter and faster." : "";
   const mutantNote = flags.includes("Mutant/ABC") ? " ABC/mutant influence may reduce lateral spread in some phenos." : "";
@@ -395,21 +407,24 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
   return [
     {
       wattage: "<100W",
-      heightCm: range(32, 58, factor),
-      widthCm: range(24, 42, factor),
-      note: `Small-light / micro setup estimate. Expect tighter structure and reduced lateral spread.${autoNote}${mutantNote}`,
+      heightCm: range(32, 58, sizeFactor),
+      widthCm: range(24, 42, sizeFactor),
+      yieldG: range(18, 45, yieldFactor),
+      note: `Small-light / micro setup estimate. Expect tighter structure, reduced lateral spread and modest dry yield.${autoNote}${mutantNote}`,
     },
     {
       wattage: "220W",
-      heightCm: range(55, 95, factor),
-      widthCm: range(42, 72, factor),
-      note: `Mid-power indoor estimate with a more complete expression of branching and terpene potential.${autoNote}${mutantNote}`,
+      heightCm: range(55, 95, sizeFactor),
+      widthCm: range(42, 72, sizeFactor),
+      yieldG: range(70, 160, yieldFactor),
+      note: `Mid-power indoor estimate with a more complete expression of branching, terpene potential and yield.${autoNote}${mutantNote}`,
     },
     {
       wattage: "500W",
-      heightCm: range(82, 145, factor),
-      widthCm: range(66, 115, factor),
-      note: `High-power estimate. Larger phenos may push beyond this if haze, diesel, or Durban influence dominates.${autoNote}${mutantNote}`,
+      heightCm: range(82, 145, sizeFactor),
+      widthCm: range(66, 115, sizeFactor),
+      yieldG: range(170, 410, yieldFactor),
+      note: `High-power estimate. Larger phenos may push beyond this if haze, diesel, Durban or heavy-yield influence dominates.${autoNote}${mutantNote}`,
     },
   ];
 }
@@ -636,7 +651,7 @@ export function copyReportText(parentA: Seed, parentB: Seed, report: CrossReport
     report.profile.summary,
     `Flavors: ${report.profile.flavors.join(", ") || "unknown"}`,
     `Terpenes: ${report.profile.terpenes.map((t) => `${t.info.name} ${t.share}%`).join(", ") || "unknown"}`,
-    `Size estimates: ${report.growthEstimates.map((g) => `${g.wattage}: ${g.heightCm.min}-${g.heightCm.max}cm H × ${g.widthCm.min}-${g.widthCm.max}cm W`).join("; ")}`,
+    `Size/yield estimates: ${report.growthEstimates.map((g) => `${g.wattage}: ${g.heightCm.min}-${g.heightCm.max}cm H × ${g.widthCm.min}-${g.widthCm.max}cm W · ${g.yieldG.min}-${g.yieldG.max}g dry`).join("; ")}`,
     `Breeder note: ${report.breederNote}`,
     "Names:",
     ...names.map((n) => `- ${n.name} (${n.category})`),

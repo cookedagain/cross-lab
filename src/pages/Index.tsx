@@ -694,7 +694,7 @@ const Index = () => {
               <div className="mt-6 rounded-3xl border border-border bg-background p-5">
                 <div className="mb-3 flex items-center gap-2">
                   <Ruler className="h-4 w-4 text-primary" />
-                  <h3 className="font-display text-lg font-bold">Estimated plant size by light power</h3>
+                  <h3 className="font-display text-lg font-bold">Estimated plant size & yield by light power</h3>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-3">
                   {report.growthEstimates.map((estimate) => (
@@ -714,12 +714,18 @@ const Index = () => {
                           </p>
                         </div>
                       </div>
+                      <div className="mt-3 rounded-xl bg-card px-3 py-2">
+                        <p className="text-[10px] font-bold uppercase text-muted-foreground">Estimated dry yield</p>
+                        <p className="font-display text-xl font-black text-primary">
+                          {estimate.yieldG.min}–{estimate.yieldG.max}g
+                        </p>
+                      </div>
                       <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{estimate.note}</p>
                     </div>
                   ))}
                 </div>
                 <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
-                  Estimates assume typical indoor expression; training, container size, veg time, phenotype and environment can shift final size.
+                  Estimates assume typical indoor expression; training, container size, veg time, phenotype, environment, nutrition and harvest timing can shift final size and dry yield.
                 </p>
               </div>
 

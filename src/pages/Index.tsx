@@ -1,27 +1,213 @@
-import { useMemo, useState } from "react";
-import { Copy, Dices, Leaf, Sparkles, Check, FlaskConical } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import {
+  BookOpen,
+  Check,
+  ClipboardList,
+  Copy,
+  Dices,
+  FlaskConical,
+  Heart,
+  Leaf,
+  Save,
+  Sparkles,
+  Target,
+  TreePine,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import SeedSelect from "@/components/SeedSelect";
 import { SEEDS, type Seed } from "@/data/seeds";
-import { generateCrossNames, getCrossProfile } from "@/lib/crossName";
+import {
+  TRAIT_GOALS,
+  copyReportText,
+  crossKey,
+  generateCrossNames,
+  getCrossReport,
+  getSeedById,
+  groupNamesByCategory,
+  type CrossName,
+  type CrossReport,
+  type NameCategory,
+  type TraitGoal,
+} from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
+
+const FAVORITES_KEY = "crosslab:favorites";
+const JOURNAL_KEY = "crosslab:journal";
+
+type FavoriteName = {
+  id: string;
+  name: string;
+  note: string;
+  category: NameCategory;
+  parentAId: string;
+  parentBId: string;
+  parentAName: string;
+  parentBName: string;
+};
+
+type JournalEntry = {
+  id: string;
+  parentAId: string;
+  parentBId: string;
+  parentAName: string;
+  parentBName: string;
+  status: "Considering" | "Planned" | "Made";
+  goal: string;
+  score: number;
+  createdAt: string;
+};
+
+function loadStored<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(key);
+    return raw ? (JSON.parse(raw) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function makeId() {
+  return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+const ScoreBar = ({ label, value }: { label: string; value: number }) => (
+  <div>
+    <div className="mb-1 flex items-center justify-between text-xs">
+      <span className="font-semibold text-foreground/80">{label}</span>
+      <span className="font-bold text-primary">{value}</span>
+    </div>
+    <div className="h-2 overflow-hidden rounded-full bg-muted">
+      <div
+        className="h-full rounded-full bg-primary transition-all"
+        style={{ width: `${value}%` }}
+      />
+    </div>
+  </div>
+);
+
+const TraitChip = ({
+  goal,
+  active,
+  onClick,
+}: {
+  goal: TraitGoal;
+  active: boolean;
+  onClick: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={`rounded-full border-2 px-3 py-1.5 text-xs font-semibold transition-all ${
+      active
+        ? "border-primary bg-primary text-primary-foreground shadow-sm"
+        : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+    }`}
+  >
+    {goal}
+  </button>
+);
+
+const TerpenePanel = ({ report }: { report: CrossReport }) => (
+  <div className="rounded-3xl border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+    <div className="mb-4 flex items-center gap-2">
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-accent">
+        <FlaskConical className="h-4 w-4" />
+      </span>
+      <h2 className="font-display text-lg font-bold">Expected terpene profile</h2>
+    </div>
+
+    <p className="mb-5 text-sm text-foreground/80">{report.profile.summary}</p>
+
+    {report.profile.terpenes.length > 0 ? (
+      <div className="space-y-3">
+        {report.profile.terpenes.map((t) => (
+          <div key={t.key}>
+            <div className="mb-1 flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
+                <span
+                  className="mt-1 h-3 w-3 rounded-full"
+                  style={{ backgroundColor: t.info.color }}
+                />
+                <div>
+                  <span className="text-sm font-semibold">{t.info.name}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {t.info.aroma} · {t.info.effect}
+                  </p>
+                </div>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground">
+                {t.share}%
+              </span>
+            </div>
+            <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+              <div
+                className="h-full rounded-full transition-all"
+                style={{ width: `${t.share}%`, backgroundColor: t.info.color }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    ) : (
+      <p className="text-sm text-muted-foreground">
+        Not enough flavor data on these parents to estimate terpenes.
+      </p>
+    )}
+
+    {report.profile.flavors.length > 0 && (
+      <div className="mt-5 flex flex-wrap gap-2">
+        {report.profile.flavors.map((f) => (
+          <span
+            key={f}
+            className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+          >
+            {f}
+          </span>
+        ))}
+      </div>
+    )}
+
+    <p className="mt-4 text-[11px] leading-snug text-muted-foreground">
+      Estimated from parent flavor and lineage cues — actual terpenes vary by phenotype and grow.
+    </p>
+  </div>
+);
 
 const Index = () => {
   const [parentA, setParentA] = useState<Seed | null>(null);
   const [parentB, setParentB] = useState<Seed | null>(null);
   const [salt, setSalt] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
+  const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+  const [favorites, setFavorites] = useState<FavoriteName[]>(() =>
+    loadStored<FavoriteName[]>(FAVORITES_KEY, []),
+  );
+  const [journal, setJournal] = useState<JournalEntry[]>(() =>
+    loadStored<JournalEntry[]>(JOURNAL_KEY, []),
+  );
+
+  useEffect(() => {
+    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+  }, [favorites]);
+
+  useEffect(() => {
+    window.localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal));
+  }, [journal]);
 
   const names = useMemo(() => {
     if (!parentA || !parentB) return [];
-    return generateCrossNames(parentA, parentB, salt);
-  }, [parentA, parentB, salt]);
+    return generateCrossNames(parentA, parentB, salt, selectedGoals);
+  }, [parentA, parentB, salt, selectedGoals]);
 
-  const profile = useMemo(() => {
+  const report = useMemo(() => {
     if (!parentA || !parentB) return null;
-    return getCrossProfile(parentA, parentB);
-  }, [parentA, parentB]);
+    return getCrossReport(parentA, parentB, selectedGoals);
+  }, [parentA, parentB, selectedGoals]);
+
+  const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
+  const ready = Boolean(parentA && parentB);
 
   const surprise = () => {
     const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
@@ -32,76 +218,143 @@ const Index = () => {
     setSalt((s) => s + 1);
   };
 
-  const copy = async (name: string) => {
-    await navigator.clipboard.writeText(name);
-    setCopied(name);
-    toast.success("Copied to clipboard", { description: name });
+  const copy = async (value: string, description = value) => {
+    await navigator.clipboard.writeText(value);
+    setCopied(description);
+    toast.success("Copied to clipboard", { description });
     setTimeout(() => setCopied(null), 1500);
   };
 
-  const ready = parentA && parentB;
+  const toggleGoal = (goal: TraitGoal) => {
+    setSelectedGoals((current) =>
+      current.includes(goal) ? current.filter((g) => g !== goal) : [...current, goal],
+    );
+  };
+
+  const isFavorite = (name: string) =>
+    Boolean(parentA && parentB && favorites.some((f) => f.name === name && f.parentAId === parentA.id && f.parentBId === parentB.id));
+
+  const toggleFavorite = (item: CrossName) => {
+    if (!parentA || !parentB) return;
+    const existing = favorites.find(
+      (f) => f.name === item.name && f.parentAId === parentA.id && f.parentBId === parentB.id,
+    );
+    if (existing) {
+      setFavorites((list) => list.filter((f) => f.id !== existing.id));
+      toast("Removed favorite", { description: item.name });
+      return;
+    }
+    setFavorites((list) => [
+      {
+        id: makeId(),
+        name: item.name,
+        note: item.note,
+        category: item.category,
+        parentAId: parentA.id,
+        parentBId: parentB.id,
+        parentAName: parentA.name,
+        parentBName: parentB.name,
+      },
+      ...list,
+    ]);
+    toast.success("Saved favorite", { description: item.name });
+  };
+
+  const saveJournal = (status: JournalEntry["status"]) => {
+    if (!parentA || !parentB || !report) return;
+    const key = crossKey(parentA, parentB);
+    const existing = journal.find((entry) => crossKey({ id: entry.parentAId } as Seed, { id: entry.parentBId } as Seed) === key);
+    const entry: JournalEntry = {
+      id: existing?.id ?? makeId(),
+      parentAId: parentA.id,
+      parentBId: parentB.id,
+      parentAName: parentA.name,
+      parentBName: parentB.name,
+      status,
+      goal: selectedGoals.length ? selectedGoals.join(", ") : "Open hunt",
+      score: report.scores.overall,
+      createdAt: existing?.createdAt ?? new Date().toISOString(),
+    };
+    setJournal((list) => [entry, ...list.filter((item) => item.id !== entry.id)]);
+    toast.success("Cross saved to journal", { description: `${parentA.name} × ${parentB.name}` });
+  };
+
+  const loadJournalEntry = (entry: JournalEntry) => {
+    setParentA(getSeedById(entry.parentAId, SEEDS));
+    setParentB(getSeedById(entry.parentBId, SEEDS));
+    setSalt((s) => s + 1);
+  };
+
+  const copyFullReport = () => {
+    if (!parentA || !parentB || !report) return;
+    copy(copyReportText(parentA, parentB, report, names), "Full cross report");
+  };
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="border-b border-border/60 bg-card/60 backdrop-blur">
-        <div className="container flex items-center justify-between py-5">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-card/80 backdrop-blur">
+        <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-3">
-            <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
+            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-primary text-primary-foreground shadow-sm">
               <Leaf className="h-5 w-5" />
             </span>
             <div className="leading-tight">
-              <p className="font-display text-xl font-extrabold tracking-tight">
-                CrossLab
-              </p>
-              <p className="text-xs text-muted-foreground">
-                Strain cross-name generator
-              </p>
+              <p className="font-display text-xl font-extrabold tracking-tight">CrossLab</p>
+              <p className="text-xs text-muted-foreground">Breeder planning workspace</p>
             </div>
           </div>
-          <span className="hidden rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground sm:inline">
-            {SEEDS.length} seeds in your vault
-          </span>
+          <div className="hidden items-center gap-2 sm:flex">
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+              {SEEDS.length} seeds
+            </span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              {favorites.length} favorites
+            </span>
+          </div>
         </div>
       </header>
 
-      <main className="container max-w-3xl pb-24 pt-10">
-        {/* Hero */}
-        <div className="mb-10 text-center">
+      <main className="container max-w-6xl pb-24 pt-8">
+        <div className="mb-8 text-center">
           <span className="mb-4 inline-flex items-center gap-2 rounded-full border border-accent/30 bg-secondary px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-accent">
             <Sparkles className="h-3.5 w-3.5" />
-            Breed something new
+            Cross report, names, notes & journal
           </span>
-          <h1 className="font-display text-4xl font-black leading-tight tracking-tight sm:text-5xl">
-            Name your next{" "}
-            <span className="text-primary">cross</span>
+          <h1 className="font-display text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+            Plan the whole <span className="text-primary">cross</span>
           </h1>
-          <p className="mx-auto mt-3 max-w-md text-base text-muted-foreground">
-            Pick two seeds from your collection and we'll dream up names for the
-            offspring.
+          <p className="mx-auto mt-3 max-w-2xl text-base text-muted-foreground">
+            Pick two parents, set your breeding goals, and get a scored cross report with terpene estimates,
+            phenotype previews, breeder notes, categorized names, favorites, and a saved journal.
           </p>
         </div>
 
-        {/* Selectors */}
-        <div className="rounded-3xl border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-          <div className="grid items-center gap-4 sm:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect
-              label="A"
-              accent="green"
-              value={parentA}
-              onChange={setParentA}
-            />
+        <section className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
+            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} />
             <div className="flex items-center justify-center">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-display text-lg font-bold text-muted-foreground">
                 ×
               </span>
             </div>
-            <SeedSelect
-              label="B"
-              accent="purple"
-              value={parentB}
-              onChange={setParentB}
-            />
+            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} />
+          </div>
+
+          <div className="mt-6 rounded-3xl bg-muted/60 p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Target className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-foreground/80">Trait goals</h2>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {TRAIT_GOALS.map((goal) => (
+                <TraitChip
+                  key={goal}
+                  goal={goal}
+                  active={selectedGoals.includes(goal)}
+                  onClick={() => toggleGoal(goal)}
+                />
+              ))}
+            </div>
           </div>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row">
@@ -112,136 +365,232 @@ const Index = () => {
               onClick={() => setSalt((s) => s + 1)}
             >
               <Sparkles className="mr-2 h-4 w-4" />
-              {names.length ? "Regenerate names" : "Generate names"}
+              {names.length ? "Regenerate report" : "Generate report"}
             </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-12 rounded-2xl border-2 text-base font-semibold"
-              onClick={surprise}
-            >
+            <Button size="lg" variant="outline" className="h-12 rounded-2xl border-2 text-base font-semibold" onClick={surprise}>
               <Dices className="mr-2 h-4 w-4" />
               Surprise me
             </Button>
           </div>
-        </div>
+        </section>
 
-        {/* Terpene profile */}
-        {ready && profile && (
-          <div className="mt-8 rounded-3xl border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-            <div className="mb-4 flex items-center gap-2">
-              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-accent">
-                <FlaskConical className="h-4 w-4" />
-              </span>
-              <h2 className="font-display text-lg font-bold">
-                Expected terpene profile
-              </h2>
+        {ready && parentA && parentB && report && (
+          <div className="mt-8 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+            <section className="rounded-[2rem] border-2 border-primary/20 bg-card p-5 shadow-sm sm:p-7">
+              <div className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Cross potential</p>
+                  <h2 className="font-display text-3xl font-black text-primary">{report.scores.overall}/100</h2>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" className="rounded-2xl border-2" onClick={copyFullReport}>
+                    <Copy className="mr-2 h-4 w-4" />
+                    Copy report
+                  </Button>
+                  <Button className="rounded-2xl" onClick={() => saveJournal("Considering")}>
+                    <Save className="mr-2 h-4 w-4" />
+                    Save cross
+                  </Button>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <ScoreBar label="Flavor synergy" value={report.scores.flavorSynergy} />
+                <ScoreBar label="Terpene contrast" value={report.scores.terpeneContrast} />
+                <ScoreBar label="Breeder interest" value={report.scores.breederInterest} />
+                <ScoreBar label="Name potential" value={report.scores.namePotential} />
+                <ScoreBar label="Goal match" value={report.scores.goalMatch} />
+              </div>
+
+              <div className="mt-6 rounded-3xl bg-secondary p-5 text-secondary-foreground">
+                <h3 className="mb-2 font-display text-xl font-bold">Breeder note</h3>
+                <p className="text-sm leading-relaxed">{report.breederNote}</p>
+                {report.matchedGoals.length > 0 && (
+                  <p className="mt-3 text-xs font-semibold">
+                    Goal alignment: {report.matchedGoals.join(", ")}
+                  </p>
+                )}
+              </div>
+
+              <div className="mt-6 grid gap-4 sm:grid-cols-3">
+                {report.phenotypes.map((pheno) => (
+                  <div key={pheno.title} className="rounded-3xl border border-border bg-background p-4">
+                    <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">
+                      {pheno.likelihood}
+                    </span>
+                    <h3 className="mt-3 font-display text-lg font-bold leading-tight">{pheno.title}</h3>
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{pheno.description}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <TerpenePanel report={report} />
+
+            <section className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7 lg:col-span-2">
+              <div className="mb-5 flex items-center gap-2">
+                <TreePine className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-xl font-bold">Lineage & genetic notes</h2>
+              </div>
+              <div className="grid gap-4 lg:grid-cols-2">
+                {report.lineage.map((node) => (
+                  <div key={node.parent} className="rounded-3xl border border-border bg-background p-4">
+                    <div className="mb-3 flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">Parent {node.parent}</p>
+                        <h3 className="font-display text-lg font-bold">{node.name}</h3>
+                        <p className="text-xs text-muted-foreground">{node.breeder}</p>
+                      </div>
+                      <div className="flex flex-wrap justify-end gap-1">
+                        {node.flags.map((flag) => (
+                          <span key={flag} className="rounded-full bg-secondary px-2 py-1 text-[10px] font-bold text-secondary-foreground">
+                            {flag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {node.pieces.map((piece) => (
+                        <div key={piece} className="rounded-2xl bg-muted px-3 py-2 text-sm font-medium">
+                          {piece}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {report.geneticNotes.map((note) => (
+                  <div key={note.label} className="rounded-2xl bg-muted p-4">
+                    <p className="font-bold text-sm">{note.label}</p>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{note.note}</p>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {ready && names.length > 0 && (
+          <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+            <div className="mb-5 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="font-display text-2xl font-black">Categorized name suggestions</h2>
+                <p className="text-sm text-muted-foreground">10 names split into commercial, terpene, breeder tribute, and keeper-weirdo directions.</p>
+              </div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">{names.length} ideas</span>
             </div>
 
-            <p className="mb-5 text-sm text-foreground/80">{profile.summary}</p>
-
-            {profile.terpenes.length > 0 ? (
-              <div className="space-y-3">
-                {profile.terpenes.map((t) => (
-                  <div key={t.key}>
-                    <div className="mb-1 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className="h-3 w-3 rounded-full"
-                          style={{ backgroundColor: t.info.color }}
-                        />
-                        <span className="text-sm font-semibold">
-                          {t.info.name}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t.info.aroma} · {t.info.effect}
-                        </span>
+            <div className="grid gap-5 lg:grid-cols-2">
+              {groupedNames.map((group) => (
+                <div key={group.category} className="rounded-3xl bg-background p-4">
+                  <h3 className="mb-3 font-display text-lg font-bold">{group.category}</h3>
+                  <div className="space-y-3">
+                    {group.names.map((item) => (
+                      <div key={item.name} className="rounded-2xl border border-border bg-card p-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <h4 className="font-display text-lg font-bold leading-tight">{item.name}</h4>
+                            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.note}</p>
+                          </div>
+                          <div className="flex shrink-0 gap-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleFavorite(item)}
+                              className={`rounded-full p-2 transition-colors ${isFavorite(item.name) ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-primary"}`}
+                              aria-label="Save favorite"
+                            >
+                              <Heart className={`h-4 w-4 ${isFavorite(item.name) ? "fill-current" : ""}`} />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => copy(item.name)}
+                              className="rounded-full bg-muted p-2 text-muted-foreground transition-colors hover:text-primary"
+                              aria-label="Copy name"
+                            >
+                              {copied === item.name ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <span className="text-xs font-semibold text-muted-foreground">
-                        {t.share}%
-                      </span>
-                    </div>
-                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                      <div
-                        className="h-full rounded-full transition-all"
-                        style={{
-                          width: `${t.share}%`,
-                          backgroundColor: t.info.color,
-                        }}
-                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        <div className="mt-8 grid gap-6 lg:grid-cols-2">
+          <section className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+            <div className="mb-4 flex items-center gap-2">
+              <Heart className="h-5 w-5 text-primary" />
+              <h2 className="font-display text-xl font-bold">Saved name favorites</h2>
+            </div>
+            {favorites.length > 0 ? (
+              <div className="space-y-3">
+                {favorites.slice(0, 8).map((fav) => (
+                  <div key={fav.id} className="rounded-2xl bg-muted p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-display text-lg font-bold">{fav.name}</p>
+                        <p className="text-xs text-muted-foreground">{fav.parentAName} × {fav.parentBName}</p>
+                      </div>
+                      <button type="button" onClick={() => setFavorites((list) => list.filter((f) => f.id !== fav.id))} className="text-xs font-bold text-muted-foreground hover:text-destructive">
+                        Remove
+                      </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">
-                Not enough flavor data on these parents to estimate terpenes.
-              </p>
+              <p className="text-sm text-muted-foreground">Heart names to build a shortlist for your keeper labels.</p>
             )}
+          </section>
 
-            {profile.flavors.length > 0 && (
-              <div className="mt-5 flex flex-wrap gap-2">
-                {profile.flavors.map((f) => (
-                  <span
-                    key={f}
-                    className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
-                  >
-                    {f}
-                  </span>
+          <section className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-xl font-bold">Cross journal</h2>
+              </div>
+              {ready && (
+                <div className="hidden gap-2 sm:flex">
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => saveJournal("Planned")}>Planned</Button>
+                  <Button size="sm" variant="outline" className="rounded-xl" onClick={() => saveJournal("Made")}>Made</Button>
+                </div>
+              )}
+            </div>
+            {journal.length > 0 ? (
+              <div className="space-y-3">
+                {journal.slice(0, 8).map((entry) => (
+                  <div key={entry.id} className="rounded-2xl bg-muted p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <span className="rounded-full bg-card px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-primary">{entry.status}</span>
+                        <p className="mt-2 font-display text-base font-bold leading-tight">{entry.parentAName} × {entry.parentBName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">Goal: {entry.goal} · Score {entry.score}/100</p>
+                      </div>
+                      <div className="flex shrink-0 flex-col gap-2">
+                        <button type="button" onClick={() => loadJournalEntry(entry)} className="text-xs font-bold text-primary">Load</button>
+                        <button type="button" onClick={() => setJournal((list) => list.filter((j) => j.id !== entry.id))} className="text-xs font-bold text-muted-foreground hover:text-destructive">Remove</button>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
+            ) : (
+              <div className="rounded-2xl bg-muted p-4 text-sm text-muted-foreground">
+                <BookOpen className="mb-2 h-5 w-5" />
+                Save a cross to track planned, made, or interesting pairings locally in this browser.
+              </div>
             )}
-
-            <p className="mt-4 text-[11px] leading-snug text-muted-foreground">
-              Estimated from parent flavors — actual terpenes vary by phenotype
-              and grow.
-            </p>
-          </div>
-        )}
-
-        {/* Results */}
-        {ready && names.length > 0 && (
-          <div className="mt-8">
-            <div className="mb-3 flex items-center justify-between px-1">
-              <h2 className="font-display text-lg font-bold">Suggested names</h2>
-              <span className="text-xs text-muted-foreground">
-                Tap a name to copy
-              </span>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              {names.map((item, i) => (
-                <button
-                  key={item.name}
-                  onClick={() => copy(item.name)}
-                  className="group flex items-start justify-between gap-3 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
-                >
-                  <div className="flex items-start gap-3">
-                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-accent">
-                      {i + 1}
-                    </span>
-                    <span className="flex flex-col gap-1">
-                      <span className="font-display text-lg font-bold leading-tight">
-                        {item.name}
-                      </span>
-                      <span className="text-xs leading-snug text-muted-foreground">
-                        {item.note}
-                      </span>
-                    </span>
-                  </div>
-                  {copied === item.name ? (
-                    <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
-                  ) : (
-                    <Copy className="mt-1 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+          </section>
+        </div>
 
         {!ready && (
           <p className="mt-8 text-center text-sm text-muted-foreground">
-            Choose both parents to start generating names.
+            Choose both parents to generate a full cross report.
           </p>
         )}
       </main>

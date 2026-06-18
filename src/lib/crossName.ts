@@ -1,7 +1,5 @@
-// Creative cannabis cross-name generator + terpene profiler.
-// Names are built from each parent's flavor/terpene profile, its lineage
-// (the real words in the strain name) and a nod to the breeders — never
-// random letter mash-ups. We also estimate the terpene profile of the cross.
+// CrossLab analysis engine: grounded names, terpene estimates, cross scores,
+// phenotype previews, breeder notes, genetic flags, and categorized suggestions.
 
 import type { Seed } from "@/data/seeds";
 
@@ -10,7 +8,43 @@ const SUFFIX_JUNK =
 
 const STOPWORDS = new Set(["the", "of", "de", "and", "&", "x", "×"]);
 
-// --- Terpene reference -----------------------------------------------------
+export type TraitGoal =
+  | "Gas"
+  | "Candy"
+  | "Purple"
+  | "Heavy resin"
+  | "Citrus"
+  | "Funk"
+  | "Floral"
+  | "Hashplant"
+  | "Auto traits"
+  | "Weird mutant traits";
+
+export const TRAIT_GOALS: TraitGoal[] = [
+  "Gas",
+  "Candy",
+  "Purple",
+  "Heavy resin",
+  "Citrus",
+  "Funk",
+  "Floral",
+  "Hashplant",
+  "Auto traits",
+  "Weird mutant traits",
+];
+
+const GOAL_WORDS: Record<TraitGoal, string[]> = {
+  Gas: ["Gas", "Fuel", "Octane", "Petrol"],
+  Candy: ["Candy", "Sugar", "Rainbow", "Taffy"],
+  Purple: ["Purple", "Violet", "Royal", "Grape"],
+  "Heavy resin": ["Resin", "Frost", "Glue", "Trichome"],
+  Citrus: ["Lemon", "Citrus", "Zest", "Tangerine"],
+  Funk: ["Funk", "Garlic", "Cheese", "Skunk"],
+  Floral: ["Lilac", "Bloom", "Petal", "Lavender"],
+  Hashplant: ["Hash", "Charas", "Temple", "Afghan"],
+  "Auto traits": ["Express", "Quick", "Auto", "Sprint"],
+  "Weird mutant traits": ["Mutant", "Quack", "Feral", "Outlier"],
+};
 
 export type TerpeneKey =
   | "myrcene"
@@ -82,66 +116,58 @@ export const TERPENES: Record<TerpeneKey, TerpeneInfo> = {
   },
 };
 
-// Detect a flavor / terpene theme from the parent name and map it to
-// evocative descriptor words + the terpene most associated with it.
-type Flavor = { match: string[]; words: string[]; terp: string; terpene: TerpeneKey };
+type Flavor = {
+  match: string[];
+  words: string[];
+  terp: string;
+  terpene: TerpeneKey;
+  goals?: TraitGoal[];
+};
 
 const FLAVORS: Flavor[] = [
-  { match: ["cherry"], words: ["Cherry", "Cordial", "Bing"], terp: "sweet cherry", terpene: "myrcene" },
-  { match: ["lemon"], words: ["Lemon", "Limoncello", "Zest"], terp: "lemon zest", terpene: "limonene" },
-  { match: ["lime"], words: ["Lime", "Citrus", "Rickey"], terp: "lime", terpene: "limonene" },
-  { match: ["mandarin", "tangie", "orange"], words: ["Tangerine", "Orange Crush", "Citrus"], terp: "orange citrus", terpene: "limonene" },
-  { match: ["diesel", "fuel"], words: ["Fuel", "Gas", "Petrol"], terp: "diesel fuel", terpene: "caryophyllene" },
-  { match: ["sour"], words: ["Sour", "Tart", "Acid"], terp: "sour funk", terpene: "caryophyllene" },
-  { match: ["og", "kush"], words: ["Kush", "Pine", "Loud"], terp: "earthy pine", terpene: "myrcene" },
-  { match: ["cookie"], words: ["Cookie", "Dough", "Batter"], terp: "doughy sweet", terpene: "caryophyllene" },
-  { match: ["cake", "wedding"], words: ["Cake", "Frosting", "Vanilla"], terp: "creamy vanilla", terpene: "linalool" },
-  { match: ["gelato"], words: ["Gelato", "Cream", "Sorbet"], terp: "creamy dessert", terpene: "caryophyllene" },
-  { match: ["sherb", "sherbet"], words: ["Sherb", "Sorbet", "Fizz"], terp: "creamy citrus", terpene: "limonene" },
-  { match: ["grape"], words: ["Grape", "Vino", "Jelly"], terp: "grape candy", terpene: "myrcene" },
-  { match: ["purple", "rozé", "roze", "violet"], words: ["Purple", "Royal", "Violet"], terp: "grape floral", terpene: "linalool" },
-  { match: ["lilac", "lavender"], words: ["Lilac", "Bloom", "Petal"], terp: "floral lilac", terpene: "linalool" },
-  { match: ["banana"], words: ["Banana", "Foster", "Cream"], terp: "tropical banana", terpene: "myrcene" },
-  { match: ["mango"], words: ["Mango", "Tropic", "Smile"], terp: "ripe mango", terpene: "myrcene" },
-  { match: ["pineapple", "pina"], words: ["Pineapple", "Colada", "Tropic"], terp: "tropical pineapple", terpene: "ocimene" },
-  { match: ["tropical"], words: ["Tropic", "Island", "Paradise"], terp: "tropical fruit", terpene: "ocimene" },
-  { match: ["blueberry", "blue"], words: ["Blueberry", "Indigo", "Berry"], terp: "blueberry", terpene: "myrcene" },
-  { match: ["berry"], words: ["Berry", "Jam", "Bramble"], terp: "berry", terpene: "myrcene" },
-  { match: ["apple"], words: ["Apple", "Orchard", "Cider"], terp: "crisp apple", terpene: "ocimene" },
-  { match: ["peach"], words: ["Peach", "Cobbler", "Nectar"], terp: "stone fruit", terpene: "ocimene" },
-  { match: ["marshmallow"], words: ["Marshmallow", "S'more", "Fluff"], terp: "toasted sugar", terpene: "linalool" },
+  { match: ["cherry"], words: ["Cherry", "Cordial", "Bing"], terp: "sweet cherry", terpene: "myrcene", goals: ["Candy"] },
+  { match: ["lemon"], words: ["Lemon", "Limoncello", "Zest"], terp: "lemon zest", terpene: "limonene", goals: ["Citrus"] },
+  { match: ["lime"], words: ["Lime", "Citrus", "Rickey"], terp: "lime", terpene: "limonene", goals: ["Citrus"] },
+  { match: ["mandarin", "tangie", "orange"], words: ["Tangerine", "Orange Crush", "Citrus"], terp: "orange citrus", terpene: "limonene", goals: ["Citrus"] },
+  { match: ["diesel", "fuel"], words: ["Fuel", "Gas", "Petrol"], terp: "diesel fuel", terpene: "caryophyllene", goals: ["Gas"] },
+  { match: ["sour"], words: ["Sour", "Tart", "Acid"], terp: "sour funk", terpene: "caryophyllene", goals: ["Funk"] },
+  { match: ["og", "kush"], words: ["Kush", "Pine", "Loud"], terp: "earthy pine", terpene: "myrcene", goals: ["Hashplant"] },
+  { match: ["cookie"], words: ["Cookie", "Dough", "Batter"], terp: "doughy sweet", terpene: "caryophyllene", goals: ["Candy"] },
+  { match: ["cake", "wedding"], words: ["Cake", "Frosting", "Vanilla"], terp: "creamy vanilla", terpene: "linalool", goals: ["Candy"] },
+  { match: ["gelato"], words: ["Gelato", "Cream", "Sorbet"], terp: "creamy dessert", terpene: "caryophyllene", goals: ["Candy"] },
+  { match: ["sherb", "sherbet"], words: ["Sherb", "Sorbet", "Fizz"], terp: "creamy citrus", terpene: "limonene", goals: ["Candy", "Citrus"] },
+  { match: ["grape"], words: ["Grape", "Vino", "Jelly"], terp: "grape candy", terpene: "myrcene", goals: ["Candy", "Purple"] },
+  { match: ["purple", "rozé", "roze", "violet"], words: ["Purple", "Royal", "Violet"], terp: "grape floral", terpene: "linalool", goals: ["Purple", "Floral"] },
+  { match: ["lilac", "lavender"], words: ["Lilac", "Bloom", "Petal"], terp: "floral lilac", terpene: "linalool", goals: ["Floral"] },
+  { match: ["banana"], words: ["Banana", "Foster", "Cream"], terp: "tropical banana", terpene: "myrcene", goals: ["Candy"] },
+  { match: ["mango"], words: ["Mango", "Tropic", "Smile"], terp: "ripe mango", terpene: "myrcene", goals: ["Candy"] },
+  { match: ["pineapple", "pina"], words: ["Pineapple", "Colada", "Tropic"], terp: "tropical pineapple", terpene: "ocimene", goals: ["Candy"] },
+  { match: ["tropical"], words: ["Tropic", "Island", "Paradise"], terp: "tropical fruit", terpene: "ocimene", goals: ["Candy"] },
+  { match: ["blueberry", "blue"], words: ["Blueberry", "Indigo", "Berry"], terp: "blueberry", terpene: "myrcene", goals: ["Candy", "Purple"] },
+  { match: ["berry"], words: ["Berry", "Jam", "Bramble"], terp: "berry", terpene: "myrcene", goals: ["Candy"] },
+  { match: ["apple"], words: ["Apple", "Orchard", "Cider"], terp: "crisp apple", terpene: "ocimene", goals: ["Candy"] },
+  { match: ["peach"], words: ["Peach", "Cobbler", "Nectar"], terp: "stone fruit", terpene: "ocimene", goals: ["Candy"] },
+  { match: ["marshmallow"], words: ["Marshmallow", "S'more", "Fluff"], terp: "toasted sugar", terpene: "linalool", goals: ["Candy"] },
   { match: ["mint", "mentha"], words: ["Mint", "Menthol", "Frost"], terp: "cooling menthol", terpene: "terpineol" },
-  { match: ["garlic", "gmo"], words: ["Garlic", "Savory", "Funk"], terp: "savory funk (GMO)", terpene: "caryophyllene" },
-  { match: ["cheese", "exodus"], words: ["Cheese", "Funk", "Rind"], terp: "funky cheese", terpene: "caryophyllene" },
+  { match: ["garlic", "gmo"], words: ["Garlic", "Savory", "Funk"], terp: "savory funk (GMO)", terpene: "caryophyllene", goals: ["Funk", "Gas"] },
+  { match: ["cheese", "exodus"], words: ["Cheese", "Funk", "Rind"], terp: "funky cheese", terpene: "caryophyllene", goals: ["Funk"] },
   { match: ["haze"], words: ["Haze", "Incense", "Spice"], terp: "spicy haze", terpene: "terpinolene" },
-  { match: ["skunk"], words: ["Skunk", "Funk", "Loud"], terp: "skunky funk", terpene: "myrcene" },
-  { match: ["runtz", "zkittlez", "skittlez", "candy"], words: ["Candy", "Rainbow", "Sugar"], terp: "candy sweet", terpene: "limonene" },
-  { match: ["bubblegum", "gum"], words: ["Bubblegum", "Sugar", "Pop"], terp: "bubblegum", terpene: "limonene" },
-  { match: ["choco", "chocolate"], words: ["Cocoa", "Truffle", "Mocha"], terp: "chocolate", terpene: "caryophyllene" },
-  { match: ["coffee", "espresso"], words: ["Mocha", "Espresso", "Roast"], terp: "roasted coffee", terpene: "caryophyllene" },
-  { match: ["hash", "temple", "charas"], words: ["Hash", "Temple", "Charas"], terp: "hashy spice", terpene: "humulene" },
-  { match: ["gorilla", "glue"], words: ["Glue", "Resin", "Grip"], terp: "sticky resin", terpene: "caryophyllene" },
-  { match: ["chem"], words: ["Chem", "Gas", "Funk"], terp: "chem funk", terpene: "caryophyllene" },
-  { match: ["cream", "custard"], words: ["Cream", "Custard", "Velvet"], terp: "creamy", terpene: "linalool" },
-  { match: ["honey", "nectar"], words: ["Honey", "Nectar", "Amber"], terp: "honeyed sweet", terpene: "ocimene" },
+  { match: ["skunk"], words: ["Skunk", "Funk", "Loud"], terp: "skunky funk", terpene: "myrcene", goals: ["Funk"] },
+  { match: ["runtz", "zkittlez", "skittlez", "candy"], words: ["Candy", "Rainbow", "Sugar"], terp: "candy sweet", terpene: "limonene", goals: ["Candy"] },
+  { match: ["bubblegum", "gum"], words: ["Bubblegum", "Sugar", "Pop"], terp: "bubblegum", terpene: "limonene", goals: ["Candy"] },
+  { match: ["hash", "temple", "charas"], words: ["Hash", "Temple", "Charas"], terp: "hashy spice", terpene: "humulene", goals: ["Hashplant"] },
+  { match: ["gorilla", "glue"], words: ["Glue", "Resin", "Grip"], terp: "sticky resin", terpene: "caryophyllene", goals: ["Heavy resin"] },
+  { match: ["chem"], words: ["Chem", "Gas", "Funk"], terp: "chem funk", terpene: "caryophyllene", goals: ["Gas", "Funk"] },
+  { match: ["honey", "nectar"], words: ["Honey", "Nectar", "Amber"], terp: "honeyed sweet", terpene: "ocimene", goals: ["Candy"] },
   { match: ["pine"], words: ["Pine", "Forest", "Sap"], terp: "fresh pine", terpene: "pinene" },
-  { match: ["coconut"], words: ["Coconut", "Colada"], terp: "coconut", terpene: "linalool" },
-  { match: ["vanilla"], words: ["Vanilla", "Custard"], terp: "vanilla", terpene: "linalool" },
-  { match: ["jealousy"], words: ["Envy", "Jealousy"], terp: "creamy gas", terpene: "caryophyllene" },
-  { match: ["sauce"], words: ["Sauce", "Drip", "Sticky"], terp: "terpy sauce", terpene: "caryophyllene" },
-  { match: ["afghan", "afghani"], words: ["Afghan", "Charas", "Hash"], terp: "hashplant", terpene: "myrcene" },
+  { match: ["afghan", "afghani"], words: ["Afghan", "Charas", "Hash"], terp: "hashplant", terpene: "myrcene", goals: ["Hashplant"] },
   { match: ["durban"], words: ["Spice", "Aniseed"], terp: "sweet spice", terpene: "terpinolene" },
-  { match: ["northern lights", "aurora"], words: ["Aurora", "Frost", "Borealis"], terp: "earthy sweet", terpene: "myrcene" },
-  { match: ["widow", "white"], words: ["Frost", "Resin", "Snow"], terp: "frosty resin", terpene: "caryophyllene" },
-  { match: ["diamond", "platinum", "glam", "glitter"], words: ["Diamond", "Glitz", "Frost"], terp: "frosty resin", terpene: "caryophyllene" },
-  { match: ["moon"], words: ["Moon", "Lunar", "Eclipse"], terp: "mystic", terpene: "linalool" },
-  { match: ["planet", "cosmic", "alien", "ufo"], words: ["Cosmic", "Orbit", "Nebula"], terp: "spacey haze", terpene: "terpinolene" },
-  { match: ["yeti", "frozen", "ice", "frost", "glacier"], words: ["Frost", "Glacier", "Ice"], terp: "frosty", terpene: "myrcene" },
-  { match: ["dog", "chunk", "deep"], words: ["Deep", "Hound", "Earth"], terp: "earthy indica", terpene: "myrcene" },
-  { match: ["wombat", "downunder", "outback"], words: ["Outback", "Bush", "Gum"], terp: "earthy", terpene: "humulene" },
+  { match: ["widow", "white", "diamond", "platinum", "glam", "frost"], words: ["Frost", "Resin", "Snow"], terp: "frosty resin", terpene: "caryophyllene", goals: ["Heavy resin"] },
+  { match: ["planet", "cosmic", "alien"], words: ["Cosmic", "Orbit", "Nebula"], terp: "spacey haze", terpene: "terpinolene" },
+  { match: ["wombat", "downunder", "outback", "abc", "mutant", "quack"], words: ["Outback", "Mutant", "Feral"], terp: "earthy mutant", terpene: "humulene", goals: ["Weird mutant traits"] },
+  { match: ["auto"], words: ["Express", "Quick", "Auto"], terp: "fast-flower selection", terpene: "ocimene", goals: ["Auto traits"] },
 ];
 
-// A short flair word for each breeder so names can tip their hat to the source.
 const BREEDER_FLAIR: Record<string, string[]> = {
   "Ethos Genetics": ["Ethos", "Crescendo"],
   "Binchickens Genetics": ["Outback", "Bin", "Downunder"],
@@ -153,13 +179,11 @@ const BREEDER_FLAIR: Record<string, string[]> = {
   "Happy Valley Genetics": ["Valley", "Happy"],
   "Brothers Grimm": ["Grimm", "Fable"],
   "Greenspace AU": ["Greenspace", "Orbit"],
-  "White Label (Burn Pile)": ["House", "Label"],
+  "White Label (Burn Pile)": ["Label", "House"],
 };
 
 const DESSERTS = ["Cake", "Sherbet", "Cream", "Pie", "Sundae", "Cobbler"];
 const EFFECTS = ["Punch", "Knockout", "Express", "Storm", "Royale", "Drip", "Velvet"];
-
-// --- helpers ---------------------------------------------------------------
 
 function mulberry32(a: number) {
   return function () {
@@ -184,6 +208,10 @@ function capitalize(w: string): string {
   return w ? w.charAt(0).toUpperCase() + w.slice(1) : w;
 }
 
+function unique<T>(items: T[]): T[] {
+  return Array.from(new Set(items));
+}
+
 function significantWords(name: string): string[] {
   return name
     .replace(/\([^)]*\)/g, " ")
@@ -198,6 +226,8 @@ type Profile = {
   terps: string[];
   terpenes: TerpeneKey[];
   flair: string[];
+  goals: TraitGoal[];
+  lineage: string[];
 };
 
 function buildProfile(seed: Seed): Profile {
@@ -205,23 +235,27 @@ function buildProfile(seed: Seed): Profile {
   const pool: string[] = [];
   const terps: string[] = [];
   const terpenes: TerpeneKey[] = [];
+  const goals: TraitGoal[] = [];
 
   for (const f of FLAVORS) {
     if (f.match.some((m) => lower.includes(m))) {
       pool.push(...f.words);
       if (!terps.includes(f.terp)) terps.push(f.terp);
       terpenes.push(f.terpene);
+      goals.push(...(f.goals ?? []));
     }
   }
 
   const lineage = significantWords(seed.name);
-  const merged = Array.from(new Set([...pool, ...lineage]));
+  const merged = unique([...pool, ...lineage]);
 
   return {
-    pool: merged.length ? merged : lineage.length ? lineage : ["Mystery"],
+    pool: merged.length ? merged : ["Mystery"],
     terps,
     terpenes,
     flair: BREEDER_FLAIR[seed.breeder] ?? [],
+    goals: unique(goals),
+    lineage,
   };
 }
 
@@ -233,12 +267,41 @@ function shortName(name: string): string {
   return name.replace(/\([^)]*\)/g, "").trim();
 }
 
-// --- Terpene profile of a cross -------------------------------------------
+function matchesGoal(word: string, goals: TraitGoal[]): boolean {
+  const lower = word.toLowerCase();
+  return goals.some((goal) => GOAL_WORDS[goal].some((w) => lower.includes(w.toLowerCase())));
+}
+
+function goalPool(base: string[], goals: TraitGoal[]): string[] {
+  if (goals.length === 0) return base;
+  const goalWords = goals.flatMap((g) => GOAL_WORDS[g]);
+  return unique([...goalWords, ...base.filter((w) => matchesGoal(w, goals)), ...base]);
+}
+
+function splitLineage(name: string): string[] {
+  return name
+    .replace(/\([^)]*\)/g, "")
+    .split(/×/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+function detectFlags(seed: Seed): string[] {
+  const lower = seed.name.toLowerCase();
+  const flags: string[] = [];
+  if (lower.includes("auto")) flags.push("Auto");
+  if (lower.includes("abc") || lower.includes("mutant") || seed.breeder.includes("Mutant")) flags.push("Mutant/ABC");
+  if (/\bS\d+\b/i.test(seed.name)) flags.push("S-line");
+  if (/\bF\d+\b/i.test(seed.name)) flags.push("Filial");
+  if (/\bBX\d*\b/i.test(seed.name) || lower.includes("rbx")) flags.push("Backcross");
+  if (lower.includes("fem")) flags.push("Fem");
+  return unique(flags);
+}
 
 export type TerpeneStat = {
   key: TerpeneKey;
   info: TerpeneInfo;
-  share: number; // 0-100, rough relative weight
+  share: number;
 };
 
 export type CrossProfile = {
@@ -247,28 +310,72 @@ export type CrossProfile = {
   summary: string;
 };
 
+export type CrossName = {
+  name: string;
+  note: string;
+  category: NameCategory;
+};
+
+export type NameCategory =
+  | "Commercial"
+  | "Terpene-Inspired"
+  | "Breeder Tribute"
+  | "Keeper Weirdos";
+
+export type CrossScores = {
+  overall: number;
+  flavorSynergy: number;
+  terpeneContrast: number;
+  breederInterest: number;
+  namePotential: number;
+  goalMatch: number;
+};
+
+export type PhenotypePreview = {
+  title: string;
+  description: string;
+  likelihood: string;
+};
+
+export type GeneticNote = {
+  label: string;
+  note: string;
+};
+
+export type LineageNode = {
+  parent: "A" | "B";
+  name: string;
+  breeder: string;
+  pieces: string[];
+  flags: string[];
+};
+
+export type CrossReport = {
+  profile: CrossProfile;
+  scores: CrossScores;
+  phenotypes: PhenotypePreview[];
+  breederNote: string;
+  geneticNotes: GeneticNote[];
+  lineage: LineageNode[];
+  matchedGoals: TraitGoal[];
+};
+
 export function getCrossProfile(parentA: Seed, parentB: Seed): CrossProfile {
   const a = buildProfile(parentA);
   const b = buildProfile(parentB);
-
   const counts = new Map<TerpeneKey, number>();
-  // Parents contribute their terpenes; shared terpenes get reinforced.
+
   for (const t of [...a.terpenes, ...b.terpenes]) {
     counts.set(t, (counts.get(t) ?? 0) + 1);
   }
 
   const total = Array.from(counts.values()).reduce((s, n) => s + n, 0) || 1;
   const terpenes: TerpeneStat[] = Array.from(counts.entries())
-    .map(([key, n]) => ({
-      key,
-      info: TERPENES[key],
-      share: Math.round((n / total) * 100),
-    }))
+    .map(([key, n]) => ({ key, info: TERPENES[key], share: Math.round((n / total) * 100) }))
     .sort((x, y) => y.share - x.share)
     .slice(0, 4);
 
-  const flavors = Array.from(new Set([...a.terps, ...b.terps])).slice(0, 5);
-
+  const flavors = unique([...a.terps, ...b.terps]).slice(0, 6);
   const dominant = terpenes[0]?.info;
   const summary = dominant
     ? `Likely ${dominant.name}-forward — expect a ${dominant.aroma} nose with ${dominant.effect} effects.`
@@ -277,93 +384,174 @@ export function getCrossProfile(parentA: Seed, parentB: Seed): CrossProfile {
   return { terpenes, flavors, summary };
 }
 
-// --- Name generation -------------------------------------------------------
+export function getCrossReport(
+  parentA: Seed,
+  parentB: Seed,
+  goals: TraitGoal[] = [],
+): CrossReport {
+  const a = buildProfile(parentA);
+  const b = buildProfile(parentB);
+  const profile = getCrossProfile(parentA, parentB);
+  const sharedTerps = a.terpenes.filter((t) => b.terpenes.includes(t)).length;
+  const uniqueTerps = unique([...a.terpenes, ...b.terpenes]).length;
+  const sharedGoals = a.goals.filter((g) => b.goals.includes(g)).length;
+  const matchedGoals = unique([...a.goals, ...b.goals].filter((g) => goals.includes(g)));
 
-export type CrossName = { name: string; note: string };
+  const flavorSynergy = Math.min(98, 62 + sharedGoals * 13 + profile.flavors.length * 4);
+  const terpeneContrast = Math.min(96, 58 + uniqueTerps * 8 - sharedTerps * 3);
+  const breederInterest = Math.min(
+    95,
+    66 + (parentA.breeder === parentB.breeder ? 6 : 18) + unique([...a.flair, ...b.flair]).length * 3,
+  );
+  const namePotential = Math.min(98, 60 + unique([...a.pool, ...b.pool]).length * 3 + unique([...a.flair, ...b.flair]).length * 4);
+  const goalMatch = goals.length === 0 ? 75 : Math.min(99, 50 + Math.round((matchedGoals.length / goals.length) * 45));
+  const overall = Math.round(
+    flavorSynergy * 0.28 + terpeneContrast * 0.2 + breederInterest * 0.16 + namePotential * 0.2 + goalMatch * 0.16,
+  );
+
+  const mainA = a.pool[0] ?? parentA.name;
+  const mainB = b.pool[0] ?? parentB.name;
+  const dominantTerp = profile.terpenes[0]?.info.name ?? "mixed terpene";
+  const phenotypes: PhenotypePreview[] = [
+    {
+      title: `${mainA} ${mainB} pheno`,
+      description: `A balanced expression carrying ${mainA.toLowerCase()} from ${shortName(parentA.name)} and ${mainB.toLowerCase()} from ${shortName(parentB.name)}.`,
+      likelihood: "Common",
+    },
+    {
+      title: `${dominantTerp} keeper`,
+      description: `The most likely keeper direction if the cross expresses the ${profile.terpenes[0]?.info.aroma ?? "loud"} side strongly.`,
+      likelihood: "Hunt for",
+    },
+    {
+      title: `${parentA.breeder === parentB.breeder ? "Line-work" : "Outcross"} expression`,
+      description:
+        parentA.breeder === parentB.breeder
+          ? `Same-breeder pairing should keep the line style more coherent while opening variation through the parents.`
+          : `Outcrossing ${parentA.breeder} with ${parentB.breeder} may throw wider phenotypic spread and more surprise expressions.`,
+      likelihood: "Variable",
+    },
+  ];
+
+  const geneticNotes: GeneticNote[] = [];
+  const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
+  if (flags.includes("Auto")) {
+    geneticNotes.push({ label: "Auto traits", note: "Auto genetics detected. Expect segregation unless the auto trait is selected and stabilized in later generations." });
+  }
+  if (flags.includes("Mutant/ABC")) {
+    geneticNotes.push({ label: "Mutant/ABC", note: "ABC or mutant influence detected. Leaf morphology can be recessive or inconsistent, so hunt multiple phenos." });
+  }
+  if (flags.includes("Backcross")) {
+    geneticNotes.push({ label: "Backcross", note: "BX/RBX material may reinforce a target parent while still adding useful variation from the mate." });
+  }
+  if (flags.includes("S-line")) {
+    geneticNotes.push({ label: "S-line", note: "Selfed material can expose recessives and may produce tighter but more revealing offspring variation." });
+  }
+  if (flags.includes("Filial")) {
+    geneticNotes.push({ label: "Filial generation", note: "F-numbered parents can carry segregating traits; plan to select toward your target profile." });
+  }
+  if (geneticNotes.length === 0) {
+    geneticNotes.push({ label: "Selection note", note: "No special auto/mutant/BX flags detected. Focus selection on terpene intensity, resin, structure, and vigor." });
+  }
+
+  const breederNote = `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions. ${parentA.breeder === parentB.breeder ? `Both parents come from ${parentA.breeder}, so the naming and selection can stay close to that breeder's style.` : `It combines ${parentA.breeder}'s ${shortName(parentA.name)} with ${parentB.breeder}'s ${shortName(parentB.name)}, which should make the hunt more varied and brandable.`}`;
+
+  return {
+    profile,
+    scores: { overall, flavorSynergy, terpeneContrast, breederInterest, namePotential, goalMatch },
+    phenotypes,
+    breederNote,
+    geneticNotes,
+    lineage: [
+      { parent: "A", name: parentA.name, breeder: parentA.breeder, pieces: splitLineage(parentA.name), flags: detectFlags(parentA) },
+      { parent: "B", name: parentB.name, breeder: parentB.breeder, pieces: splitLineage(parentB.name), flags: detectFlags(parentB) },
+    ],
+    matchedGoals,
+  };
+}
 
 export function generateCrossNames(
   parentA: Seed,
   parentB: Seed,
   salt = 0,
+  goals: TraitGoal[] = [],
 ): CrossName[] {
   const a = buildProfile(parentA);
   const b = buildProfile(parentB);
-  const rnd = mulberry32(hashString(parentA.id + "|" + parentB.id) + salt * 8675309);
-
+  const rnd = mulberry32(hashString(parentA.id + "|" + parentB.id + goals.join("|")) + salt * 8675309);
   const aName = shortName(parentA.name);
   const bName = shortName(parentB.name);
-
-  const terpLine =
-    [...a.terps, ...b.terps].length > 0
-      ? `Expect ${[...new Set([...a.terps, ...b.terps])].slice(0, 3).join(" + ")} notes.`
-      : "";
+  const aPool = goalPool(a.pool, goals);
+  const bPool = goalPool(b.pool, goals);
+  const allFlair = unique([...a.flair, ...b.flair]);
+  const terpLine = unique([...a.terps, ...b.terps]).length
+    ? `Expected notes: ${unique([...a.terps, ...b.terps]).slice(0, 3).join(" + ")}.`
+    : "";
 
   const strategies: (() => CrossName | null)[] = [
     () => {
-      const wA = pick(a.pool, rnd);
-      const wB = pick(b.pool, rnd);
+      const wA = pick(aPool, rnd);
+      const wB = pick(bPool, rnd);
       if (wA === wB) return null;
-      return {
-        name: `${wA} ${wB}`,
-        note: `Pairs ${wA} from ${aName} with ${wB} from ${bName}. ${terpLine}`.trim(),
-      };
+      return { name: `${wA} ${wB}`, category: "Commercial", note: `Pairs ${wA} from ${aName} with ${wB} from ${bName}. ${terpLine}`.trim() };
     },
     () => {
-      const wA = pick(a.pool, rnd);
-      const wB = pick(b.pool, rnd);
+      const wA = pick(aPool, rnd);
+      const wB = pick(bPool, rnd);
       if (wA === wB) return null;
-      return {
-        name: `${wB} ${wA}`,
-        note: `Leads with ${wB} from ${bName}, backed by ${wA} from ${aName}. ${terpLine}`.trim(),
-      };
+      return { name: `${wB} ${wA}`, category: "Commercial", note: `A clean seedbank-style name leading with ${wB.toLowerCase()}, backed by ${wA.toLowerCase()}.` };
     },
     () => {
-      const wA = pick(a.pool, rnd);
-      const wB = pick(b.pool, rnd);
+      const wA = pick(aPool, rnd);
+      const wB = pick(bPool, rnd);
       const dessert = pick(DESSERTS, rnd);
       if (wA === wB) return null;
-      return {
-        name: `${wA} ${wB} ${dessert}`,
-        note: `A dessert-style cross of ${aName} × ${bName}, with a ${dessert.toLowerCase()} finish.`,
-      };
+      return { name: `${wA} ${wB} ${dessert}`, category: "Commercial", note: `Dessert branding for ${aName} × ${bName}, with a ${dessert.toLowerCase()} finish.` };
     },
     () => {
-      const wA = pick(rnd() > 0.5 ? a.pool : b.pool, rnd);
-      const eff = pick(EFFECTS, rnd);
-      return {
-        name: `${wA} ${eff}`,
-        note: `Highlights the ${wA.toLowerCase()} side of the ${aName} × ${bName} cross.`,
-      };
+      const terpOptions = unique([...a.terpenes, ...b.terpenes]);
+      if (terpOptions.length === 0) return null;
+      const terp = pick(terpOptions, rnd);
+      const w = pick(rnd() > 0.5 ? aPool : bPool, rnd);
+      return { name: `${TERPENES[terp].name} ${w}`, category: "Terpene-Inspired", note: `Built around ${TERPENES[terp].name}: ${TERPENES[terp].aroma}.` };
     },
     () => {
-      const flair = [...a.flair, ...b.flair];
-      if (flair.length === 0) return null;
-      const fl = pick(flair, rnd);
-      const w = pick(rnd() > 0.5 ? a.pool : b.pool, rnd);
-      if (fl === w) return null;
-      const breeder = a.flair.includes(fl) ? parentA.breeder : parentB.breeder;
-      return {
-        name: `${fl} ${w}`,
-        note: `A tip of the hat to ${breeder}, carrying ${w} from the cross.`,
-      };
+      const w = pick(rnd() > 0.5 ? aPool : bPool, rnd);
+      const effect = pick(EFFECTS, rnd);
+      return { name: `${w} ${effect}`, category: "Terpene-Inspired", note: `Highlights the ${w.toLowerCase()} side and gives it a strong keeper-name finish.` };
     },
     () => {
-      const wA = pick(a.pool, rnd);
-      const wB = pick(b.pool, rnd);
-      const wC = pick(rnd() > 0.5 ? a.pool : b.pool, rnd);
-      const uniq = [...new Set([wA, wB, wC])];
-      if (uniq.length < 2) return null;
-      return {
-        name: uniq.slice(0, 3).join(" "),
-        note: `Stacks the standout flavors of ${aName} and ${bName}. ${terpLine}`.trim(),
-      };
+      if (allFlair.length === 0) return null;
+      const flair = pick(allFlair, rnd);
+      const w = pick(rnd() > 0.5 ? aPool : bPool, rnd);
+      if (flair === w) return null;
+      return { name: `${flair} ${w}`, category: "Breeder Tribute", note: `A breeder-aware name using ${flair} as the tribute hook.` };
+    },
+    () => {
+      if (allFlair.length === 0) return null;
+      const wA = pick(aPool, rnd);
+      const wB = pick(bPool, rnd);
+      const flair = pick(allFlair, rnd);
+      const pieces = unique([flair, wA, wB]).slice(0, 3);
+      if (pieces.length < 2) return null;
+      return { name: pieces.join(" "), category: "Breeder Tribute", note: `Nods to breeder style while keeping the parent flavors visible.` };
+    },
+    () => {
+      const weird = pick(["Octane", "Static", "Phantom", "Ritual", "Relic", "Artifact", "Oracle", "Gremlin"], rnd);
+      const w = pick(rnd() > 0.5 ? aPool : bPool, rnd);
+      return { name: `${w} ${weird}`, category: "Keeper Weirdos", note: `A less commercial keeper tag for the oddball pheno hunt.` };
+    },
+    () => {
+      const words = unique([pick(aPool, rnd), pick(bPool, rnd), pick(rnd() > 0.5 ? aPool : bPool, rnd)]).slice(0, 3);
+      if (words.length < 2) return null;
+      return { name: words.join(" "), category: "Keeper Weirdos", note: `Stacks standout parent traits into a more unusual keeper-style name.` };
     },
   ];
 
   const seen = new Set<string>();
   const results: CrossName[] = [];
   let attempts = 0;
-  while (results.length < 10 && attempts < 160) {
+  while (results.length < 10 && attempts < 220) {
     attempts++;
     const out = pick(strategies, rnd)();
     if (!out) continue;
@@ -376,4 +564,32 @@ export function generateCrossNames(
   }
 
   return results;
+}
+
+export function groupNamesByCategory(names: CrossName[]) {
+  const categories: NameCategory[] = ["Commercial", "Terpene-Inspired", "Breeder Tribute", "Keeper Weirdos"];
+  return categories
+    .map((category) => ({ category, names: names.filter((n) => n.category === category) }))
+    .filter((group) => group.names.length > 0);
+}
+
+export function copyReportText(parentA: Seed, parentB: Seed, report: CrossReport, names: CrossName[]) {
+  return [
+    `${parentA.name} × ${parentB.name}`,
+    `Cross potential: ${report.scores.overall}/100`,
+    report.profile.summary,
+    `Flavors: ${report.profile.flavors.join(", ") || "unknown"}`,
+    `Terpenes: ${report.profile.terpenes.map((t) => `${t.info.name} ${t.share}%`).join(", ") || "unknown"}`,
+    `Breeder note: ${report.breederNote}`,
+    "Names:",
+    ...names.map((n) => `- ${n.name} (${n.category})`),
+  ].join("\n");
+}
+
+export function crossKey(parentA: Seed, parentB: Seed) {
+  return [parentA.id, parentB.id].sort().join("::");
+}
+
+export function getSeedById(id: string, seeds: Seed[]) {
+  return seeds.find((seed) => seed.id === id) ?? null;
 }

@@ -8,9 +8,11 @@ import {
   FlaskConical,
   Heart,
   Leaf,
+  Moon,
   PackagePlus,
   Save,
   Sparkles,
+  Sun,
   Target,
   Trash2,
   TreePine,
@@ -46,6 +48,7 @@ const FAVORITES_KEY = "crosslab:favorites";
 const JOURNAL_KEY = "crosslab:journal";
 const CUSTOM_SEEDS_KEY = "crosslab:ethos-multipass";
 const SEED_COUNTS_KEY = "crosslab:seed-counts";
+const THEME_KEY = "crosslab:theme";
 const MULTIPASS_BREEDER = "Ethos Multipass";
 
 type FavoriteName = {
@@ -200,6 +203,11 @@ const Index = () => {
   const [parentB, setParentB] = useState<Seed | null>(null);
   const [salt, setSalt] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
+  const [isDark, setIsDark] = useState(() =>
+    typeof window !== "undefined" &&
+    (window.localStorage.getItem(THEME_KEY) === "dark" ||
+      (!window.localStorage.getItem(THEME_KEY) && window.matchMedia("(prefers-color-scheme: dark)").matches)),
+  );
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
   const [multipassName, setMultipassName] = useState("");
   const [multipassCount, setMultipassCount] = useState("");
@@ -216,6 +224,11 @@ const Index = () => {
   const [journal, setJournal] = useState<JournalEntry[]>(() =>
     loadStored<JournalEntry[]>(JOURNAL_KEY, []),
   );
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    window.localStorage.setItem(THEME_KEY, isDark ? "dark" : "light");
+  }, [isDark]);
 
   useEffect(() => {
     window.localStorage.setItem(CUSTOM_SEEDS_KEY, JSON.stringify(customSeeds));
@@ -410,6 +423,15 @@ const Index = () => {
               {favorites.length} favorites
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsDark((value) => !value)}
+            className="ml-3 inline-flex h-11 w-11 items-center justify-center rounded-2xl border-2 border-border bg-card text-foreground shadow-sm transition-colors hover:border-primary hover:text-primary"
+            aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          >
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
         </div>
       </header>
 

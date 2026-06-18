@@ -15,7 +15,7 @@ const Index = () => {
 
   const names = useMemo(() => {
     if (!parentA || !parentB) return [];
-    return generateCrossNames(parentA.name, parentB.name, salt);
+    return generateCrossNames(parentA, parentB, salt);
   }, [parentA, parentB, salt]);
 
   const surprise = () => {
@@ -131,24 +131,29 @@ const Index = () => {
               </span>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
-              {names.map((name, i) => (
+              {names.map((item, i) => (
                 <button
-                  key={name}
-                  onClick={() => copy(name)}
-                  className="group flex items-center justify-between gap-3 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
+                  key={item.name}
+                  onClick={() => copy(item.name)}
+                  className="group flex items-start justify-between gap-3 rounded-2xl border-2 border-border bg-card p-4 text-left transition-all hover:-translate-y-0.5 hover:border-primary hover:shadow-md"
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-accent">
+                  <div className="flex items-start gap-3">
+                    <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary font-display text-sm font-bold text-accent">
                       {i + 1}
                     </span>
-                    <span className="font-display text-lg font-bold leading-tight">
-                      {name}
+                    <span className="flex flex-col gap-1">
+                      <span className="font-display text-lg font-bold leading-tight">
+                        {item.name}
+                      </span>
+                      <span className="text-xs leading-snug text-muted-foreground">
+                        {item.note}
+                      </span>
                     </span>
                   </div>
-                  {copied === name ? (
-                    <Check className="h-4 w-4 shrink-0 text-primary" />
+                  {copied === item.name ? (
+                    <Check className="mt-1 h-4 w-4 shrink-0 text-primary" />
                   ) : (
-                    <Copy className="h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
+                    <Copy className="mt-1 h-4 w-4 shrink-0 text-muted-foreground opacity-0 transition-opacity group-hover:opacity-100" />
                   )}
                 </button>
               ))}

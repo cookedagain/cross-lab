@@ -56,6 +56,51 @@ const ToggleChip = ({ goal, active, onClick }: { goal: TraitGoal; active: boolea
   </button>
 );
 
+type SeedTypeAdvice = {
+  pollen: string;
+  seed: string;
+  watch: string;
+};
+
+const SEED_TYPE_ADVICE: Record<SeedType, SeedTypeAdvice> = {
+  Regular: {
+    pollen: "Best pollen path: regular seed stock is the natural donor pool. Hunt for a strong male expression, then only keep donors that match your structure, vigor, aroma-stem, and lineage goals.",
+    seed: "Best seed path: use a selected female as the receiver and a selected male as the donor. Expect mixed-sex offspring, which is useful when you want future pollen options.",
+    watch: "Watch-outs: space is needed to sex and sort plants; avoid using a male just because it is male.",
+  },
+  Feminized: {
+    pollen: "Best pollen path: fem stock is usually better treated as the seed parent. Feminized pollen requires reversal work, so keep that as an advanced, legal-compliance-only option rather than the default plan.",
+    seed: "Best seed path: use the fem as the receiver when you want to preserve or combine a known female line without hunting males from that pack.",
+    watch: "Watch-outs: do not spend low-count fem stock casually; preserve-first logic matters unless it is Burn Pile.",
+  },
+  Autoflower: {
+    pollen: "Best pollen path: auto donors need early planning because the clock is fixed. Auto × auto is the cleanest route when the goal is auto offspring.",
+    seed: "Best seed path: use autos when speed and compact plants matter. If crossed to photoperiods, expect the auto trait to need later selection before it is reliable.",
+    watch: "Watch-outs: less time to evaluate a plant before breeding decisions; keep notes tight and avoid overcommitting rare auto stock.",
+  },
+  "Unknown Photo": {
+    pollen: "Best pollen path: treat unknown-photo stock as unproven until sex is confirmed. It may become a donor, receiver, or cull depending on what it shows.",
+    seed: "Best seed path: use only after the plant proves it has a reason to stay in the project.",
+    watch: "Watch-outs: unknown sex means unknown workflow; keep expectations loose until the plant declares itself.",
+  },
+};
+
+const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
+  if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
+    return "Burn Pile involved: treat any pollen or seed work as a rare one-off experiment, not preservation work.";
+  }
+  if (parentA.type === "Regular" || parentB.type === "Regular") {
+    return "Regular stock gives the most straightforward path to true male pollen and mixed-sex seed lots.";
+  }
+  if (parentA.type === "Autoflower" || parentB.type === "Autoflower") {
+    return "Auto genetics are best used intentionally: auto × auto for auto-focused work, photo × auto only if you are prepared for later selection.";
+  }
+  if (parentA.type === "Feminized" && parentB.type === "Feminized") {
+    return "Fem × fem is best viewed as female-line combining unless you deliberately choose advanced reversal work.";
+  }
+  return "Confirm sex and project value before deciding which plant should donate pollen or receive seed.";
+};
+
 const Index = () => {
   const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
   const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
@@ -194,18 +239,43 @@ const Index = () => {
           </div>
 
           {parentA && parentB && (
-            <div className="mt-5 grid gap-3 rounded-3xl bg-muted/50 p-4 sm:grid-cols-2">
-              {[parentA, parentB].map((seed) => (
-                <div key={seed.id} className="rounded-2xl bg-card p-4">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <p className="font-display text-lg font-bold leading-tight">{seed.name}</p>
-                    <TypeBadge type={seed.type} />
+            <div className="mt-5 space-y-3 rounded-3xl bg-muted/50 p-4">
+              <div className="grid gap-3 sm:grid-cols-2">
+                {[parentA, parentB].map((seed) => (
+                  <div key={seed.id} className="rounded-2xl bg-card p-4">
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <p className="font-display text-lg font-bold leading-tight">{seed.name}</p>
+                      <TypeBadge type={seed.type} />
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {seed.breeder} · {seed.type} · {seed.count ?? 0} seeds
+                    </p>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {seed.breeder} · {seed.type} · {seed.count ?? 0} seeds
-                  </p>
+                ))}
+              </div>
+
+              <div className="rounded-2xl border border-primary/20 bg-card p-4">
+                <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Pollen / seed route advice</p>
+                <p className="text-sm font-semibold leading-relaxed">{getPairingAdvice(parentA, parentB)}</p>
+                <div className="mt-4 grid gap-3 lg:grid-cols-2">
+                  {[parentA, parentB].map((seed) => {
+                    const advice = SEED_TYPE_ADVICE[seed.type];
+                    return (
+                      <div key={`${seed.id}-advice`} className="rounded-2xl bg-muted/70 p-4">
+                        <div className="mb-3 flex items-center justify-between gap-2">
+                          <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
+                          <TypeBadge type={seed.type} />
+                        </div>
+                        <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
+                          <p><span className="font-bold text-foreground">Pollen:</span> {advice.pollen}</p>
+                          <p><span className="font-bold text-foreground">Seeds:</span> {advice.seed}</p>
+                          <p><span className="font-bold text-foreground">Watch:</span> {advice.watch}</p>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
+              </div>
             </div>
           )}
 

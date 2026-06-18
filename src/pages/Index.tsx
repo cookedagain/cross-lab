@@ -18,7 +18,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import SeedSelect from "@/components/SeedSelect";
-import { SEEDS, type Seed } from "@/data/seeds";
+import {
+  BURN_PILE_TOTAL,
+  DEFAULT_SEED_COUNTS,
+  GRAND_TOTAL,
+  MAIN_VAULT_TOTAL,
+  SEEDS,
+  VAULT_TOTALS,
+  type Seed,
+} from "@/data/seeds";
 import {
   TRAIT_GOALS,
   copyReportText,
@@ -82,10 +90,6 @@ function stockStatus(count: number | undefined) {
   if (count <= 3) return { label: "Preserve", tone: "bg-red-100 text-red-700", advice: "3 or fewer seeds — keep or hunt before breeding." };
   if (count <= 6) return { label: "Cautious", tone: "bg-amber-100 text-amber-800", advice: "Limited stock — breed only if the cross is a priority." };
   return { label: "Breed", tone: "bg-primary/10 text-primary", advice: "Good stock level for breeding work." };
-}
-
-function totalKnownSeeds(counts: Record<string, number>) {
-  return Object.values(counts).reduce((sum, count) => sum + count, 0);
 }
 
 const ScoreBar = ({ label, value }: { label: string; value: number }) => (
@@ -202,9 +206,10 @@ const Index = () => {
   const [customSeeds, setCustomSeeds] = useState<Seed[]>(() =>
     loadStored<Seed[]>(CUSTOM_SEEDS_KEY, []),
   );
-  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() =>
-    loadStored<Record<string, number>>(SEED_COUNTS_KEY, {}),
-  );
+  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => ({
+    ...DEFAULT_SEED_COUNTS,
+    ...loadStored<Record<string, number>>(SEED_COUNTS_KEY, {}),
+  }));
   const [favorites, setFavorites] = useState<FavoriteName[]>(() =>
     loadStored<FavoriteName[]>(FAVORITES_KEY, []),
   );
@@ -237,7 +242,7 @@ const Index = () => {
     const breedable = knownIds.filter((seed) => seedCounts[seed.id] > 6).length;
     return {
       totalStrains: allSeeds.length,
-      knownSeeds: totalKnownSeeds(seedCounts),
+      knownSeeds: allSeeds.reduce((sum, seed) => sum + (seedCounts[seed.id] ?? 0), 0),
       unknown: allSeeds.length - knownIds.length,
       preserve,
       cautious,
@@ -283,6 +288,7 @@ const Index = () => {
       id: `ethos-multipass-${makeId()}-${name}`,
       name,
       breeder: MULTIPASS_BREEDER,
+      count,
     };
     setCustomSeeds((list) => [seed, ...list]);
     setSeedCounts((counts) => ({ ...counts, [seed.id]: count }));
@@ -398,6 +404,9 @@ const Index = () => {
               {inventory.totalStrains} strains
             </span>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+              {inventory.knownSeeds} seeds
+            </span>
+            <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-semibold text-accent">
               {favorites.length} favorites
             </span>
           </div>
@@ -484,9 +493,21 @@ const Index = () => {
             <div>
               <h2 className="font-display text-xl font-bold">Ethos Multipass & seed counts</h2>
               <p className="text-sm text-muted-foreground">
-                Add Multipass strains and count stock. Unknown counts are treated as preserve-first.
+                Updated vault loaded: {MAIN_VAULT_TOTAL} main-vault seeds + {BURN_PILE_TOTAL} burn-pile seeds = {GRAND_TOTAL} total.
+                Unknown custom counts are treated as preserve-first.
               </p>
             </div>
+          </div>
+
+          <div className="mb-5 flex flex-wrap gap-2">
+            {VAULT_TOTALS.map((group) => (
+              <span
+                key={group.breeder}
+                className="rounded-full bg-muted px-3 py-1 text-xs font-semibold text-muted-foreground"
+              >
+                {group.breeder}: {group.total}
+              </span>
+            ))}
           </div>
 
           <div className="grid gap-3 sm:grid-cols-5">

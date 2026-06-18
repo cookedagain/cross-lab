@@ -24,6 +24,7 @@ type Props = {
   onChange: (seed: Seed) => void;
   seeds?: Seed[];
   seedCounts?: Record<string, number>;
+  title?: string;
 };
 
 const accentStyles = {
@@ -52,6 +53,7 @@ const SeedSelect = ({
   onChange,
   seeds = SEEDS,
   seedCounts = {},
+  title,
 }: Props) => {
   const [open, setOpen] = useState(false);
   const styles = accentStyles[accent];
@@ -72,7 +74,7 @@ const SeedSelect = ({
           {label}
         </span>
         <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          Parent {label}
+          {title ?? `Parent ${label}`}
         </span>
       </div>
 

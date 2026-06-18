@@ -37,6 +37,7 @@ import {
   generateCrossNames,
   getCrossReport,
   getSeedById,
+  getSingleSeedProfile,
   groupNamesByCategory,
   type CrossName,
   type CrossReport,
@@ -202,6 +203,7 @@ const TerpenePanel = ({ report }: { report: CrossReport }) => (
 const Index = () => {
   const [parentA, setParentA] = useState<Seed | null>(null);
   const [parentB, setParentB] = useState<Seed | null>(null);
+  const [singleSeed, setSingleSeed] = useState<Seed | null>(null);
   const [salt, setSalt] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
   const [isDark, setIsDark] = useState(() =>
@@ -274,6 +276,11 @@ const Index = () => {
     if (!parentA || !parentB) return null;
     return getCrossReport(parentA, parentB, selectedGoals);
   }, [parentA, parentB, selectedGoals]);
+
+  const singleProfile = useMemo(() => {
+    if (!singleSeed) return null;
+    return getSingleSeedProfile(singleSeed);
+  }, [singleSeed]);
 
   const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
   const ready = Boolean(parentA && parentB);
@@ -615,6 +622,115 @@ const Index = () => {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-2">
+            <Leaf className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="font-display text-xl font-bold">Single seed profile</h2>
+              <p className="text-sm text-muted-foreground">
+                Inspect one seed on its own for terpene clues, heritage, breeder context and stock status.
+              </p>
+            </div>
+          </div>
+
+          <SeedSelect
+            label="1"
+            title="Single seed"
+            accent="green"
+            value={singleSeed}
+            onChange={setSingleSeed}
+            seeds={allSeeds}
+            seedCounts={seedCounts}
+          />
+
+          {singleProfile && singleSeed && (
+            <div className="mt-5 grid gap-4 lg:grid-cols-[1fr_1.2fr]">
+              <div className="rounded-3xl border border-border bg-background p-5">
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">{singleSeed.breeder}</p>
+                    <h3 className="font-display text-2xl font-black leading-tight">{singleSeed.name}</h3>
+                  </div>
+                  {(() => {
+                    const status = stockStatus(seedCounts[singleSeed.id]);
+                    return (
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-bold uppercase ${status.tone}`}>
+                        {status.label}
+                      </span>
+                    );
+                  })()}
+                </div>
+                <p className="text-sm leading-relaxed text-foreground/80">{singleProfile.terpeneBlurb}</p>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{singleProfile.breederBlurb}</p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {singleProfile.flags.map((flag) => (
+                    <span key={flag} className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
+                      {flag}
+                    </span>
+                  ))}
+                  {singleProfile.goals.map((goal) => (
+                    <span key={goal} className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                      {goal}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-3xl border border-border bg-background p-5">
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <FlaskConical className="h-4 w-4 text-primary" />
+                      <h3 className="font-display text-lg font-bold">Terpene cues</h3>
+                    </div>
+                    {singleProfile.terpenes.length > 0 ? (
+                      <div className="space-y-3">
+                        {singleProfile.terpenes.map((t) => (
+                          <div key={t.key}>
+                            <div className="mb-1 flex items-center justify-between gap-2 text-xs">
+                              <span className="font-semibold">{t.info.name}</span>
+                              <span className="text-muted-foreground">{t.share}%</span>
+                            </div>
+                            <div className="h-2 overflow-hidden rounded-full bg-muted">
+                              <div className="h-full rounded-full" style={{ width: `${t.share}%`, backgroundColor: t.info.color }} />
+                            </div>
+                            <p className="mt-1 text-[11px] text-muted-foreground">{t.info.aroma} · {t.info.effect}</p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-muted-foreground">No strong terpene tags detected from the name yet.</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <div className="mb-3 flex items-center gap-2">
+                      <TreePine className="h-4 w-4 text-primary" />
+                      <h3 className="font-display text-lg font-bold">Heritage</h3>
+                    </div>
+                    <div className="space-y-2">
+                      {singleProfile.heritage.map((piece) => (
+                        <div key={piece} className="rounded-2xl bg-muted px-3 py-2 text-sm font-medium">
+                          {piece}
+                        </div>
+                      ))}
+                    </div>
+                    {singleProfile.flavors.length > 0 && (
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {singleProfile.flavors.map((flavor) => (
+                          <span key={flavor} className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground">
+                            {flavor}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
           )}
         </section>

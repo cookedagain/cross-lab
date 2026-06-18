@@ -386,6 +386,17 @@ export type GrowthEstimate = {
   note: string;
 };
 
+export type SingleSeedProfile = {
+  seed: Seed;
+  terpenes: TerpeneStat[];
+  flavors: string[];
+  heritage: string[];
+  breederBlurb: string;
+  terpeneBlurb: string;
+  flags: string[];
+  goals: TraitGoal[];
+};
+
 export type CrossReport = {
   profile: CrossProfile;
   scores: CrossScores;
@@ -427,6 +438,47 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
       note: `High-power estimate. Larger phenos may push beyond this if haze, diesel, Durban or heavy-yield influence dominates.${autoNote}${mutantNote}`,
     },
   ];
+}
+
+export function getSingleSeedProfile(seed: Seed): SingleSeedProfile {
+  const profile = buildProfile(seed);
+  const counts = new Map<TerpeneKey, number>();
+  for (const terpene of profile.terpenes) {
+    counts.set(terpene, (counts.get(terpene) ?? 0) + 1);
+  }
+
+  const total = Array.from(counts.values()).reduce((sum, value) => sum + value, 0) || 1;
+  const terpenes: TerpeneStat[] = Array.from(counts.entries())
+    .map(([key, value]) => ({
+      key,
+      info: TERPENES[key],
+      share: Math.round((value / total) * 100),
+    }))
+    .sort((a, b) => b.share - a.share)
+    .slice(0, 4);
+
+  const dominant = terpenes[0]?.info;
+  const heritage = splitLineage(seed.name);
+  const flags = detectFlags(seed);
+  const flavorText = profile.terps.length ? profile.terps.slice(0, 4).join(", ") : "less obvious from name alone";
+  const terpeneBlurb = dominant
+    ? `${seed.name} looks ${dominant.name}-leaning from its name cues, suggesting ${dominant.aroma} notes and a ${dominant.effect} style expression. Expected flavor direction: ${flavorText}.`
+    : `${seed.name} does not expose a strong terpene cue from its name, so treat this as a hunt-first seed and log notes from actual phenos.`;
+
+  const breederBlurb = `${seed.breeder} entry${heritage.length > 1 ? ` built from ${heritage.join(" × ")}` : ""}. ${
+    flags.length ? `Detected markers: ${flags.join(", ")}.` : "No special auto/mutant/BX/S-line markers detected from the name."
+  }`;
+
+  return {
+    seed,
+    terpenes,
+    flavors: profile.terps,
+    heritage,
+    breederBlurb,
+    terpeneBlurb,
+    flags,
+    goals: profile.goals,
+  };
 }
 
 export function getCrossProfile(parentA: Seed, parentB: Seed): CrossProfile {

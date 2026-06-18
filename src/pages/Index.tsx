@@ -87,7 +87,7 @@ const SEED_TYPE_ADVICE: Record<SeedType, SeedTypeAdvice> = {
 
 const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
   if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
-    return "Burn Pile involved: treat any pollen or seed work as a rare one-off experiment, not preservation work.";
+    return "Burn Pile involved: one-and-only run only. Do not plan pollen, seed making, preservation, or breeding work from white-label / potentially mislabelled stock.";
   }
   if (parentA.type === "Regular" || parentB.type === "Regular") {
     return "Regular stock gives the most straightforward path to true male pollen and mixed-sex seed lots.";
@@ -130,9 +130,9 @@ const getKeeperPriority = (seed: Seed): KeeperPriority => {
       score: 0,
       level: "Utility",
       tone: "bg-orange-50 text-orange-800 border-orange-200",
-      reasons: ["Burn Pile utility stock"],
-      seedPlan: "Do not preserve by default; only keep seed from it if the plant unexpectedly earns a specific use.",
-      pollenPlan: "Avoid saving pollen unless it shows something unusually useful and you already have a planned one-off receiver.",
+      reasons: ["one-and-only run", "white-label / potentially mislabelled", "not breeding stock"],
+      seedPlan: "Do not keep seed from Burn Pile plants. Run once for testing/smoke only, then close it out.",
+      pollenPlan: "Do not save pollen from Burn Pile plants; the label confidence is too low to justify breeding work.",
     };
   }
 
@@ -197,8 +197,9 @@ const getPairingTips = (parentA: Seed, parentB: Seed) => {
   const types = new Set([parentA.type, parentB.type]);
   if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
     return [
-      "Keep the run small and intentional; Burn Pile should not consume rare keeper space.",
-      "Only keep seed if the outcome has a clear job, such as testing vigor, speed, or a one-off trait.",
+      "Treat the Burn Pile plant as a one-and-only run: grow it, evaluate it, consume or discard it, and do not carry it forward.",
+      "Do not keep pollen or make seed from it; white-label / potentially mislabelled stock is not reliable enough for your breeding map.",
+      "If a non-Burn-Pile parent is valuable, protect that parent and do not spend it on Burn Pile work.",
     ];
   }
   if (types.has("Regular")) {
@@ -353,7 +354,7 @@ const Index = () => {
               <div>
                 <p className="font-bold">Burn Pile rule</p>
                 <p className="mt-1 text-sm leading-relaxed">
-                  Burn Pile seeds are utility stock. They can be grown, failed, tossed, or very rarely bred if something earns the space — they are not preservation candidates.
+                  Burn Pile seeds are one-and-only runs. They can be grown, failed, tossed, smoked/tested, or closed out — but they are white-label / potentially mislabelled stock, so they are not breeding, pollen, seed-making, or preservation candidates.
                 </p>
               </div>
             </div>
@@ -421,7 +422,13 @@ const Index = () => {
                 <p className="text-sm font-semibold leading-relaxed">{getPairingAdvice(parentA, parentB)}</p>
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                   {[parentA, parentB].map((seed) => {
-                    const advice = SEED_TYPE_ADVICE[seed.type];
+                    const advice = seed.breeder === "Burn Pile"
+                      ? {
+                          ...SEED_TYPE_ADVICE[seed.type],
+                          pollen: "Burn Pile route: one-and-only run only. Do not collect pollen or make seeds from white-label / potentially mislabelled stock.",
+                          watch: "Watch-outs: evaluate only as personal smoke/test stock; do not use it as breeding evidence or preservation material.",
+                        }
+                      : SEED_TYPE_ADVICE[seed.type];
                     const priority = getKeeperPriority(seed);
                     return (
                       <div key={`${seed.id}-advice`} className="rounded-2xl bg-muted/70 p-4">

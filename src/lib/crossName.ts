@@ -467,9 +467,9 @@ function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecomm
   if (seed.breeder === "Burn Pile") {
     return {
       priority: "Low",
-      title: "Utility / burn-pile stock",
-      note: `${seed.name} is in the Burn Pile. It does not need preservation pressure — grow it, discard it, or use it experimentally if it earns the space.`,
-      caution: "Breeding from Burn Pile should stay rare and intentional; treat any useful result as a bonus, not a project priority.",
+      title: "One-and-only burn-pile run",
+      note: `${seed.name} is in the Burn Pile. Run it once as smoke/test stock only, then close it out; it is not a preservation or breeding candidate.`,
+      caution: "Do not save pollen or make seed from Burn Pile plants. White-label / potentially mislabelled stock is too unreliable for the breeding map.",
     };
   }
 
@@ -625,7 +625,7 @@ export function getCrossReport(
   const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
   const includesBurnPile = parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile";
   if (includesBurnPile) {
-    geneticNotes.push({ label: "Burn Pile utility", note: "This pairing includes Burn Pile stock. Treat it as experimental/disposable material; breeding from it should be rare, intentional, and never a preservation priority." });
+    geneticNotes.push({ label: "Burn Pile one-and-done", note: "This pairing includes Burn Pile stock. Treat it as a one-and-only smoke/test run; do not save pollen, make seed, or use it for breeding because the source is white-label / potentially mislabelled." });
   }
   if (flags.includes("Auto")) {
     geneticNotes.push({ label: "Auto traits", note: "Auto genetics detected. Expect segregation unless the auto trait is selected and stabilized in later generations." });
@@ -647,7 +647,7 @@ export function getCrossReport(
   }
 
   const breederNote = includesBurnPile
-    ? `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions, but it includes Burn Pile stock. Treat it as a low-stakes utility experiment: fine to grow, fail, discard, or very occasionally breed if it clearly earns the space.`
+    ? `This pairing includes Burn Pile stock. Treat it as a one-and-only smoke/test run only: grow it, fail it, toss it, or consume it, but do not save pollen, make seeds, preserve it, or use it for breeding because the source is white-label / potentially mislabelled.`
     : `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions. ${parentA.breeder === parentB.breeder ? `Both parents come from ${parentA.breeder}, so the naming and selection can stay close to that breeder's style.` : `It combines ${parentA.breeder}'s ${shortName(parentA.name)} with ${parentB.breeder}'s ${shortName(parentB.name)}, which should make the hunt more varied and brandable.`}`;
 
   return {

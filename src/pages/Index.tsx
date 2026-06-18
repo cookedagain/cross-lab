@@ -1,10 +1,10 @@
 import { useMemo, useState } from "react";
-import { Copy, Dices, Leaf, Sparkles, Check } from "lucide-react";
+import { Copy, Dices, Leaf, Sparkles, Check, FlaskConical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import SeedSelect from "@/components/SeedSelect";
 import { SEEDS, type Seed } from "@/data/seeds";
-import { generateCrossNames } from "@/lib/crossName";
+import { generateCrossNames, getCrossProfile } from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const Index = () => {
@@ -17,6 +17,11 @@ const Index = () => {
     if (!parentA || !parentB) return [];
     return generateCrossNames(parentA, parentB, salt);
   }, [parentA, parentB, salt]);
+
+  const profile = useMemo(() => {
+    if (!parentA || !parentB) return null;
+    return getCrossProfile(parentA, parentB);
+  }, [parentA, parentB]);
 
   const surprise = () => {
     const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
@@ -120,6 +125,79 @@ const Index = () => {
             </Button>
           </div>
         </div>
+
+        {/* Terpene profile */}
+        {ready && profile && (
+          <div className="mt-8 rounded-3xl border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+            <div className="mb-4 flex items-center gap-2">
+              <span className="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-secondary text-accent">
+                <FlaskConical className="h-4 w-4" />
+              </span>
+              <h2 className="font-display text-lg font-bold">
+                Expected terpene profile
+              </h2>
+            </div>
+
+            <p className="mb-5 text-sm text-foreground/80">{profile.summary}</p>
+
+            {profile.terpenes.length > 0 ? (
+              <div className="space-y-3">
+                {profile.terpenes.map((t) => (
+                  <div key={t.key}>
+                    <div className="mb-1 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="h-3 w-3 rounded-full"
+                          style={{ backgroundColor: t.info.color }}
+                        />
+                        <span className="text-sm font-semibold">
+                          {t.info.name}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {t.info.aroma} · {t.info.effect}
+                        </span>
+                      </div>
+                      <span className="text-xs font-semibold text-muted-foreground">
+                        {t.share}%
+                      </span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+                      <div
+                        className="h-full rounded-full transition-all"
+                        style={{
+                          width: `${t.share}%`,
+                          backgroundColor: t.info.color,
+                        }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Not enough flavor data on these parents to estimate terpenes.
+              </p>
+            )}
+
+            {profile.flavors.length > 0 && (
+              <div className="mt-5 flex flex-wrap gap-2">
+                {profile.flavors.map((f) => (
+                  <span
+                    key={f}
+                    className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-secondary-foreground"
+                  >
+                    {f}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <p className="mt-4 text-[11px] leading-snug text-muted-foreground">
+              Estimated from parent flavors — actual terpenes vary by phenotype
+              and grow.
+            </p>
+          </div>
+        )}
 
         {/* Results */}
         {ready && names.length > 0 && (

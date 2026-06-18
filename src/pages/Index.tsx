@@ -8,9 +8,11 @@ import {
   FlaskConical,
   Heart,
   Leaf,
+  PackagePlus,
   Save,
   Sparkles,
   Target,
+  Trash2,
   TreePine,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -34,6 +36,9 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const FAVORITES_KEY = "crosslab:favorites";
 const JOURNAL_KEY = "crosslab:journal";
+const CUSTOM_SEEDS_KEY = "crosslab:ethos-multipass";
+const SEED_COUNTS_KEY = "crosslab:seed-counts";
+const MULTIPASS_BREEDER = "Ethos Multipass";
 
 type FavoriteName = {
   id: string;
@@ -70,6 +75,17 @@ function loadStored<T>(key: string, fallback: T): T {
 
 function makeId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function stockStatus(count: number | undefined) {
+  if (count === undefined) return { label: "Unknown", tone: "bg-muted text-muted-foreground", advice: "Treat as preserve-first until counted." };
+  if (count <= 3) return { label: "Preserve", tone: "bg-red-100 text-red-700", advice: "3 or fewer seeds — keep or hunt before breeding." };
+  if (count <= 6) return { label: "Cautious", tone: "bg-amber-100 text-amber-800", advice: "Limited stock — breed only if the cross is a priority." };
+  return { label: "Breed", tone: "bg-primary/10 text-primary", advice: "Good stock level for breeding work." };
+}
+
+function totalKnownSeeds(counts: Record<string, number>) {
+  return Object.values(counts).reduce((sum, count) => sum + count, 0);
 }
 
 const ScoreBar = ({ label, value }: { label: string; value: number }) => (
@@ -181,6 +197,14 @@ const Index = () => {
   const [salt, setSalt] = useState(0);
   const [copied, setCopied] = useState<string | null>(null);
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+  const [multipassName, setMultipassName] = useState("");
+  const [multipassCount, setMultipassCount] = useState("");
+  const [customSeeds, setCustomSeeds] = useState<Seed[]>(() =>
+    loadStored<Seed[]>(CUSTOM_SEEDS_KEY, []),
+  );
+  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() =>
+    loadStored<Record<string, number>>(SEED_COUNTS_KEY, {}),
+  );
   const [favorites, setFavorites] = useState<FavoriteName[]>(() =>
     loadStored<FavoriteName[]>(FAVORITES_KEY, []),
   );
@@ -189,12 +213,38 @@ const Index = () => {
   );
 
   useEffect(() => {
+    window.localStorage.setItem(CUSTOM_SEEDS_KEY, JSON.stringify(customSeeds));
+  }, [customSeeds]);
+
+  useEffect(() => {
+    window.localStorage.setItem(SEED_COUNTS_KEY, JSON.stringify(seedCounts));
+  }, [seedCounts]);
+
+  useEffect(() => {
     window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
   }, [favorites]);
 
   useEffect(() => {
     window.localStorage.setItem(JOURNAL_KEY, JSON.stringify(journal));
   }, [journal]);
+
+  const allSeeds = useMemo(() => [...SEEDS, ...customSeeds], [customSeeds]);
+
+  const inventory = useMemo(() => {
+    const knownIds = allSeeds.filter((seed) => seedCounts[seed.id] !== undefined);
+    const preserve = knownIds.filter((seed) => seedCounts[seed.id] <= 3).length;
+    const cautious = knownIds.filter((seed) => seedCounts[seed.id] > 3 && seedCounts[seed.id] <= 6).length;
+    const breedable = knownIds.filter((seed) => seedCounts[seed.id] > 6).length;
+    return {
+      totalStrains: allSeeds.length,
+      knownSeeds: totalKnownSeeds(seedCounts),
+      unknown: allSeeds.length - knownIds.length,
+      preserve,
+      cautious,
+      breedable,
+      multipass: customSeeds.length,
+    };
+  }, [allSeeds, customSeeds.length, seedCounts]);
 
   const names = useMemo(() => {
     if (!parentA || !parentB) return [];
@@ -210,12 +260,52 @@ const Index = () => {
   const ready = Boolean(parentA && parentB);
 
   const surprise = () => {
-    const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    let b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    while (b.id === a.id) b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    const a = allSeeds[Math.floor(Math.random() * allSeeds.length)];
+    let b = allSeeds[Math.floor(Math.random() * allSeeds.length)];
+    while (b.id === a.id) b = allSeeds[Math.floor(Math.random() * allSeeds.length)];
     setParentA(a);
     setParentB(b);
     setSalt((s) => s + 1);
+  };
+
+  const addMultipassSeed = () => {
+    const name = multipassName.trim();
+    const count = Number(multipassCount);
+    if (!name) {
+      toast.error("Add a strain name first");
+      return;
+    }
+    if (!Number.isFinite(count) || count < 0) {
+      toast.error("Seed count must be 0 or higher");
+      return;
+    }
+    const seed: Seed = {
+      id: `ethos-multipass-${makeId()}-${name}`,
+      name,
+      breeder: MULTIPASS_BREEDER,
+    };
+    setCustomSeeds((list) => [seed, ...list]);
+    setSeedCounts((counts) => ({ ...counts, [seed.id]: count }));
+    setMultipassName("");
+    setMultipassCount("");
+    toast.success("Ethos Multipass strain added", { description: `${name} · ${count} seeds` });
+  };
+
+  const updateSeedCount = (seed: Seed, value: string) => {
+    const count = Number(value);
+    if (!Number.isFinite(count) || count < 0) return;
+    setSeedCounts((counts) => ({ ...counts, [seed.id]: count }));
+  };
+
+  const removeMultipassSeed = (seed: Seed) => {
+    setCustomSeeds((list) => list.filter((item) => item.id !== seed.id));
+    setSeedCounts((counts) => {
+      const next = { ...counts };
+      delete next[seed.id];
+      return next;
+    });
+    if (parentA?.id === seed.id) setParentA(null);
+    if (parentB?.id === seed.id) setParentB(null);
   };
 
   const copy = async (value: string, description = value) => {
@@ -280,8 +370,8 @@ const Index = () => {
   };
 
   const loadJournalEntry = (entry: JournalEntry) => {
-    setParentA(getSeedById(entry.parentAId, SEEDS));
-    setParentB(getSeedById(entry.parentBId, SEEDS));
+    setParentA(getSeedById(entry.parentAId, allSeeds));
+    setParentB(getSeedById(entry.parentBId, allSeeds));
     setSalt((s) => s + 1);
   };
 
@@ -305,7 +395,7 @@ const Index = () => {
           </div>
           <div className="hidden items-center gap-2 sm:flex">
             <span className="rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-secondary-foreground">
-              {SEEDS.length} seeds
+              {inventory.totalStrains} strains
             </span>
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
               {favorites.length} favorites
@@ -331,13 +421,27 @@ const Index = () => {
 
         <section className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} />
+            <SeedSelect
+              label="A"
+              accent="green"
+              value={parentA}
+              onChange={setParentA}
+              seeds={allSeeds}
+              seedCounts={seedCounts}
+            />
             <div className="flex items-center justify-center">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-muted font-display text-lg font-bold text-muted-foreground">
                 ×
               </span>
             </div>
-            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} />
+            <SeedSelect
+              label="B"
+              accent="purple"
+              value={parentB}
+              onChange={setParentB}
+              seeds={allSeeds}
+              seedCounts={seedCounts}
+            />
           </div>
 
           <div className="mt-6 rounded-3xl bg-muted/60 p-4">
@@ -372,6 +476,103 @@ const Index = () => {
               Surprise me
             </Button>
           </div>
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-2">
+            <PackagePlus className="h-5 w-5 text-primary" />
+            <div>
+              <h2 className="font-display text-xl font-bold">Ethos Multipass & seed counts</h2>
+              <p className="text-sm text-muted-foreground">
+                Add Multipass strains and count stock. Unknown counts are treated as preserve-first.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-5">
+            <input
+              value={multipassName}
+              onChange={(event) => setMultipassName(event.target.value)}
+              placeholder="Multipass strain name"
+              className="rounded-2xl border-2 border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-primary sm:col-span-3"
+            />
+            <input
+              value={multipassCount}
+              onChange={(event) => setMultipassCount(event.target.value)}
+              placeholder="Seed count"
+              inputMode="numeric"
+              type="number"
+              min="0"
+              className="rounded-2xl border-2 border-input bg-background px-4 py-3 text-sm outline-none transition-colors focus:border-primary"
+            />
+            <Button className="h-12 rounded-2xl" onClick={addMultipassSeed}>
+              Add strain
+            </Button>
+          </div>
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <div className="rounded-2xl bg-muted p-4">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Strains logged</p>
+              <p className="font-display text-2xl font-black">{inventory.totalStrains}</p>
+            </div>
+            <div className="rounded-2xl bg-muted p-4">
+              <p className="text-xs font-bold uppercase text-muted-foreground">Known seed total</p>
+              <p className="font-display text-2xl font-black">{inventory.knownSeeds}</p>
+            </div>
+            <div className="rounded-2xl bg-red-50 p-4 text-red-700">
+              <p className="text-xs font-bold uppercase">Preserve first</p>
+              <p className="font-display text-2xl font-black">{inventory.preserve + inventory.unknown}</p>
+            </div>
+            <div className="rounded-2xl bg-amber-50 p-4 text-amber-800">
+              <p className="text-xs font-bold uppercase">Use cautiously</p>
+              <p className="font-display text-2xl font-black">{inventory.cautious}</p>
+            </div>
+            <div className="rounded-2xl bg-primary/10 p-4 text-primary">
+              <p className="text-xs font-bold uppercase">Breedable</p>
+              <p className="font-display text-2xl font-black">{inventory.breedable}</p>
+            </div>
+          </div>
+
+          {customSeeds.length > 0 && (
+            <div className="mt-5 grid gap-3 lg:grid-cols-2">
+              {customSeeds.map((seed) => {
+                const status = stockStatus(seedCounts[seed.id]);
+                return (
+                  <div key={seed.id} className="rounded-2xl border border-border bg-background p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="font-display text-lg font-bold">{seed.name}</p>
+                        <p className="text-xs text-muted-foreground">{MULTIPASS_BREEDER}</p>
+                      </div>
+                      <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${status.tone}`}>
+                        {status.label}
+                      </span>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2">
+                      <input
+                        value={seedCounts[seed.id] ?? ""}
+                        onChange={(event) => updateSeedCount(seed, event.target.value)}
+                        placeholder="Count"
+                        inputMode="numeric"
+                        type="number"
+                        min="0"
+                        className="w-28 rounded-xl border-2 border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+                      />
+                      <p className="flex-1 text-xs text-muted-foreground">{status.advice}</p>
+                      <button
+                        type="button"
+                        onClick={() => removeMultipassSeed(seed)}
+                        className="rounded-full bg-muted p-2 text-muted-foreground transition-colors hover:text-destructive"
+                        aria-label="Remove Multipass strain"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </section>
 
         {ready && parentA && parentB && report && (
@@ -410,6 +611,40 @@ const Index = () => {
                     Goal alignment: {report.matchedGoals.join(", ")}
                   </p>
                 )}
+              </div>
+
+              <div className="mt-6 rounded-3xl border border-border bg-background p-5">
+                <h3 className="mb-3 font-display text-lg font-bold">Breeding stock recommendation</h3>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[parentA, parentB].map((seed) => {
+                    const count = seedCounts[seed.id];
+                    const status = stockStatus(count);
+                    return (
+                      <div key={seed.id} className="rounded-2xl bg-muted p-4">
+                        <div className="mb-2 flex items-start justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-bold uppercase text-muted-foreground">{seed.name}</p>
+                            <p className="text-xs text-muted-foreground">{count === undefined ? "Unknown count" : `${count} seeds`}</p>
+                          </div>
+                          <span className={`rounded-full px-2 py-1 text-[10px] font-bold uppercase ${status.tone}`}>{status.label}</span>
+                        </div>
+                        <div className="mb-2 flex items-center gap-2">
+                          <input
+                            value={count ?? ""}
+                            onChange={(event) => updateSeedCount(seed, event.target.value)}
+                            placeholder="Count"
+                            inputMode="numeric"
+                            type="number"
+                            min="0"
+                            className="w-28 rounded-xl border-2 border-input bg-card px-3 py-2 text-sm outline-none focus:border-primary"
+                          />
+                          <span className="text-xs text-muted-foreground">Update stock</span>
+                        </div>
+                        <p className="text-xs leading-relaxed text-muted-foreground">{status.advice}</p>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-3">

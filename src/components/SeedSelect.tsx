@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Check, ChevronsUpDown, Sprout } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -22,24 +22,43 @@ type Props = {
   accent: "green" | "purple";
   value: Seed | null;
   onChange: (seed: Seed) => void;
+  seeds?: Seed[];
+  seedCounts?: Record<string, number>;
 };
 
 const accentStyles = {
   green: {
     ring: "border-primary/30 hover:border-primary",
     chip: "bg-primary text-primary-foreground",
-    dot: "bg-primary",
   },
   purple: {
     ring: "border-accent/30 hover:border-accent",
     chip: "bg-accent text-accent-foreground",
-    dot: "bg-accent",
   },
 };
 
-const SeedSelect = ({ label, accent, value, onChange }: Props) => {
+const countLabel = (seed: Seed, seedCounts: Record<string, number>) => {
+  const count = seedCounts[seed.id];
+  if (count === undefined) return "unknown stock";
+  if (count <= 3) return `${count} seeds · preserve`;
+  if (count <= 6) return `${count} seeds · cautious`;
+  return `${count} seeds · breedable`;
+};
+
+const SeedSelect = ({
+  label,
+  accent,
+  value,
+  onChange,
+  seeds = SEEDS,
+  seedCounts = {},
+}: Props) => {
   const [open, setOpen] = useState(false);
   const styles = accentStyles[accent];
+  const breeders = useMemo(() => {
+    const extra = seeds.map((seed) => seed.breeder).filter((b) => !BREEDERS.includes(b));
+    return [...BREEDERS.filter((b) => seeds.some((s) => s.breeder === b)), ...Array.from(new Set(extra))];
+  }, [seeds]);
 
   return (
     <div className="flex flex-col gap-2">
@@ -74,7 +93,7 @@ const SeedSelect = ({ label, accent, value, onChange }: Props) => {
                   {value.name}
                 </span>
                 <span className="truncate text-xs text-muted-foreground">
-                  {value.breeder}
+                  {value.breeder} · {countLabel(value, seedCounts)}
                 </span>
               </span>
             ) : (
@@ -98,12 +117,12 @@ const SeedSelect = ({ label, accent, value, onChange }: Props) => {
             <CommandInput placeholder="Search strains…" />
             <CommandList>
               <CommandEmpty>No seed found.</CommandEmpty>
-              {BREEDERS.map((breeder) => {
-                const seeds = SEEDS.filter((s) => s.breeder === breeder);
-                if (seeds.length === 0) return null;
+              {breeders.map((breeder) => {
+                const breederSeeds = seeds.filter((s) => s.breeder === breeder);
+                if (breederSeeds.length === 0) return null;
                 return (
                   <CommandGroup key={breeder} heading={breeder}>
-                    {seeds.map((seed) => (
+                    {breederSeeds.map((seed) => (
                       <CommandItem
                         key={seed.id}
                         value={`${seed.name} ${seed.breeder}`}
@@ -118,7 +137,12 @@ const SeedSelect = ({ label, accent, value, onChange }: Props) => {
                             value?.id === seed.id ? "opacity-100" : "opacity-0",
                           )}
                         />
-                        {seed.name}
+                        <span className="flex min-w-0 flex-col">
+                          <span className="truncate">{seed.name}</span>
+                          <span className="text-[11px] text-muted-foreground">
+                            {countLabel(seed, seedCounts)}
+                          </span>
+                        </span>
                       </CommandItem>
                     ))}
                   </CommandGroup>

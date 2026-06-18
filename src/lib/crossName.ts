@@ -184,6 +184,16 @@ const BREEDER_FLAIR: Record<string, string[]> = {
 
 const DESSERTS = ["Cake", "Sherbet", "Cream", "Pie", "Sundae", "Cobbler"];
 const EFFECTS = ["Punch", "Knockout", "Express", "Storm", "Royale", "Drip", "Velvet"];
+const RUNESCAPE_REFERENCES = [
+  "Lumbridge",
+  "Varrock",
+  "Falador",
+  "Abyssal Whip",
+  "Dragon Scimmy",
+  "Partyhat",
+  "Gnome Stronghold",
+  "Rune Plate",
+];
 
 function mulberry32(a: number) {
   return function () {
@@ -735,6 +745,20 @@ export function generateCrossNames(
 
   const seen = new Set<string>();
   const results: CrossName[] = [];
+  const rareRuneScapeRoll = Math.floor(rnd() * 512) === 0;
+
+  if (rareRuneScapeRoll) {
+    const reference = pick(RUNESCAPE_REFERENCES, rnd);
+    const parentWord = pick(rnd() > 0.5 ? aPool : bPool, rnd);
+    const name = `${reference} ${parentWord}`.replace(/\s+/g, " ").trim();
+    seen.add(name.toLowerCase());
+    results.push({
+      name,
+      category: "Keeper Weirdos",
+      note: "1/512 rare drop: a RuneScape easter egg rolled into this name set.",
+    });
+  }
+
   let attempts = 0;
   while (results.length < 10 && attempts < 220) {
     attempts++;

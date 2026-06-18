@@ -10,6 +10,7 @@ import {
   Leaf,
   Moon,
   PackagePlus,
+  Ruler,
   Save,
   Sparkles,
   Sun,
@@ -688,6 +689,38 @@ const Index = () => {
                     );
                   })}
                 </div>
+              </div>
+
+              <div className="mt-6 rounded-3xl border border-border bg-background p-5">
+                <div className="mb-3 flex items-center gap-2">
+                  <Ruler className="h-4 w-4 text-primary" />
+                  <h3 className="font-display text-lg font-bold">Estimated plant size by light power</h3>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {report.growthEstimates.map((estimate) => (
+                    <div key={estimate.wattage} className="rounded-2xl bg-muted p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-primary">{estimate.wattage}</p>
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Height</p>
+                          <p className="font-display text-lg font-black">
+                            {estimate.heightCm.min}–{estimate.heightCm.max}cm
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase text-muted-foreground">Width</p>
+                          <p className="font-display text-lg font-black">
+                            {estimate.widthCm.min}–{estimate.widthCm.max}cm
+                          </p>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-[11px] leading-relaxed text-muted-foreground">{estimate.note}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="mt-3 text-[11px] leading-snug text-muted-foreground">
+                  Estimates assume typical indoor expression; training, container size, veg time, phenotype and environment can shift final size.
+                </p>
               </div>
 
               <div className="mt-6 grid gap-4 sm:grid-cols-3">

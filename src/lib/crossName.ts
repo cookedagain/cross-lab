@@ -298,6 +298,24 @@ function detectFlags(seed: Seed): string[] {
   return unique(flags);
 }
 
+function growthVigor(seed: Seed): number {
+  const lower = seed.name.toLowerCase();
+  let score = 1;
+  if (lower.includes("auto")) score -= 0.18;
+  if (lower.includes("haze") || lower.includes("durban") || lower.includes("tangie") || lower.includes("nycd")) score += 0.18;
+  if (lower.includes("og") || lower.includes("kush") || lower.includes("afghan") || lower.includes("hash") || lower.includes("deep chunk")) score -= 0.08;
+  if (lower.includes("abc") || lower.includes("mutant")) score -= 0.12;
+  if (lower.includes("gorilla") || lower.includes("glue") || lower.includes("diesel")) score += 0.06;
+  return Math.min(1.25, Math.max(0.72, score));
+}
+
+function range(min: number, max: number, factor: number) {
+  return {
+    min: Math.round(min * factor),
+    max: Math.round(max * factor),
+  };
+}
+
 export type TerpeneStat = {
   key: TerpeneKey;
   info: TerpeneInfo;
@@ -350,15 +368,51 @@ export type LineageNode = {
   flags: string[];
 };
 
+export type GrowthEstimate = {
+  wattage: "<100W" | "220W" | "500W";
+  heightCm: { min: number; max: number };
+  widthCm: { min: number; max: number };
+  note: string;
+};
+
 export type CrossReport = {
   profile: CrossProfile;
   scores: CrossScores;
   phenotypes: PhenotypePreview[];
+  growthEstimates: GrowthEstimate[];
   breederNote: string;
   geneticNotes: GeneticNote[];
   lineage: LineageNode[];
   matchedGoals: TraitGoal[];
 };
+
+function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
+  const factor = (growthVigor(parentA) + growthVigor(parentB)) / 2;
+  const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
+  const autoNote = flags.includes("Auto") ? " Auto influence may keep some phenos shorter and faster." : "";
+  const mutantNote = flags.includes("Mutant/ABC") ? " ABC/mutant influence may reduce lateral spread in some phenos." : "";
+
+  return [
+    {
+      wattage: "<100W",
+      heightCm: range(32, 58, factor),
+      widthCm: range(24, 42, factor),
+      note: `Small-light / micro setup estimate. Expect tighter structure and reduced lateral spread.${autoNote}${mutantNote}`,
+    },
+    {
+      wattage: "220W",
+      heightCm: range(55, 95, factor),
+      widthCm: range(42, 72, factor),
+      note: `Mid-power indoor estimate with a more complete expression of branching and terpene potential.${autoNote}${mutantNote}`,
+    },
+    {
+      wattage: "500W",
+      heightCm: range(82, 145, factor),
+      widthCm: range(66, 115, factor),
+      note: `High-power estimate. Larger phenos may push beyond this if haze, diesel, or Durban influence dominates.${autoNote}${mutantNote}`,
+    },
+  ];
+}
 
 export function getCrossProfile(parentA: Seed, parentB: Seed): CrossProfile {
   const a = buildProfile(parentA);
@@ -412,6 +466,7 @@ export function getCrossReport(
   const mainA = a.pool[0] ?? parentA.name;
   const mainB = b.pool[0] ?? parentB.name;
   const dominantTerp = profile.terpenes[0]?.info.name ?? "mixed terpene";
+  const growthEstimates = estimateGrowth(parentA, parentB);
   const phenotypes: PhenotypePreview[] = [
     {
       title: `${mainA} ${mainB} pheno`,
@@ -460,6 +515,7 @@ export function getCrossReport(
     profile,
     scores: { overall, flavorSynergy, terpeneContrast, breederInterest, namePotential, goalMatch },
     phenotypes,
+    growthEstimates,
     breederNote,
     geneticNotes,
     lineage: [
@@ -580,6 +636,7 @@ export function copyReportText(parentA: Seed, parentB: Seed, report: CrossReport
     report.profile.summary,
     `Flavors: ${report.profile.flavors.join(", ") || "unknown"}`,
     `Terpenes: ${report.profile.terpenes.map((t) => `${t.info.name} ${t.share}%`).join(", ") || "unknown"}`,
+    `Size estimates: ${report.growthEstimates.map((g) => `${g.wattage}: ${g.heightCm.min}-${g.heightCm.max}cm H × ${g.widthCm.min}-${g.widthCm.max}cm W`).join("; ")}`,
     `Breeder note: ${report.breederNote}`,
     "Names:",
     ...names.map((n) => `- ${n.name} (${n.category})`),

@@ -101,6 +101,133 @@ const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
   return "Confirm sex and project value before deciding which plant should donate pollen or receive seed.";
 };
 
+type KeeperPriority = {
+  score: number;
+  level: "High" | "Medium" | "Low" | "Utility";
+  tone: string;
+  reasons: string[];
+  seedPlan: string;
+  pollenPlan: string;
+};
+
+const SOUGHT_AFTER_CUES = [
+  { match: /end game|grandpa|lilac diesel|crescend/i, label: "Ethos cornerstone / hyped line" },
+  { match: /temple|quattro|josh d|og kush|tk/i, label: "OG / kush breeding value" },
+  { match: /cookies|gelato|permanent marker|cap junkie/i, label: "modern dessert / hype lineage" },
+  { match: /diesel|chem91|gmo|nycd/i, label: "gas / Chem-Diesel value" },
+  { match: /deep chunk|hash plant|afghan/i, label: "hashplant / old-school preservation value" },
+  { match: /abc|mutant|quack|feral|croco/i, label: "rare mutant/ABC trait" },
+  { match: /brothers grimm|cinderella|blueberry|tangie/i, label: "classic keeper-hunt value" },
+];
+
+const getKeeperPriority = (seed: Seed): KeeperPriority => {
+  const count = seed.count ?? 0;
+  const reasons: string[] = [];
+  let score = 0;
+
+  if (seed.breeder === "Burn Pile") {
+    return {
+      score: 0,
+      level: "Utility",
+      tone: "bg-orange-50 text-orange-800 border-orange-200",
+      reasons: ["Burn Pile utility stock"],
+      seedPlan: "Do not preserve by default; only keep seed from it if the plant unexpectedly earns a specific use.",
+      pollenPlan: "Avoid saving pollen unless it shows something unusually useful and you already have a planned one-off receiver.",
+    };
+  }
+
+  if (count <= 2) {
+    score += 42;
+    reasons.push("very low stock");
+  } else if (count <= 3) {
+    score += 34;
+    reasons.push("low stock");
+  } else if (count <= 6) {
+    score += 18;
+    reasons.push("limited stock");
+  }
+
+  for (const cue of SOUGHT_AFTER_CUES) {
+    if (cue.match.test(`${seed.name} ${seed.breeder}`)) {
+      score += 14;
+      reasons.push(cue.label);
+    }
+  }
+
+  if (seed.type === "Regular") {
+    score += 10;
+    reasons.push("can produce true male/female selections");
+  }
+  if (seed.type === "Autoflower") score += 4;
+  if (/s1|bx|rbx|f\d/i.test(seed.name)) {
+    score += 6;
+    reasons.push("worked filial/backcross marker");
+  }
+
+  const level = score >= 42 ? "High" : score >= 24 ? "Medium" : "Low";
+  const tone =
+    level === "High"
+      ? "bg-red-50 text-red-800 border-red-200"
+      : level === "Medium"
+        ? "bg-amber-50 text-amber-800 border-amber-200"
+        : "bg-emerald-50 text-emerald-800 border-emerald-200";
+
+  const seedPlan =
+    level === "High"
+      ? "Keep seed from standout females before spending the line in heavy outcrossing; this is preservation-worthy if a keeper appears."
+      : level === "Medium"
+        ? "Worth making a small backup seed lot if the plant proves special, but do not force it if the expression is average."
+        : "Use normally; keep seed only from clear winners or crosses that fit a project goal.";
+
+  const pollenPlan =
+    seed.type === "Regular"
+      ? level === "High"
+        ? "If a male is exceptional, save pollen as a priority donor and test it lightly before using it broadly."
+        : "Save pollen only from males that beat your structure, vigor, aroma-stem, and lineage standard."
+      : seed.type === "Feminized"
+        ? "Female-derived pollen is an advanced preservation/combining choice; reserve it for elite keepers rather than routine crosses."
+        : seed.type === "Autoflower"
+          ? "Auto pollen is worth keeping only when the auto trait and plant quality are both central to the project."
+          : "Wait until sex and quality are known before deciding whether pollen is worth keeping.";
+
+  return { score, level, tone, reasons: reasons.slice(0, 3), seedPlan, pollenPlan };
+};
+
+const getPairingTips = (parentA: Seed, parentB: Seed) => {
+  const types = new Set([parentA.type, parentB.type]);
+  if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
+    return [
+      "Keep the run small and intentional; Burn Pile should not consume rare keeper space.",
+      "Only keep seed if the outcome has a clear job, such as testing vigor, speed, or a one-off trait.",
+    ];
+  }
+  if (types.has("Regular")) {
+    return [
+      "Use the best selected regular male as the pollen source and a proven female as the receiver; avoid choosing donors on sex alone.",
+      "Make a small test lot first when the pollen parent is unproven, then expand only if the offspring justify it.",
+      "If both parents are valuable, keep backup seed from each side rather than spending all remaining stock on one cross.",
+    ];
+  }
+  if (types.has("Autoflower")) {
+    return [
+      "Auto × auto is the cleanest route for auto offspring; photo × auto should be treated as longer-term selection work.",
+      "Because autos move fast, decide the goal before pairing: speed, compact size, terpene, or trait preservation.",
+      "Keep seed from only the most goal-matching auto expressions, not every quick plant.",
+    ];
+  }
+  if (parentA.type === "Feminized" && parentB.type === "Feminized") {
+    return [
+      "Choose the stronger keeper as the seed receiver and only use female-derived pollen from a plant worth preserving or combining.",
+      "Fem pollen work should stay targeted: one receiver, one clear goal, and careful offspring evaluation.",
+      "Avoid using low-count fem lines casually; make backup seed first if the line is rare or highly desired.",
+    ];
+  }
+  return [
+    "Confirm sex, quality, and project role before assigning donor or receiver status.",
+    "Keep the first seed lot small until the pairing proves it produces worthwhile offspring.",
+  ];
+};
+
 const Index = () => {
   const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
   const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
@@ -131,6 +258,15 @@ const Index = () => {
           .filter((entry) => entry.total > 0);
         return { ...group, byType };
       }),
+    [],
+  );
+
+  const preservationShortlist = useMemo(
+    () =>
+      SEEDS.map((seed) => ({ seed, priority: getKeeperPriority(seed) }))
+        .filter(({ priority }) => priority.level === "High" || priority.level === "Medium")
+        .sort((a, b) => b.priority.score - a.priority.score)
+        .slice(0, 8),
     [],
   );
 
@@ -222,6 +358,32 @@ const Index = () => {
               </div>
             </div>
           </div>
+
+          <div className="mt-5 rounded-3xl border border-border bg-background p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Worth keeping seed / pollen for</p>
+                <p className="text-sm text-muted-foreground">Auto-ranked by scarcity, breeder value, and sought-after lineage cues.</p>
+              </div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Top {preservationShortlist.length}</span>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              {preservationShortlist.map(({ seed, priority }) => (
+                <div key={`${seed.id}-shortlist`} className={`rounded-2xl border p-3 ${priority.tone}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
+                      <p className="mt-1 text-xs font-semibold opacity-80">{seed.breeder} · {seed.count ?? 0} seeds</p>
+                    </div>
+                    <TypeBadge type={seed.type} />
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed">
+                    <span className="font-black">{priority.level}:</span> {priority.reasons.join(" · ")}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
         </section>
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
@@ -260,20 +422,36 @@ const Index = () => {
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
                   {[parentA, parentB].map((seed) => {
                     const advice = SEED_TYPE_ADVICE[seed.type];
+                    const priority = getKeeperPriority(seed);
                     return (
                       <div key={`${seed.id}-advice`} className="rounded-2xl bg-muted/70 p-4">
                         <div className="mb-3 flex items-center justify-between gap-2">
                           <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
                           <TypeBadge type={seed.type} />
                         </div>
+                        <div className={`mb-3 rounded-2xl border p-3 ${priority.tone}`}>
+                          <p className="text-xs font-black uppercase tracking-wide">{priority.level} keep priority</p>
+                          <p className="mt-1 text-xs leading-relaxed">
+                            {priority.reasons.length ? priority.reasons.join(" · ") : "standard working stock"}
+                          </p>
+                        </div>
                         <div className="space-y-2 text-xs leading-relaxed text-muted-foreground">
-                          <p><span className="font-bold text-foreground">Pollen:</span> {advice.pollen}</p>
-                          <p><span className="font-bold text-foreground">Seeds:</span> {advice.seed}</p>
+                          <p><span className="font-bold text-foreground">Keep seed:</span> {priority.seedPlan}</p>
+                          <p><span className="font-bold text-foreground">Keep pollen:</span> {priority.pollenPlan}</p>
+                          <p><span className="font-bold text-foreground">Type route:</span> {advice.pollen}</p>
                           <p><span className="font-bold text-foreground">Watch:</span> {advice.watch}</p>
                         </div>
                       </div>
                     );
                   })}
+                </div>
+                <div className="mt-4 rounded-2xl bg-primary/10 p-4 text-primary">
+                  <p className="text-xs font-black uppercase tracking-wide">Once pollen + receiver are chosen</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold leading-relaxed">
+                    {getPairingTips(parentA, parentB).map((tip) => (
+                      <li key={tip}>{tip}</li>
+                    ))}
+                  </ul>
                 </div>
               </div>
             </div>

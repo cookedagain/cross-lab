@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">cross-lab</string>
+    <string name="title_activity_main">cross-lab</string>
+    <string name="package_name">com.example.crosslab</string>
+    <string name="custom_url_scheme">com.example.crosslab</string>
+</resources>

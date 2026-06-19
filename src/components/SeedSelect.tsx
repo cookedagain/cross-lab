@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Check, ChevronsUpDown, Sprout } from "lucide-react";
+import { Check, ChevronsUpDown, Sprout, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +22,7 @@ type Props = {
   accent: "green" | "purple";
   value: Seed | null;
   onChange: (seed: Seed) => void;
+  onClear?: () => void;
   seeds?: Seed[];
   seedCounts?: Record<string, number>;
   title?: string;
@@ -61,6 +62,7 @@ const SeedSelect = ({
   accent,
   value,
   onChange,
+  onClear,
   seeds = SEEDS,
   seedCounts = {},
   title,
@@ -86,6 +88,16 @@ const SeedSelect = ({
         <span className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">
           {title ?? `Parent ${label}`}
         </span>
+        {onClear && value && (
+          <button
+            type="button"
+            onClick={onClear}
+            className="ml-auto inline-flex items-center gap-1 rounded-full border border-border bg-card px-2 py-1 text-[11px] font-bold text-muted-foreground transition-colors hover:border-destructive hover:text-destructive"
+          >
+            <X className="h-3 w-3" />
+            Clear
+          </button>
+        )}
       </div>
 
       <Popover open={open} onOpenChange={setOpen}>

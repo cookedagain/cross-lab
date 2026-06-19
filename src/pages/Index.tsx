@@ -637,11 +637,11 @@ const Index = () => {
           </div>
 
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} seeds={SEEDS} seedCounts={seedCounts} />
+            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} onClear={() => setParentA(null)} seeds={SEEDS} seedCounts={seedCounts} />
             <div className="grid place-items-center">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-muted font-display text-xl font-black text-muted-foreground">×</span>
             </div>
-            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} seeds={SEEDS} seedCounts={seedCounts} />
+            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} onClear={() => setParentB(null)} seeds={SEEDS} seedCounts={seedCounts} />
           </div>
 
           {parentA && parentB && (

@@ -4,15 +4,17 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TypeBadge } from "@/components/TypeBadge";
+import { RarityBadge } from "@/components/RarityBadge";
+import CannabinoidPanel from "@/components/CannabinoidPanel";
 import { useVault } from "@/hooks/useVaultStore";
 import {
   estimateAdvancedMetrics,
-  estimateCannabinoids,
   estimateLineageSplit,
   estimateSeedGrowth,
   getSingleSeedProfile,
 } from "@/lib/crossName";
 import { getKeeperPriority } from "@/lib/keeper";
+import { getSeedRarity } from "@/lib/rarity";
 
 const Stars = ({ value }: { value: number }) => (
   <span className="font-bold text-foreground">
@@ -43,9 +45,9 @@ const StrainDetail = () => {
   const profile = getSingleSeedProfile(seed, count);
   const adv = estimateAdvancedMetrics(seed);
   const split = estimateLineageSplit(seed);
-  const cannabinoids = estimateCannabinoids(seed);
   const keeper = getKeeperPriority(counted);
   const growth = estimateSeedGrowth(seed);
+  const rarity = getSeedRarity(counted);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -58,8 +60,9 @@ const StrainDetail = () => {
         <header className="mt-4 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
-              <div className="mb-2 flex items-center gap-2">
+              <div className="mb-2 flex flex-wrap items-center gap-2">
                 <TypeBadge type={seed.type} />
+                <RarityBadge rarity={rarity} />
                 <span className="text-sm font-semibold text-muted-foreground">{seed.breeder}</span>
               </div>
               <h1 className="font-display text-3xl font-black tracking-tight">{seed.name}</h1>
@@ -86,6 +89,21 @@ const StrainDetail = () => {
         </header>
 
         <div className="mt-6 grid gap-4 lg:grid-cols-2">
+          <div className={`rounded-3xl border p-5 lg:col-span-2 ${rarity.tone}`}>
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide">Rarity · {rarity.tier}</p>
+                <p className="mt-1 text-sm leading-relaxed">
+                  {rarity.reasons.length ? rarity.reasons.join(" · ") : "widely available stock"}
+                </p>
+              </div>
+              <p className="font-display text-3xl font-black">{rarity.score}<span className="text-base">/100</span></p>
+            </div>
+            <div className="mt-3 h-2 overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div className="h-full rounded-full bg-current opacity-70" style={{ width: `${rarity.score}%` }} />
+            </div>
+          </div>
+
           <div className="rounded-3xl border border-border bg-card p-5">
             <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Terpene read</p>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.terpeneBlurb}</p>
@@ -128,16 +146,7 @@ const StrainDetail = () => {
             </div>
           </div>
 
-          <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-            <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Estimated potency (% dry weight)</p>
-            <div className="grid grid-cols-2 gap-2 text-[11px] font-bold sm:grid-cols-5">
-              <span className="rounded-lg bg-emerald-100 px-2 py-1 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">THC {cannabinoids.thc.min}–{cannabinoids.thc.max}%</span>
-              <span className="rounded-lg bg-muted px-2 py-1 text-muted-foreground">CBD {cannabinoids.cbd.min}–{cannabinoids.cbd.max}%</span>
-              <span className="rounded-lg bg-muted px-2 py-1 text-muted-foreground">CBG {cannabinoids.cbg.min}–{cannabinoids.cbg.max}%</span>
-              <span className="rounded-lg bg-muted px-2 py-1 text-muted-foreground">CBN {cannabinoids.cbn.min}–{cannabinoids.cbn.max}%</span>
-              <span className="rounded-lg bg-primary/10 px-2 py-1 text-primary">Total {cannabinoids.total.min}–{cannabinoids.total.max}%</span>
-            </div>
-          </div>
+          <CannabinoidPanel seed={seed} />
 
           <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Est. dry yield · single plant</p>

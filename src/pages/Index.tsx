@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
+import ThemeToggle from "@/components/ThemeToggle";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -53,6 +54,8 @@ const MULTIPASS_BREEDER = "Ethos Genetics";
 type MultipassEntry = {
   id: string;
   name: string;
+  parentA: string;
+  parentB: string;
   type: SeedType;
   count: number;
   arrived: boolean;
@@ -297,6 +300,8 @@ const Index = () => {
   }, [multipass]);
 
   const [newPassName, setNewPassName] = useState("");
+  const [newPassParentA, setNewPassParentA] = useState("");
+  const [newPassParentB, setNewPassParentB] = useState("");
   const [newPassType, setNewPassType] = useState<SeedType>("Feminized");
   const [newPassCount, setNewPassCount] = useState(10);
 
@@ -308,12 +313,16 @@ const Index = () => {
       {
         id: `multipass-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
         name,
+        parentA: newPassParentA.trim(),
+        parentB: newPassParentB.trim(),
         type: newPassType,
         count: clampSeedCount(newPassCount),
         arrived: false,
       },
     ]);
     setNewPassName("");
+    setNewPassParentA("");
+    setNewPassParentB("");
     setNewPassCount(10);
   };
 
@@ -452,10 +461,11 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Vault-aware breeder planning with FEM / REG / AUTO labels</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainVaultTotal}</span>
             <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {burnPileTotal}</span>
             <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
+            <ThemeToggle />
           </div>
         </div>
       </header>
@@ -711,16 +721,37 @@ const Index = () => {
 
           <div className="rounded-3xl border border-border bg-background p-4">
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-primary">Add an incoming pack</p>
-            <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+            <Input
+              value={newPassName}
+              onChange={(event) => setNewPassName(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") addMultipass();
+              }}
+              placeholder="Strain name (e.g. Crunch Berries)"
+              className="mb-3 h-11 rounded-2xl font-semibold"
+            />
+            <div className="mb-3 grid gap-3 sm:grid-cols-[1fr_auto_1fr] sm:items-center">
               <Input
-                value={newPassName}
-                onChange={(event) => setNewPassName(event.target.value)}
+                value={newPassParentA}
+                onChange={(event) => setNewPassParentA(event.target.value)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") addMultipass();
                 }}
-                placeholder="Strain name (e.g. Crunch Berries × End Game #5)"
+                placeholder="Cross parent A (mother)"
                 className="h-11 rounded-2xl font-semibold"
               />
+              <span className="hidden text-center font-display text-lg font-black text-muted-foreground sm:block">×</span>
+              <Input
+                value={newPassParentB}
+                onChange={(event) => setNewPassParentB(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addMultipass();
+                }}
+                placeholder="Cross parent B (father)"
+                className="h-11 rounded-2xl font-semibold"
+              />
+            </div>
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
               <div className="flex items-center gap-2">
                 <div className="flex items-center rounded-2xl border border-border bg-card p-1">
                   <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setNewPassCount((value) => clampSeedCount(value - 1))}>
@@ -768,6 +799,11 @@ const Index = () => {
                   <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-primary/40 bg-background p-3">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{entry.name}</p>
+                      {(entry.parentA || entry.parentB) && (
+                        <p className="mt-0.5 truncate text-[11px] font-semibold text-muted-foreground">
+                          {entry.parentA || "?"} × {entry.parentB || "?"}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">{entry.count} seeds · expected</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">
@@ -794,6 +830,11 @@ const Index = () => {
                   <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{entry.name}</p>
+                      {(entry.parentA || entry.parentB) && (
+                        <p className="mt-0.5 truncate text-[11px] font-semibold opacity-90">
+                          {entry.parentA || "?"} × {entry.parentB || "?"}
+                        </p>
+                      )}
                       <p className="mt-0.5 text-[11px] font-bold opacity-80">added to {MULTIPASS_BREEDER}</p>
                     </div>
                     <div className="flex shrink-0 items-center gap-1.5">

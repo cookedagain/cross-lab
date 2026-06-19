@@ -40,10 +40,10 @@ const typeShort: Record<SeedType, string> = {
 };
 
 const typeStyles: Record<SeedType, string> = {
-  Feminized: "bg-pink-100 text-pink-800 border-pink-200",
-  Regular: "bg-blue-100 text-blue-800 border-blue-200",
-  Autoflower: "bg-lime-100 text-lime-800 border-lime-200",
-  "Unknown Photo": "bg-slate-100 text-slate-700 border-slate-200",
+  Feminized: "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950/50 dark:text-pink-200 dark:border-pink-900",
+  Regular: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900",
+  Autoflower: "bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-950/50 dark:text-lime-200 dark:border-lime-900",
+  "Unknown Photo": "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700",
 };
 
 const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
@@ -156,7 +156,7 @@ const getKeeperPriority = (seed: Seed): KeeperPriority => {
     return {
       score: 0,
       level: "Utility",
-      tone: "bg-orange-50 text-orange-800 border-orange-200",
+      tone: "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-200 dark:border-orange-900",
       reasons: ["one-and-only run", "white-label / potentially mislabelled", "not breeding stock"],
       seedPlan: "Do not keep seed from Burn Pile plants. Run once for testing/smoke only, then close it out.",
       pollenPlan: "Do not save pollen from Burn Pile plants; the label confidence is too low to justify breeding work.",
@@ -194,10 +194,10 @@ const getKeeperPriority = (seed: Seed): KeeperPriority => {
   const level = score >= 42 ? "High" : score >= 24 ? "Medium" : "Low";
   const tone =
     level === "High"
-      ? "bg-red-50 text-red-800 border-red-200"
+      ? "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-900"
       : level === "Medium"
-        ? "bg-amber-50 text-amber-800 border-amber-200"
-        : "bg-emerald-50 text-emerald-800 border-emerald-200";
+        ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
+        : "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900";
 
   const seedPlan =
     level === "High"
@@ -463,7 +463,7 @@ const Index = () => {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainVaultTotal}</span>
-            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {burnPileTotal}</span>
+            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800 dark:bg-orange-950/50 dark:text-orange-200">Burn pile {burnPileTotal}</span>
             <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
             <ThemeToggle />
           </div>
@@ -669,7 +669,7 @@ const Index = () => {
             })}
           </div>
 
-          <div className="mt-5 rounded-3xl bg-orange-50 p-4 text-orange-800">
+          <div className="mt-5 rounded-3xl bg-orange-50 p-4 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">
             <div className="flex items-start gap-2">
               <ShieldAlert className="mt-0.5 h-5 w-5" />
               <div>
@@ -824,10 +824,10 @@ const Index = () => {
 
           {arrivedPasses.length > 0 && (
             <div className="mt-4">
-              <p className="mb-2 text-xs font-black uppercase tracking-wide text-emerald-700">In vault ({arrivedPasses.length})</p>
+              <p className="mb-2 text-xs font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">In vault ({arrivedPasses.length})</p>
               <div className="grid gap-2 sm:grid-cols-2">
                 {arrivedPasses.map((entry) => (
-                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-100">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold">{entry.name}</p>
                       {(entry.parentA || entry.parentB) && (

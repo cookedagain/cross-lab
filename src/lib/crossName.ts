@@ -490,7 +490,7 @@ export function estimateSeedGrowth(seed: Seed): SeedGrowthEstimate[] {
     },
     {
       wattage: "500W",
-      gear: "AC Infinity 500W",
+      gear: "AC Infinity 4×4",
       heightCm: range(78, 138, sizeFactor),
       widthCm: range(62, 105, sizeFactor),
       yieldG: range(120, 280, yieldFactor),

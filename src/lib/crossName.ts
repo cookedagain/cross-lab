@@ -458,6 +458,46 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
   ];
 }
 
+export type GrowEnvironment = "<100W" | "220W" | "500W";
+
+export type SeedGrowthEstimate = {
+  wattage: GrowEnvironment;
+  gear: string;
+  heightCm: { min: number; max: number };
+  widthCm: { min: number; max: number };
+  yieldG: { min: number; max: number };
+};
+
+// Per-plant (single seed) size and dry-yield estimate across the three real grow spaces.
+export function estimateSeedGrowth(seed: Seed): SeedGrowthEstimate[] {
+  const sizeFactor = growthVigor(seed);
+  const yieldFactor = yieldVigor(seed);
+
+  return [
+    {
+      wattage: "<100W",
+      gear: "Vivosun VGrow smart box",
+      heightCm: range(28, 52, sizeFactor),
+      widthCm: range(20, 38, sizeFactor),
+      yieldG: range(12, 35, yieldFactor),
+    },
+    {
+      wattage: "220W",
+      gear: "AC Infinity 2×2",
+      heightCm: range(50, 88, sizeFactor),
+      widthCm: range(38, 64, sizeFactor),
+      yieldG: range(45, 110, yieldFactor),
+    },
+    {
+      wattage: "500W",
+      gear: "AC Infinity 500W",
+      heightCm: range(78, 138, sizeFactor),
+      widthCm: range(62, 105, sizeFactor),
+      yieldG: range(120, 280, yieldFactor),
+    },
+  ];
+}
+
 function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecommendation {
   const flags = detectFlags(seed);
   const countText = seedCount === undefined ? "unknown stock" : `${seedCount} seeds logged`;

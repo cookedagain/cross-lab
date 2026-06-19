@@ -20,6 +20,7 @@ import {
 } from "@/data/seeds";
 import {
   TRAIT_GOALS,
+  estimateSeedGrowth,
   generateCrossNames,
   getCrossReport,
   groupNamesByCategory,
@@ -375,16 +376,38 @@ const Index = () => {
 
                   <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
                     {group.strains.map((seed) => (
-                      <div
-                        key={seed.id}
-                        className="flex items-center justify-between gap-3 rounded-2xl bg-muted/50 px-3 py-2"
-                      >
-                        <p className="min-w-0 truncate text-sm font-semibold">{seed.name}</p>
-                        <div className="flex shrink-0 items-center gap-2">
-                          <TypeBadge type={seed.type} />
-                          <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
-                            {seed.count ?? 0}
-                          </span>
+                      <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="min-w-0 truncate text-sm font-semibold">{seed.name}</p>
+                          <div className="flex shrink-0 items-center gap-2">
+                            <TypeBadge type={seed.type} />
+                            <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
+                              {seed.count ?? 0}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="mt-2.5">
+                          <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                            Est. dry yield · single plant
+                          </p>
+                          <div className="grid gap-1.5 sm:grid-cols-3">
+                            {estimateSeedGrowth(seed).map((env) => (
+                              <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
+                                <div className="flex items-center justify-between gap-1">
+                                  <span className="text-[10px] font-black uppercase tracking-wide text-primary">
+                                    {env.wattage}
+                                  </span>
+                                  <span className="font-display text-sm font-black leading-none">
+                                    {env.yieldG.min}–{env.yieldG.max}g
+                                  </span>
+                                </div>
+                                <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
+                                  {env.gear}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     ))}

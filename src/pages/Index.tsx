@@ -24,6 +24,8 @@ import {
 } from "@/data/seeds";
 import {
   TRAIT_GOALS,
+  estimateCannabinoids,
+  estimateLineageSplit,
   estimateSeedGrowth,
   generateCrossNames,
   getCrossReport,
@@ -48,21 +50,44 @@ const typeStyles: Record<SeedType, string> = {
 
 const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
 
-type SortMode = "count" | "yield-desc" | "yield-asc" | "name";
+type SortMode =
+  | "count"
+  | "yield-desc"
+  | "yield-asc"
+  | "height-desc"
+  | "height-asc"
+  | "sativa-desc"
+  | "indica-desc"
+  | "potency-desc"
+  | "name";
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "count", label: "Seed count" },
   { mode: "yield-desc", label: "Yield high → low" },
   { mode: "yield-asc", label: "Yield low → high" },
+  { mode: "height-desc", label: "Height tall → short" },
+  { mode: "height-asc", label: "Height short → tall" },
+  { mode: "sativa-desc", label: "Sativa % high → low" },
+  { mode: "indica-desc", label: "Indica % high → low" },
+  { mode: "potency-desc", label: "Potency high → low" },
   { mode: "name", label: "Name A → Z" },
 ];
 
-// Use the top-end of the highest-power (4×4) estimate as the yield ranking metric.
+// Use the top-end of the highest-power (4×4) estimate as the size ranking metric.
 const seedYieldMetric = (seed: Seed) => {
   const estimates = estimateSeedGrowth(seed);
   const top = estimates[estimates.length - 1];
   return top ? top.yieldG.max : 0;
 };
+
+const seedHeightMetric = (seed: Seed) => {
+  const estimates = estimateSeedGrowth(seed);
+  const top = estimates[estimates.length - 1];
+  return top ? top.heightCm.max : 0;
+};
+
+const seedSativaMetric = (seed: Seed) => estimateLineageSplit(seed).sativa;
+const seedPotencyMetric = (seed: Seed) => estimateCannabinoids(seed).thc.max;
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
 const MULTIPASS_BREEDER = "Ethos Genetics";
@@ -427,6 +452,16 @@ const Index = () => {
                 return seedYieldMetric(b) - seedYieldMetric(a);
               case "yield-asc":
                 return seedYieldMetric(a) - seedYieldMetric(b);
+              case "height-desc":
+                return seedHeightMetric(b) - seedHeightMetric(a);
+              case "height-asc":
+                return seedHeightMetric(a) - seedHeightMetric(b);
+              case "sativa-desc":
+                return seedSativaMetric(b) - seedSativaMetric(a);
+              case "indica-desc":
+                return seedSativaMetric(a) - seedSativaMetric(b);
+              case "potency-desc":
+                return seedPotencyMetric(b) - seedPotencyMetric(a);
               case "name":
                 return a.name.localeCompare(b.name);
               case "count":
@@ -709,6 +744,40 @@ const Index = () => {
                               ))}
                             </div>
                           </div>
+
+                          {(() => {
+                            const split = estimateLineageSplit(seed);
+                            const cannabinoids = estimateCannabinoids(seed);
+                            const topHeight = seedHeightMetric(seed);
+                            return (
+                              <div className="mt-2.5">
+                                <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                  Est. lean · potency · height
+                                </p>
+                                <div className="mb-2 flex h-2 overflow-hidden rounded-full bg-muted">
+                                  <div className="h-full bg-amber-400 dark:bg-amber-500" style={{ width: `${split.sativa}%` }} />
+                                  <div className="h-full bg-violet-500" style={{ width: `${split.indica}%` }} />
+                                </div>
+                                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold sm:grid-cols-4">
+                                  <span className="rounded-lg bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
+                                    Sativa {split.sativa}%
+                                  </span>
+                                  <span className="rounded-lg bg-violet-100 px-2 py-1 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
+                                    Indica {split.indica}%
+                                  </span>
+                                  <span className="rounded-lg bg-emerald-100 px-2 py-1 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
+                                    THC {cannabinoids.thc.min}–{cannabinoids.thc.max}%
+                                  </span>
+                                  <span className="rounded-lg bg-muted px-2 py-1 text-muted-foreground">
+                                    ~{topHeight}cm tall
+                                  </span>
+                                </div>
+                                <p className="mt-1.5 text-[10px] font-semibold leading-tight text-muted-foreground">
+                                  CBD {cannabinoids.cbd.min}–{cannabinoids.cbd.max}% · CBG {cannabinoids.cbg.min}–{cannabinoids.cbg.max}% · CBN {cannabinoids.cbn.min}–{cannabinoids.cbn.max}% · total {cannabinoids.total.min}–{cannabinoids.total.max}%
+                                </p>
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}

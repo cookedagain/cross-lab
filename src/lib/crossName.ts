@@ -458,6 +458,127 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
   ];
 }
 
+const SATIVA_WORDS = [
+  "haze",
+  "durban",
+  "sour",
+  "diesel",
+  "tangie",
+  "lemon",
+  "jack",
+  "amnesia",
+  "nycd",
+  "thai",
+  "neville",
+  "moby",
+  "chocolope",
+  "cinderella",
+  "super lemon",
+  "green crack",
+  "maui",
+  "malawi",
+];
+
+const INDICA_WORDS = [
+  "kush",
+  "afghan",
+  "og",
+  "hash",
+  "deep chunk",
+  "granddaddy",
+  "gdp",
+  "purple",
+  "bubba",
+  "northern lights",
+  "hindu",
+  "master",
+  "domina",
+  "blueberry",
+  "grape",
+  "gelato",
+  "cookies",
+  "wedding",
+  "zkittlez",
+  "runtz",
+  "slurricane",
+  "temple",
+  "marshmallow",
+];
+
+export type LineageSplit = { sativa: number; indica: number };
+
+// Rough indica/sativa lean estimated from name + lineage cues. Planning only.
+export function estimateLineageSplit(seed: Seed): LineageSplit {
+  const text = `${seed.name}`.toLowerCase();
+  let sativa = 50;
+  for (const word of SATIVA_WORDS) if (text.includes(word)) sativa += 9;
+  for (const word of INDICA_WORDS) if (text.includes(word)) sativa -= 9;
+  if (text.includes("auto")) sativa -= 5;
+  sativa = Math.min(88, Math.max(12, sativa));
+  return { sativa, indica: 100 - sativa };
+}
+
+export type CannabinoidRange = { min: number; max: number };
+
+export type CannabinoidEstimate = {
+  thc: CannabinoidRange;
+  cbd: CannabinoidRange;
+  cbg: CannabinoidRange;
+  cbn: CannabinoidRange;
+  total: CannabinoidRange;
+};
+
+const HIGH_THC_CUES = /cookies|gelato|runtz|zkittlez|gmo|permanent marker|cap junkie|slurricane|sherb|wedding|diesel|chem|gorilla|glue|jealousy|mac|platinum/i;
+const HEMP_CBD_CUES = /\bcbd\b|charlotte|harlequin|acdc|cannatonic|ratio/i;
+
+// Estimated cannabinoid potency ranges (% dry weight) from name/lineage cues. Planning only.
+export function estimateCannabinoids(seed: Seed): CannabinoidEstimate {
+  const text = `${seed.name}`.toLowerCase();
+  let thcMin = 17;
+  let thcMax = 23;
+
+  if (HIGH_THC_CUES.test(text)) {
+    thcMin += 4;
+    thcMax += 6;
+  }
+  if (/haze|durban|amnesia|sour/i.test(text)) {
+    thcMin += 1;
+    thcMax += 2;
+  }
+  if (/afghan|deep chunk|hash|northern lights/i.test(text)) {
+    thcMin -= 1;
+    thcMax -= 1;
+  }
+  if (text.includes("auto")) {
+    thcMin -= 2;
+    thcMax -= 3;
+  }
+
+  let cbd: CannabinoidRange = { min: 0.1, max: 0.8 };
+  if (HEMP_CBD_CUES.test(text)) {
+    cbd = { min: 4, max: 12 };
+    thcMin = Math.max(4, thcMin - 9);
+    thcMax = Math.max(7, thcMax - 9);
+  }
+
+  thcMin = Math.max(3, Math.round(thcMin));
+  thcMax = Math.max(thcMin + 2, Math.round(thcMax));
+
+  const cbg: CannabinoidRange = { min: 0.3, max: /cbg|white|frost|diesel/i.test(text) ? 1.8 : 1.1 };
+  const cbn: CannabinoidRange = { min: 0.1, max: /afghan|hash|kush|deep chunk/i.test(text) ? 1.2 : 0.6 };
+
+  return {
+    thc: { min: thcMin, max: thcMax },
+    cbd,
+    cbg,
+    cbn,
+    total: {
+      min: Math.round((thcMin + cbd.min + cbg.min + cbn.min) * 10) / 10,
+      max: Math.round((thcMax + cbd.max + cbg.max + cbn.max) * 10) / 10,
+    },
+  };
+}
+
 export type GrowEnvironment = "<100W" | "220W" | "500W";
 
 export type SeedGrowthEstimate = {

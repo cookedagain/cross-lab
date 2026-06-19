@@ -4,7 +4,6 @@ import { ArrowLeft, Minus, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TypeBadge } from "@/components/TypeBadge";
-import ExtractionPanel from "@/components/ExtractionPanel";
 import { useVault } from "@/hooks/useVaultStore";
 import {
   estimateAdvancedMetrics,
@@ -170,14 +169,6 @@ const StrainDetail = () => {
               <div className="rounded-lg bg-background p-2"><span className="block text-[9px] font-black uppercase text-muted-foreground">Mold resist</span><Stars value={adv.moldResilience} /></div>
               <div className="rounded-lg bg-background p-2"><span className="block text-[9px] font-black uppercase text-muted-foreground">Keeper</span>{keeper.level}</div>
             </div>
-          </div>
-
-          <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-            <p className="mb-1 text-xs font-black uppercase tracking-wide text-primary">Extraction, pressability & carts</p>
-            <p className="mb-2 text-xs leading-relaxed text-muted-foreground">
-              Estimated solventless and solvent suitability from resin, terpene, and lineage cues — including how well each output runs in a 510 cartridge.
-            </p>
-            <ExtractionPanel seed={seed} tileClass="bg-background" />
           </div>
 
           <div className={`rounded-3xl border p-5 lg:col-span-2 ${keeper.tone}`}>

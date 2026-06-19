@@ -1,7 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import ThemeToggle from "@/components/ThemeToggle";
+import VaultBackup from "@/components/VaultBackup";
+import VaultAnalytics from "@/components/VaultAnalytics";
+import BestParents from "@/components/BestParents";
+import BreedingLots from "@/components/BreedingLots";
+import { TypeBadge } from "@/components/TypeBadge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -15,13 +21,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import {
-  DEFAULT_SEED_COUNTS,
-  SEEDS,
-  VAULT_TOTALS,
-  type Seed,
-  type SeedType,
-} from "@/data/seeds";
+import { SEEDS, VAULT_TOTALS, type Seed, type SeedType } from "@/data/seeds";
+import { clampSeedCount, MULTIPASS_BREEDER, useVault } from "@/hooks/useVaultStore";
+import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
+import { getKeeperPriority } from "@/lib/keeper";
 import {
   TRAIT_GOALS,
   estimateCannabinoids,
@@ -34,22 +37,6 @@ import {
   type TraitGoal,
 } from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
-
-const typeShort: Record<SeedType, string> = {
-  Feminized: "FEM",
-  Regular: "REG",
-  Autoflower: "AUTO",
-  "Unknown Photo": "PHOTO ?",
-};
-
-const typeStyles: Record<SeedType, string> = {
-  Feminized: "bg-pink-100 text-pink-800 border-pink-200 dark:bg-pink-950/50 dark:text-pink-200 dark:border-pink-900",
-  Regular: "bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/50 dark:text-blue-200 dark:border-blue-900",
-  Autoflower: "bg-lime-100 text-lime-800 border-lime-200 dark:bg-lime-950/50 dark:text-lime-200 dark:border-lime-900",
-  "Unknown Photo": "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700",
-};
-
-const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
 
 type SortMode =
   | "count"
@@ -92,7 +79,6 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "name", label: "Name A → Z" },
 ];
 
-// Use the top-end of the highest-power (4×4) estimate as the size ranking metric.
 const seedYieldMetric = (seed: Seed) => {
   const estimates = estimateSeedGrowth(seed);
   const top = estimates[estimates.length - 1];
@@ -107,27 +93,6 @@ const seedHeightMetric = (seed: Seed) => {
 
 const seedSativaMetric = (seed: Seed) => estimateLineageSplit(seed).sativa;
 const seedPotencyMetric = (seed: Seed) => estimateCannabinoids(seed).thc.max;
-const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
-const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
-const MULTIPASS_BREEDER = "Ethos Genetics";
-
-type MultipassEntry = {
-  id: string;
-  name: string;
-  parentA: string;
-  parentB: string;
-  type: SeedType;
-  count: number;
-  arrived: boolean;
-};
-
-const clampSeedCount = (value: number) => Math.max(0, Math.min(999, Math.round(Number.isFinite(value) ? value : 0)));
-
-const TypeBadge = ({ type }: { type: SeedType }) => (
-  <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${typeStyles[type]}`}>
-    {typeShort[type]}
-  </span>
-);
 
 const ToggleChip = ({ goal, active, onClick }: { goal: TraitGoal; active: boolean; onClick: () => void }) => (
   <button
@@ -188,98 +153,6 @@ const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
   return "Confirm sex and project value before deciding which plant should donate pollen or receive seed.";
 };
 
-type KeeperPriority = {
-  score: number;
-  level: "High" | "Medium" | "Low" | "Utility";
-  tone: string;
-  reasons: string[];
-  seedPlan: string;
-  pollenPlan: string;
-};
-
-const SOUGHT_AFTER_CUES = [
-  { match: /end game|grandpa|lilac diesel|crescend/i, label: "Ethos cornerstone / hyped line" },
-  { match: /temple|quattro|josh d|og kush|tk/i, label: "OG / kush breeding value" },
-  { match: /cookies|gelato|permanent marker|cap junkie/i, label: "modern dessert / hype lineage" },
-  { match: /diesel|chem91|gmo|nycd/i, label: "gas / Chem-Diesel value" },
-  { match: /deep chunk|hash plant|afghan/i, label: "hashplant / old-school preservation value" },
-  { match: /abc|mutant|quack|feral|croco/i, label: "rare mutant/ABC trait" },
-  { match: /brothers grimm|cinderella|blueberry|tangie/i, label: "classic keeper-hunt value" },
-];
-
-const getKeeperPriority = (seed: Seed): KeeperPriority => {
-  const count = seed.count ?? 0;
-  const reasons: string[] = [];
-  let score = 0;
-
-  if (seed.breeder === "Burn Pile") {
-    return {
-      score: 0,
-      level: "Utility",
-      tone: "bg-orange-50 text-orange-800 border-orange-200 dark:bg-orange-950/40 dark:text-orange-200 dark:border-orange-900",
-      reasons: ["one-and-only run", "white-label / potentially mislabelled", "not breeding stock"],
-      seedPlan: "Do not keep seed from Burn Pile plants. Run once for testing/smoke only, then close it out.",
-      pollenPlan: "Do not save pollen from Burn Pile plants; the label confidence is too low to justify breeding work.",
-    };
-  }
-
-  if (count <= 2) {
-    score += 42;
-    reasons.push("very low stock");
-  } else if (count <= 3) {
-    score += 34;
-    reasons.push("low stock");
-  } else if (count <= 6) {
-    score += 18;
-    reasons.push("limited stock");
-  }
-
-  for (const cue of SOUGHT_AFTER_CUES) {
-    if (cue.match.test(`${seed.name} ${seed.breeder}`)) {
-      score += 14;
-      reasons.push(cue.label);
-    }
-  }
-
-  if (seed.type === "Regular") {
-    score += 10;
-    reasons.push("can produce true male/female selections");
-  }
-  if (seed.type === "Autoflower") score += 4;
-  if (/s1|bx|rbx|f\d/i.test(seed.name)) {
-    score += 6;
-    reasons.push("worked filial/backcross marker");
-  }
-
-  const level = score >= 42 ? "High" : score >= 24 ? "Medium" : "Low";
-  const tone =
-    level === "High"
-      ? "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-200 dark:border-red-900"
-      : level === "Medium"
-        ? "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-900"
-        : "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-200 dark:border-emerald-900";
-
-  const seedPlan =
-    level === "High"
-      ? "Keep seed from standout females before spending the line in heavy outcrossing; this is preservation-worthy if a keeper appears."
-      : level === "Medium"
-        ? "Worth making a small backup seed lot if the plant proves special, but do not force it if the expression is average."
-        : "Use normally; keep seed only from clear winners or crosses that fit a project goal.";
-
-  const pollenPlan =
-    seed.type === "Regular"
-      ? level === "High"
-        ? "If a male is exceptional, save pollen as a priority donor and test it lightly before using it broadly."
-        : "Save pollen only from males that beat your structure, vigor, aroma-stem, and lineage standard."
-      : seed.type === "Feminized"
-        ? "Female-derived pollen is an advanced preservation/combining choice; reserve it for elite keepers rather than routine crosses."
-        : seed.type === "Autoflower"
-          ? "Auto pollen is worth keeping only when the auto trait and plant quality are both central to the project."
-          : "Wait until sex and quality are known before deciding whether pollen is worth keeping.";
-
-  return { score, level, tone, reasons: reasons.slice(0, 3), seedPlan, pollenPlan };
-};
-
 const getPairingTips = (parentA: Seed, parentB: Seed) => {
   const types = new Set([parentA.type, parentB.type]);
   if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
@@ -317,6 +190,19 @@ const getPairingTips = (parentA: Seed, parentB: Seed) => {
 };
 
 const Index = () => {
+  const {
+    seedCounts,
+    multipass,
+    vaultSeeds,
+    getSeedCount,
+    seedWithCount,
+    updateSeedCount,
+    resetSeedCounts,
+    addMultipass,
+    removeMultipass,
+    toggleArrived,
+  } = useVault();
+
   const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
   const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
   const [salt, setSalt] = useState(0);
@@ -324,41 +210,11 @@ const Index = () => {
   const [vaultSearch, setVaultSearch] = useState("");
   const [activeTypes, setActiveTypes] = useState<SeedType[]>([]);
   const [sortMode, setSortMode] = useState<SortMode>("count");
-  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => {
-    if (typeof window === "undefined") return DEFAULT_SEED_COUNTS;
-
-    try {
-      const stored = window.localStorage.getItem(INVENTORY_STORAGE_KEY);
-      if (!stored) return DEFAULT_SEED_COUNTS;
-      const parsed = JSON.parse(stored) as Record<string, unknown>;
-      const cleaned = Object.fromEntries(
-        Object.entries(parsed).map(([id, value]) => [id, clampSeedCount(Number(value))]),
-      );
-      return { ...DEFAULT_SEED_COUNTS, ...cleaned };
-    } catch {
-      return DEFAULT_SEED_COUNTS;
-    }
-  });
-
-  useEffect(() => {
-    window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(seedCounts));
-  }, [seedCounts]);
-
-  const [multipass, setMultipass] = useState<MultipassEntry[]>(() => {
-    if (typeof window === "undefined") return [];
-    try {
-      const stored = window.localStorage.getItem(MULTIPASS_STORAGE_KEY);
-      if (!stored) return [];
-      const parsed = JSON.parse(stored) as MultipassEntry[];
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  });
-
-  useEffect(() => {
-    window.localStorage.setItem(MULTIPASS_STORAGE_KEY, JSON.stringify(multipass));
-  }, [multipass]);
+  const [showFilters, setShowFilters] = useState(false);
+  const [minThc, setMinThc] = useState(0);
+  const [maxFlowering, setMaxFlowering] = useState(20);
+  const [minResin, setMinResin] = useState(1);
+  const [minTerpene, setMinTerpene] = useState(1);
 
   const [newPassName, setNewPassName] = useState("");
   const [newPassParentA, setNewPassParentA] = useState("");
@@ -366,57 +222,36 @@ const Index = () => {
   const [newPassType, setNewPassType] = useState<SeedType>("Feminized");
   const [newPassCount, setNewPassCount] = useState(10);
 
-  const addMultipass = () => {
+  const handleAddMultipass = () => {
     const name = newPassName.trim();
     if (!name) return;
-    setMultipass((current) => [
-      ...current,
-      {
-        id: `multipass-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-        name,
-        parentA: newPassParentA.trim(),
-        parentB: newPassParentB.trim(),
-        type: newPassType,
-        count: clampSeedCount(newPassCount),
-        arrived: false,
-      },
-    ]);
+    addMultipass({
+      name,
+      parentA: newPassParentA.trim(),
+      parentB: newPassParentB.trim(),
+      type: newPassType,
+      count: clampSeedCount(newPassCount),
+    });
     setNewPassName("");
     setNewPassParentA("");
     setNewPassParentB("");
     setNewPassCount(10);
   };
 
-  const removeMultipass = (id: string) => setMultipass((current) => current.filter((entry) => entry.id !== id));
-  const toggleArrived = (id: string) =>
-    setMultipass((current) => current.map((entry) => (entry.id === id ? { ...entry, arrived: !entry.arrived } : entry)));
-
   const incomingPasses = multipass.filter((entry) => !entry.arrived);
   const arrivedPasses = multipass.filter((entry) => entry.arrived);
 
-  const arrivedSeeds = useMemo<Seed[]>(
-    () =>
-      arrivedPasses.map((entry) => ({
-        id: entry.id,
-        name: entry.name,
-        breeder: MULTIPASS_BREEDER,
-        type: entry.type,
-        count: entry.count,
-      })),
-    [multipass],
-  );
-
-  const vaultSeeds = useMemo(() => [...SEEDS, ...arrivedSeeds], [arrivedSeeds]);
-
-  const getSeedCount = (seed: Seed) => seedCounts[seed.id] ?? seed.count ?? 0;
-  const seedWithCount = (seed: Seed): Seed => ({ ...seed, count: getSeedCount(seed) });
-
-  const updateSeedCount = (seed: Seed, nextCount: number) => {
-    setSeedCounts((current) => ({ ...current, [seed.id]: clampSeedCount(nextCount) }));
-  };
-
   const toggleTypeFilter = (type: SeedType) => {
     setActiveTypes((current) => (current.includes(type) ? current.filter((item) => item !== type) : [...current, type]));
+  };
+
+  const filtersActive = minThc > 0 || maxFlowering < 20 || minResin > 1 || minTerpene > 1;
+
+  const resetMetricFilters = () => {
+    setMinThc(0);
+    setMaxFlowering(20);
+    setMinResin(1);
+    setMinTerpene(1);
   };
 
   const report = useMemo(() => {
@@ -441,16 +276,16 @@ const Index = () => {
         ),
         strains: vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
       })),
-    [seedCounts, vaultSeeds],
+    [seedCounts, vaultSeeds, getSeedCount],
   );
 
   const mainVaultTotal = useMemo(
     () => vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
-    [seedCounts, vaultSeeds],
+    [seedCounts, vaultSeeds, getSeedCount],
   );
   const burnPileTotal = useMemo(
     () => vaultSeeds.filter((seed) => seed.breeder === "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
-    [seedCounts, vaultSeeds],
+    [seedCounts, vaultSeeds, getSeedCount],
   );
   const grandTotal = mainVaultTotal + burnPileTotal;
 
@@ -463,7 +298,12 @@ const Index = () => {
           .filter((seed) => {
             const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
             const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
-            return matchesSearch && matchesType;
+            const adv = estimateAdvancedMetrics(seed);
+            const matchesThc = seedPotencyMetric(seed) >= minThc;
+            const matchesFlowering = adv.floweringWeeks <= maxFlowering;
+            const matchesResin = adv.resinDensity >= minResin;
+            const matchesTerpene = adv.terpeneIntensity >= minTerpene;
+            return matchesSearch && matchesType && matchesThc && matchesFlowering && matchesResin && matchesTerpene;
           })
           .sort((a, b) => {
             const advA = estimateAdvancedMetrics(a);
@@ -521,7 +361,7 @@ const Index = () => {
         return { ...group, total, byType, strains };
       }).filter((group) => group.strains.length > 0);
     },
-    [activeTypes, seedCounts, vaultSearch, vaultSeeds, sortMode],
+    [activeTypes, seedCounts, vaultSearch, vaultSeeds, sortMode, minThc, maxFlowering, minResin, minTerpene, getSeedCount, seedWithCount],
   );
 
   const visibleStrainCount = breederTypeTotals.reduce((sum, group) => sum + group.strains.length, 0);
@@ -539,7 +379,7 @@ const Index = () => {
         .filter(({ priority }) => priority.level === "High" || priority.level === "Medium")
         .sort((a, b) => b.priority.score - a.priority.score)
         .slice(0, 8),
-    [seedCounts, vaultSeeds],
+    [seedCounts, vaultSeeds, seedWithCount],
   );
 
   const randomPair = () => {
@@ -592,13 +432,19 @@ const Index = () => {
           ))}
         </section>
 
+        <div className="mt-6">
+          <VaultBackup />
+        </div>
+
+        <VaultAnalytics />
+
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-start gap-3">
             <PackagePlus className="mt-1 h-5 w-5 text-primary" />
             <div>
               <h1 className="font-display text-3xl font-black tracking-tight">Revised vault breakdown</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Burn Pile remains separated from preservation pressure.
+                Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Tap any strain to open its full detail page. Burn Pile remains separated from preservation pressure.
               </p>
             </div>
           </div>
@@ -619,9 +465,19 @@ const Index = () => {
                   type="button"
                   variant="outline"
                   className="rounded-2xl border-2 font-bold"
+                  onClick={() => setShowFilters((value) => !value)}
+                >
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  Filters{filtersActive ? " •" : ""}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl border-2 font-bold"
                   onClick={() => {
                     setVaultSearch("");
                     setActiveTypes([]);
+                    resetMetricFilters();
                   }}
                 >
                   Clear filters
@@ -630,7 +486,7 @@ const Index = () => {
                   type="button"
                   variant="outline"
                   className="rounded-2xl border-2 font-bold"
-                  onClick={() => setSeedCounts(DEFAULT_SEED_COUNTS)}
+                  onClick={resetSeedCounts}
                 >
                   <RotateCcw className="mr-2 h-4 w-4" />
                   Reset counts
@@ -657,6 +513,68 @@ const Index = () => {
                 Showing {visibleStrainCount} strains
               </span>
             </div>
+
+            {showFilters && (
+              <div className="mt-3 grid gap-4 border-t border-border/60 pt-3 sm:grid-cols-2">
+                <div>
+                  <div className="mb-1 flex justify-between text-xs font-bold">
+                    <span>Min THC</span>
+                    <span>{minThc}%</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={0}
+                    max={30}
+                    value={minThc}
+                    onChange={(event) => setMinThc(Number(event.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-xs font-bold">
+                    <span>Max flowering</span>
+                    <span>{maxFlowering} wks</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={6}
+                    max={20}
+                    value={maxFlowering}
+                    onChange={(event) => setMaxFlowering(Number(event.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-xs font-bold">
+                    <span>Min resin density</span>
+                    <span>{minResin}★</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={minResin}
+                    onChange={(event) => setMinResin(Number(event.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+                <div>
+                  <div className="mb-1 flex justify-between text-xs font-bold">
+                    <span>Min terpene intensity</span>
+                    <span>{minTerpene}★</span>
+                  </div>
+                  <input
+                    type="range"
+                    min={1}
+                    max={5}
+                    value={minTerpene}
+                    onChange={(event) => setMinTerpene(Number(event.target.value))}
+                    className="w-full accent-primary"
+                  />
+                </div>
+              </div>
+            )}
+
             <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
               <span className="text-xs font-black uppercase tracking-wide text-muted-foreground">Sort:</span>
               {SORT_OPTIONS.map((option) => {
@@ -720,7 +638,12 @@ const Index = () => {
                         <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                             <div className="min-w-0">
-                              <p className="truncate text-sm font-semibold">{seed.name}</p>
+                              <Link
+                                to={`/strain/${encodeURIComponent(seed.id)}`}
+                                className="truncate text-sm font-semibold hover:text-primary hover:underline"
+                              >
+                                {seed.name}
+                              </Link>
                               <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -895,7 +818,11 @@ const Index = () => {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {preservationShortlist.map(({ seed, priority }) => (
-                <div key={`${seed.id}-shortlist`} className={`rounded-2xl border p-3 ${priority.tone}`}>
+                <Link
+                  key={`${seed.id}-shortlist`}
+                  to={`/strain/${encodeURIComponent(seed.id)}`}
+                  className={`block rounded-2xl border p-3 transition-opacity hover:opacity-80 ${priority.tone}`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
@@ -906,11 +833,13 @@ const Index = () => {
                   <p className="mt-2 text-xs leading-relaxed">
                     <span className="font-black">{priority.level}:</span> {priority.reasons.join(" · ")}
                   </p>
-                </div>
+                </Link>
               ))}
             </div>
           </div>
         </section>
+
+        <BestParents />
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-start gap-3">
@@ -929,7 +858,7 @@ const Index = () => {
               value={newPassName}
               onChange={(event) => setNewPassName(event.target.value)}
               onKeyDown={(event) => {
-                if (event.key === "Enter") addMultipass();
+                if (event.key === "Enter") handleAddMultipass();
               }}
               placeholder="Strain name (e.g. Crunch Berries)"
               className="mb-3 h-11 rounded-2xl font-semibold"
@@ -939,7 +868,7 @@ const Index = () => {
                 value={newPassParentA}
                 onChange={(event) => setNewPassParentA(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") addMultipass();
+                  if (event.key === "Enter") handleAddMultipass();
                 }}
                 placeholder="Cross parent A (mother)"
                 className="h-11 rounded-2xl font-semibold"
@@ -949,7 +878,7 @@ const Index = () => {
                 value={newPassParentB}
                 onChange={(event) => setNewPassParentB(event.target.value)}
                 onKeyDown={(event) => {
-                  if (event.key === "Enter") addMultipass();
+                  if (event.key === "Enter") handleAddMultipass();
                 }}
                 placeholder="Cross parent B (father)"
                 className="h-11 rounded-2xl font-semibold"
@@ -972,7 +901,7 @@ const Index = () => {
                     <Plus className="h-3.5 w-3.5" />
                   </Button>
                 </div>
-                <Button type="button" className="h-11 rounded-2xl font-bold" onClick={addMultipass} disabled={!newPassName.trim()}>
+                <Button type="button" className="h-11 rounded-2xl font-bold" onClick={handleAddMultipass} disabled={!newPassName.trim()}>
                   <Plus className="mr-1.5 h-4 w-4" />
                   Add
                 </Button>
@@ -1063,6 +992,8 @@ const Index = () => {
             </p>
           )}
         </section>
+
+        <BreedingLots />
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-center gap-2">

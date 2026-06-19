@@ -47,6 +47,22 @@ const typeStyles: Record<SeedType, string> = {
 };
 
 const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
+
+type SortMode = "count" | "yield-desc" | "yield-asc" | "name";
+
+const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
+  { mode: "count", label: "Seed count" },
+  { mode: "yield-desc", label: "Yield high → low" },
+  { mode: "yield-asc", label: "Yield low → high" },
+  { mode: "name", label: "Name A → Z" },
+];
+
+// Use the top-end of the highest-power (4×4) estimate as the yield ranking metric.
+const seedYieldMetric = (seed: Seed) => {
+  const estimates = estimateSeedGrowth(seed);
+  const top = estimates[estimates.length - 1];
+  return top ? top.yieldG.max : 0;
+};
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
 const MULTIPASS_BREEDER = "Ethos Genetics";
@@ -263,6 +279,7 @@ const Index = () => {
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
   const [vaultSearch, setVaultSearch] = useState("");
   const [activeTypes, setActiveTypes] = useState<SeedType[]>([]);
+  const [sortMode, setSortMode] = useState<SortMode>("count");
   const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => {
     if (typeof window === "undefined") return DEFAULT_SEED_COUNTS;
 
@@ -404,7 +421,19 @@ const Index = () => {
             const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
             return matchesSearch && matchesType;
           })
-          .sort((a, b) => getSeedCount(b) - getSeedCount(a));
+          .sort((a, b) => {
+            switch (sortMode) {
+              case "yield-desc":
+                return seedYieldMetric(b) - seedYieldMetric(a);
+              case "yield-asc":
+                return seedYieldMetric(a) - seedYieldMetric(b);
+              case "name":
+                return a.name.localeCompare(b.name);
+              case "count":
+              default:
+                return getSeedCount(b) - getSeedCount(a);
+            }
+          });
         const byType = SEED_TYPES.map((type) => ({
           type,
           total: strains.filter((seed) => seed.type === type).reduce((sum, seed) => sum + getSeedCount(seed), 0),
@@ -413,7 +442,7 @@ const Index = () => {
         return { ...group, total, byType, strains };
       }).filter((group) => group.strains.length > 0);
     },
-    [activeTypes, seedCounts, vaultSearch, vaultSeeds],
+    [activeTypes, seedCounts, vaultSearch, vaultSeeds, sortMode],
   );
 
   const visibleStrainCount = breederTypeTotals.reduce((sum, group) => sum + group.strains.length, 0);
@@ -548,6 +577,26 @@ const Index = () => {
               <span className="ml-auto text-xs font-bold text-muted-foreground">
                 Showing {visibleStrainCount} strains
               </span>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+              <span className="text-xs font-black uppercase tracking-wide text-muted-foreground">Sort:</span>
+              {SORT_OPTIONS.map((option) => {
+                const active = sortMode === option.mode;
+                return (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    onClick={() => setSortMode(option.mode)}
+                    className={`inline-flex items-center gap-1 rounded-full border-2 px-3 py-1 text-xs font-bold transition ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

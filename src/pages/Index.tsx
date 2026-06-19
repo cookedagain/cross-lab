@@ -27,6 +27,7 @@ import {
   estimateCannabinoids,
   estimateLineageSplit,
   estimateSeedGrowth,
+  estimateAdvancedMetrics,
   generateCrossNames,
   getCrossReport,
   groupNamesByCategory,
@@ -59,6 +60,15 @@ type SortMode =
   | "sativa-desc"
   | "indica-desc"
   | "potency-desc"
+  | "flowering-asc"
+  | "flowering-desc"
+  | "terpene-desc"
+  | "resin-desc"
+  | "ease-desc"
+  | "stretch-desc"
+  | "stress-desc"
+  | "mold-desc"
+  | "keeper-desc"
   | "name";
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
@@ -70,6 +80,15 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "sativa-desc", label: "Sativa % high → low" },
   { mode: "indica-desc", label: "Indica % high → low" },
   { mode: "potency-desc", label: "Potency high → low" },
+  { mode: "flowering-asc", label: "Flowering fast → slow" },
+  { mode: "flowering-desc", label: "Flowering slow → fast" },
+  { mode: "terpene-desc", label: "Terpene intensity" },
+  { mode: "resin-desc", label: "Resin density" },
+  { mode: "ease-desc", label: "Ease of grow" },
+  { mode: "stretch-desc", label: "Stretch factor" },
+  { mode: "stress-desc", label: "Stress resistance" },
+  { mode: "mold-desc", label: "Mold resilience" },
+  { mode: "keeper-desc", label: "Keeper priority" },
   { mode: "name", label: "Name A → Z" },
 ];
 
@@ -447,6 +466,11 @@ const Index = () => {
             return matchesSearch && matchesType;
           })
           .sort((a, b) => {
+            const advA = estimateAdvancedMetrics(a);
+            const advB = estimateAdvancedMetrics(b);
+            const priorityA = getKeeperPriority(seedWithCount(a)).score;
+            const priorityB = getKeeperPriority(seedWithCount(b)).score;
+
             switch (sortMode) {
               case "yield-desc":
                 return seedYieldMetric(b) - seedYieldMetric(a);
@@ -462,6 +486,26 @@ const Index = () => {
                 return seedSativaMetric(a) - seedSativaMetric(b);
               case "potency-desc":
                 return seedPotencyMetric(b) - seedPotencyMetric(a);
+              case "flowering-asc":
+                return advA.floweringWeeks - advB.floweringWeeks;
+              case "flowering-desc":
+                return advB.floweringWeeks - advA.floweringWeeks;
+              case "terpene-desc":
+                return advB.terpeneIntensity - advA.terpeneIntensity;
+              case "resin-desc":
+                return advB.resinDensity - advA.resinDensity;
+              case "ease-desc":
+                return advB.easeOfGrow - advA.easeOfGrow;
+              case "stretch-desc": {
+                const stretchVal = (s: string) => (s === "High" ? 3 : s === "Medium" ? 2 : 1);
+                return stretchVal(advB.stretchFactor) - stretchVal(advA.stretchFactor);
+              }
+              case "stress-desc":
+                return advB.stressResistance - advA.stressResistance;
+              case "mold-desc":
+                return advB.moldResilience - advA.moldResilience;
+              case "keeper-desc":
+                return priorityB - priorityA;
               case "name":
                 return a.name.localeCompare(b.name);
               case "count":
@@ -671,6 +715,7 @@ const Index = () => {
                   <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
                     {group.strains.map((seed) => {
                       const count = getSeedCount(seed);
+                      const adv = estimateAdvancedMetrics(seed);
                       return (
                         <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
                           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -778,6 +823,47 @@ const Index = () => {
                               </div>
                             );
                           })()}
+
+                          {/* Advanced Metrics Readout */}
+                          <div className="mt-3 border-t border-border/40 pt-2.5">
+                            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                              Advanced Breeder Metrics
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4">
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Flowering</span>
+                                <span className="font-bold text-foreground">{adv.floweringWeeks} weeks</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Terpene Intensity</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.terpeneIntensity)}{"☆".repeat(5 - adv.terpeneIntensity)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Resin Density</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.resinDensity)}{"☆".repeat(5 - adv.resinDensity)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Ease of Grow</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.easeOfGrow)}{"☆".repeat(5 - adv.easeOfGrow)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Stretch Factor</span>
+                                <span className="font-bold text-foreground">{adv.stretchFactor}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Stress Resistance</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.stressResistance)}{"☆".repeat(5 - adv.stressResistance)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Mold Resilience</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.moldResilience)}{"☆".repeat(5 - adv.moldResilience)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Keeper Priority</span>
+                                <span className="font-bold text-foreground">{getKeeperPriority(seedWithCount(seed)).level}</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}

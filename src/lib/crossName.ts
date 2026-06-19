@@ -619,6 +619,76 @@ export function estimateSeedGrowth(seed: Seed): SeedGrowthEstimate[] {
   ];
 }
 
+export type AdvancedMetrics = {
+  floweringWeeks: number;
+  terpeneIntensity: number; // 1-5
+  resinDensity: number; // 1-5
+  easeOfGrow: number; // 1-5
+  stretchFactor: "Low" | "Medium" | "High";
+  stressResistance: number; // 1-5
+  moldResilience: number; // 1-5
+};
+
+// Estimates advanced metrics based on name and lineage cues.
+export function estimateAdvancedMetrics(seed: Seed): AdvancedMetrics {
+  const text = `${seed.name} ${seed.breeder}`.toLowerCase();
+  const isAuto = text.includes("auto");
+
+  // 1. Flowering Weeks
+  let floweringWeeks = isAuto ? 8 : 9;
+  if (/haze|durban|amnesia|sativa|thai/i.test(text)) floweringWeeks += 1.5;
+  if (/kush|afghan|hash|deep chunk|indica/i.test(text)) floweringWeeks -= 0.5;
+  floweringWeeks = Math.round(floweringWeeks * 10) / 10;
+
+  // 2. Terpene Intensity (1-5)
+  let terpeneIntensity = 3;
+  if (/diesel|fuel|gas|gmo|chem|loud|permanent marker|cap junkie|zweet/i.test(text)) terpeneIntensity += 1.5;
+  if (/candy|runtz|zkittlez|sherb|gelato|cookies|peach|cherry|banana/i.test(text)) terpeneIntensity += 1.0;
+  if (/abc|mutant|feral/i.test(text)) terpeneIntensity -= 0.5;
+  terpeneIntensity = Math.min(5, Math.max(1, Math.round(terpeneIntensity)));
+
+  // 3. Resin Density (1-5)
+  let resinDensity = 3;
+  if (/glue|gorilla|resin|frost|diamond|platinum|white|hash|temple|slurricane|cap junkie/i.test(text)) resinDensity += 1.5;
+  if (/cookies|gelato|wedding|cake|bag/i.test(text)) resinDensity += 0.8;
+  if (/abc|mutant|feral/i.test(text)) resinDensity -= 0.8;
+  resinDensity = Math.min(5, Math.max(1, Math.round(resinDensity)));
+
+  // 4. Ease of Grow (1-5)
+  let easeOfGrow = 4;
+  if (/haze|thai|neville|mutant|abc|feral/i.test(text)) easeOfGrow -= 1.5;
+  if (/kush|afghan|northern lights|skunk|white widow/i.test(text)) easeOfGrow += 0.8;
+  if (isAuto) easeOfGrow -= 0.3; // Autos can be sensitive to stress
+  easeOfGrow = Math.min(5, Math.max(1, Math.round(easeOfGrow)));
+
+  // 5. Stretch Factor
+  let stretchFactor: "Low" | "Medium" | "High" = "Medium";
+  if (/haze|durban|sour|diesel|tangie|thai/i.test(text)) stretchFactor = "High";
+  if (/kush|afghan|deep chunk|hash|bubba|northern lights/i.test(text)) stretchFactor = "Low";
+
+  // 6. Stress/Herm Resistance (1-5)
+  let stressResistance = 4;
+  if (/cookies|gelato|runtz|gmo|chem/i.test(text)) stressResistance -= 0.8; // Hype cuts can sometimes be touchy
+  if (/skunk|afghan|northern lights|durban/i.test(text)) stressResistance += 0.8;
+  stressResistance = Math.min(5, Math.max(1, Math.round(stressResistance)));
+
+  // 7. Mold/Pest Resilience (1-5)
+  let moldResilience = 3;
+  if (/haze|durban|thai|sativa/i.test(text)) moldResilience += 1.2; // Sativas are adapted to humid climates
+  if (/deep chunk|afghan|hash|kush|indica/i.test(text)) moldResilience -= 0.8; // Dense indica buds are prone to mold
+  moldResilience = Math.min(5, Math.max(1, Math.round(moldResilience)));
+
+  return {
+    floweringWeeks,
+    terpeneIntensity,
+    resinDensity,
+    easeOfGrow,
+    stretchFactor,
+    stressResistance,
+    moldResilience,
+  };
+}
+
 function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecommendation {
   const flags = detectFlags(seed);
   const countText = seedCount === undefined ? "unknown stock" : `${seedCount} seeds logged`;
@@ -808,7 +878,7 @@ export function getCrossReport(
   }
 
   const breederNote = includesBurnPile
-    ? `This pairing includes Burn Pile stock. Treat it as a one-and-only smoke/test run only: grow it, fail it, toss it, or consume it, but do not save pollen, make seeds, preserve it, or use it for breeding because the source is white-label / potentially mislabelled.`
+    ? `This pairing includes Burn Pile stock. Treat it as a one-and-only smoke/test run only: grow it, evaluate it, consume or discard it, and do not carry it forward.`
     : `This cross points toward ${profile.flavors.slice(0, 3).join(", ") || "mixed terpene"} expressions. ${parentA.breeder === parentB.breeder ? `Both parents come from ${parentA.breeder}, so the naming and selection can stay close to that breeder's style.` : `It combines ${parentA.breeder}'s ${shortName(parentA.name)} with ${parentB.breeder}'s ${shortName(parentB.name)}, which should make the hunt more varied and brandable.`}`;
 
   return {

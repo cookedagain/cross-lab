@@ -1,7 +1,12 @@
 import { useMemo, useState } from "react";
-import { Dices, FlaskConical, Leaf, PackagePlus, ShieldAlert, Sparkles, Target } from "lucide-react";
+import { ChevronDown, Dices, FlaskConical, Leaf, PackagePlus, ShieldAlert, Sparkles, Target } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import { Button } from "@/components/ui/button";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   BURN_PILE_TOTAL,
   DEFAULT_SEED_COUNTS,
@@ -257,10 +262,15 @@ const Index = () => {
             total: seeds.filter((seed) => seed.type === type).reduce((sum, seed) => sum + (seed.count ?? 0), 0),
           }))
           .filter((entry) => entry.total > 0);
-        return { ...group, byType };
+        const strains = [...seeds].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+        return { ...group, byType, strains };
       }),
     [],
   );
+
+  const [openBreeders, setOpenBreeders] = useState<Record<string, boolean>>({});
+  const toggleBreeder = (breeder: string) =>
+    setOpenBreeders((current) => ({ ...current, [breeder]: !current[breeder] }));
 
   const preservationShortlist = useMemo(
     () =>
@@ -331,21 +341,57 @@ const Index = () => {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
-            {breederTypeTotals.map((group) => (
-              <div key={group.breeder} className="rounded-3xl border border-border bg-background p-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="font-display text-lg font-bold">{group.breeder}</h2>
-                  <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {group.byType.map((entry) => (
-                    <span key={entry.type} className={`rounded-full border px-3 py-1 text-xs font-black ${typeStyles[entry.type]}`}>
-                      {typeShort[entry.type]}: {entry.total}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
+            {breederTypeTotals.map((group) => {
+              const isOpen = openBreeders[group.breeder] ?? false;
+              return (
+                <Collapsible
+                  key={group.breeder}
+                  open={isOpen}
+                  onOpenChange={() => toggleBreeder(group.breeder)}
+                  className="rounded-3xl border border-border bg-background p-4"
+                >
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 text-left">
+                    <div className="min-w-0">
+                      <h2 className="font-display text-lg font-bold leading-tight">{group.breeder}</h2>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {group.strains.length} {group.strains.length === 1 ? "strain" : "strains"} · tap to {isOpen ? "hide" : "view"}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  </CollapsibleTrigger>
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {group.byType.map((entry) => (
+                      <span key={entry.type} className={`rounded-full border px-3 py-1 text-xs font-black ${typeStyles[entry.type]}`}>
+                        {typeShort[entry.type]}: {entry.total}
+                      </span>
+                    ))}
+                  </div>
+
+                  <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
+                    {group.strains.map((seed) => (
+                      <div
+                        key={seed.id}
+                        className="flex items-center justify-between gap-3 rounded-2xl bg-muted/50 px-3 py-2"
+                      >
+                        <p className="min-w-0 truncate text-sm font-semibold">{seed.name}</p>
+                        <div className="flex shrink-0 items-center gap-2">
+                          <TypeBadge type={seed.type} />
+                          <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
+                            {seed.count ?? 0}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
           </div>
 
           <div className="mt-5 rounded-3xl bg-orange-50 p-4 text-orange-800">

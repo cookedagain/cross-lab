@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Target } from "lucide-react";
+import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,6 +47,16 @@ const typeStyles: Record<SeedType, string> = {
 
 const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
+const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
+const MULTIPASS_BREEDER = "Ethos Genetics";
+
+type MultipassEntry = {
+  id: string;
+  name: string;
+  type: SeedType;
+  count: number;
+  arrived: boolean;
+};
 
 const clampSeedCount = (value: number) => Math.max(0, Math.min(999, Math.round(Number.isFinite(value) ? value : 0)));
 
@@ -270,6 +280,64 @@ const Index = () => {
     window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(seedCounts));
   }, [seedCounts]);
 
+  const [multipass, setMultipass] = useState<MultipassEntry[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = window.localStorage.getItem(MULTIPASS_STORAGE_KEY);
+      if (!stored) return [];
+      const parsed = JSON.parse(stored) as MultipassEntry[];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(MULTIPASS_STORAGE_KEY, JSON.stringify(multipass));
+  }, [multipass]);
+
+  const [newPassName, setNewPassName] = useState("");
+  const [newPassType, setNewPassType] = useState<SeedType>("Feminized");
+  const [newPassCount, setNewPassCount] = useState(10);
+
+  const addMultipass = () => {
+    const name = newPassName.trim();
+    if (!name) return;
+    setMultipass((current) => [
+      ...current,
+      {
+        id: `multipass-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+        name,
+        type: newPassType,
+        count: clampSeedCount(newPassCount),
+        arrived: false,
+      },
+    ]);
+    setNewPassName("");
+    setNewPassCount(10);
+  };
+
+  const removeMultipass = (id: string) => setMultipass((current) => current.filter((entry) => entry.id !== id));
+  const toggleArrived = (id: string) =>
+    setMultipass((current) => current.map((entry) => (entry.id === id ? { ...entry, arrived: !entry.arrived } : entry)));
+
+  const incomingPasses = multipass.filter((entry) => !entry.arrived);
+  const arrivedPasses = multipass.filter((entry) => entry.arrived);
+
+  const arrivedSeeds = useMemo<Seed[]>(
+    () =>
+      arrivedPasses.map((entry) => ({
+        id: entry.id,
+        name: entry.name,
+        breeder: MULTIPASS_BREEDER,
+        type: entry.type,
+        count: entry.count,
+      })),
+    [multipass],
+  );
+
+  const vaultSeeds = useMemo(() => [...SEEDS, ...arrivedSeeds], [arrivedSeeds]);
+
   const getSeedCount = (seed: Seed) => seedCounts[seed.id] ?? seed.count ?? 0;
   const seedWithCount = (seed: Seed): Seed => ({ ...seed, count: getSeedCount(seed) });
 
@@ -297,22 +365,22 @@ const Index = () => {
     () =>
       SEED_TYPES.map((type) => ({
         type,
-        total: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).reduce(
+        total: vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).reduce(
           (sum, seed) => sum + getSeedCount(seed),
           0,
         ),
-        strains: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
+        strains: vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
       })),
-    [seedCounts],
+    [seedCounts, vaultSeeds],
   );
 
   const mainVaultTotal = useMemo(
-    () => SEEDS.filter((seed) => seed.breeder !== "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
-    [seedCounts],
+    () => vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    [seedCounts, vaultSeeds],
   );
   const burnPileTotal = useMemo(
-    () => SEEDS.filter((seed) => seed.breeder === "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
-    [seedCounts],
+    () => vaultSeeds.filter((seed) => seed.breeder === "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    [seedCounts, vaultSeeds],
   );
   const grandTotal = mainVaultTotal + burnPileTotal;
 
@@ -320,7 +388,7 @@ const Index = () => {
     () => {
       const search = vaultSearch.trim().toLowerCase();
       return VAULT_TOTALS.map((group) => {
-        const allSeeds = SEEDS.filter((seed) => seed.breeder === group.breeder);
+        const allSeeds = vaultSeeds.filter((seed) => seed.breeder === group.breeder);
         const strains = allSeeds
           .filter((seed) => {
             const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
@@ -336,7 +404,7 @@ const Index = () => {
         return { ...group, total, byType, strains };
       }).filter((group) => group.strains.length > 0);
     },
-    [activeTypes, seedCounts, vaultSearch],
+    [activeTypes, seedCounts, vaultSearch, vaultSeeds],
   );
 
   const visibleStrainCount = breederTypeTotals.reduce((sum, group) => sum + group.strains.length, 0);
@@ -347,20 +415,20 @@ const Index = () => {
 
   const preservationShortlist = useMemo(
     () =>
-      SEEDS.map((seed) => {
+      vaultSeeds.map((seed) => {
         const countedSeed = seedWithCount(seed);
         return { seed: countedSeed, priority: getKeeperPriority(countedSeed) };
       })
         .filter(({ priority }) => priority.level === "High" || priority.level === "Medium")
         .sort((a, b) => b.priority.score - a.priority.score)
         .slice(0, 8),
-    [seedCounts],
+    [seedCounts, vaultSeeds],
   );
 
   const randomPair = () => {
-    const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    let b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    while (b.id === a.id) b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    const a = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
+    let b = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
+    while (b.id === a.id) b = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
     setParentA(a);
     setParentB(b);
     setSalt((value) => value + 1);
@@ -631,17 +699,138 @@ const Index = () => {
         </section>
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-start gap-3">
+            <PackageCheck className="mt-1 h-5 w-5 text-primary" />
+            <div>
+              <h2 className="font-display text-2xl font-black tracking-tight">Ethos Multipass — incoming additions</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Pre-log packs coming later in the year. When one lands, hit <b>Mark arrived</b> and it drops straight into the vault under {MULTIPASS_BREEDER} — counted, searchable, and selectable in the cross planner.
+              </p>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-border bg-background p-4">
+            <p className="mb-3 text-xs font-black uppercase tracking-wide text-primary">Add an incoming pack</p>
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto]">
+              <Input
+                value={newPassName}
+                onChange={(event) => setNewPassName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") addMultipass();
+                }}
+                placeholder="Strain name (e.g. Crunch Berries × End Game #5)"
+                className="h-11 rounded-2xl font-semibold"
+              />
+              <div className="flex items-center gap-2">
+                <div className="flex items-center rounded-2xl border border-border bg-card p-1">
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setNewPassCount((value) => clampSeedCount(value - 1))}>
+                    <Minus className="h-3.5 w-3.5" />
+                  </Button>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={newPassCount}
+                    onChange={(event) => setNewPassCount(clampSeedCount(Number(event.target.value)))}
+                    className="h-8 w-14 border-0 bg-transparent p-0 text-center text-sm font-black shadow-none focus-visible:ring-0"
+                  />
+                  <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setNewPassCount((value) => clampSeedCount(value + 1))}>
+                    <Plus className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+                <Button type="button" className="h-11 rounded-2xl font-bold" onClick={addMultipass} disabled={!newPassName.trim()}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Add
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold text-muted-foreground">Type:</span>
+              {SEED_TYPES.map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => setNewPassType(type)}
+                  className={`rounded-full border px-3 py-1 text-xs font-black transition ${
+                    newPassType === type ? typeStyles[type] : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+                  }`}
+                >
+                  {typeShort[type]}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {incomingPasses.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-black uppercase tracking-wide text-muted-foreground">Incoming ({incomingPasses.length})</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {incomingPasses.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-dashed border-primary/40 bg-background p-3">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{entry.name}</p>
+                      <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">{entry.count} seeds · expected</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <TypeBadge type={entry.type} />
+                      <Button type="button" size="sm" className="h-8 rounded-full text-xs font-bold" onClick={() => toggleArrived(entry.id)}>
+                        <PackageCheck className="mr-1 h-3.5 w-3.5" />
+                        Arrived
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive" onClick={() => removeMultipass(entry.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {arrivedPasses.length > 0 && (
+            <div className="mt-4">
+              <p className="mb-2 text-xs font-black uppercase tracking-wide text-emerald-700">In vault ({arrivedPasses.length})</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {arrivedPasses.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-emerald-900">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold">{entry.name}</p>
+                      <p className="mt-0.5 text-[11px] font-bold opacity-80">added to {MULTIPASS_BREEDER}</p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <TypeBadge type={entry.type} />
+                      <Button type="button" variant="outline" size="sm" className="h-8 rounded-full border-2 text-xs font-bold" onClick={() => toggleArrived(entry.id)}>
+                        <Undo2 className="mr-1 h-3.5 w-3.5" />
+                        Incoming
+                      </Button>
+                      <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:text-destructive" onClick={() => removeMultipass(entry.id)}>
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {multipass.length === 0 && (
+            <p className="mt-4 rounded-2xl bg-muted/50 p-4 text-sm text-muted-foreground">
+              No Multipass packs logged yet. Add the strains you expect to receive and they'll be ready to fold into the vault the moment they arrive.
+            </p>
+          )}
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
             <h2 className="font-display text-2xl font-black">Cross planner</h2>
           </div>
 
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} onClear={() => setParentA(null)} seeds={SEEDS} seedCounts={seedCounts} />
+            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} onClear={() => setParentA(null)} seeds={vaultSeeds} seedCounts={seedCounts} />
             <div className="grid place-items-center">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-muted font-display text-xl font-black text-muted-foreground">×</span>
             </div>
-            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} onClear={() => setParentB(null)} seeds={SEEDS} seedCounts={seedCounts} />
+            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} onClear={() => setParentB(null)} seeds={vaultSeeds} seedCounts={seedCounts} />
           </div>
 
           {parentA && parentB && (

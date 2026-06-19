@@ -1,31 +1,52 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, Dices, FlaskConical, Leaf, PackagePlus, ShieldAlert, Sparkles, Target } from "lucide-react";
+import {
+  ChevronDown,
+  Dices,
+  FlaskConical,
+  Leaf,
+  PackagePlus,
+  PieChart as PieChartIcon,
+  Search,
+  ShieldAlert,
+  Sparkles,
+  Target,
+} from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
+import ThemeToggle from "@/components/ThemeToggle";
+import VaultDonut from "@/components/VaultDonut";
+import SeedProfileDialog from "@/components/SeedProfileDialog";
+import CrossReportPanel from "@/components/CrossReportPanel";
+import SavedCrosses from "@/components/SavedCrosses";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
-  BURN_PILE_TOTAL,
-  DEFAULT_SEED_COUNTS,
-  GRAND_TOTAL,
-  MAIN_VAULT_TOTAL,
-  SEEDS,
-  VAULT_TOTALS,
-  VAULT_TYPE_TOTALS,
-  type Seed,
-  type SeedType,
-} from "@/data/seeds";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { BREEDERS, SEEDS, type Seed, type SeedType } from "@/data/seeds";
 import {
   TRAIT_GOALS,
+  crossKey,
   estimateSeedGrowth,
   generateCrossNames,
   getCrossReport,
   groupNamesByCategory,
   type TraitGoal,
 } from "@/lib/crossName";
+import { useLocalStorage } from "@/hooks/use-local-storage";
+import {
+  PHENO_STATUSES,
+  STORAGE_KEYS,
+  type JournalEntry,
+  type SavedCross,
+} from "@/lib/storage";
+import { showSuccess } from "@/utils/toast";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 const typeShort: Record<SeedType, string> = {
@@ -235,28 +256,73 @@ const getPairingTips = (parentA: Seed, parentB: Seed) => {
   ];
 };
 
+const statusTone: Record<string, string> = Object.fromEntries(PHENO_STATUSES.map((s) => [s.value, s.tone]));
+
 const Index = () => {
+  const [inventory, setInventory] = useLocalStorage<Record<string, number>>(
+    STORAGE_KEYS.inventory,
+    Object.fromEntries(SEEDS.map((seed) => [seed.id, seed.count ?? 0])),
+  );
+  const [journal, setJournal] = useLocalStorage<Record<string, JournalEntry>>(STORAGE_KEYS.journal, {});
+  const [savedCrosses, setSavedCrosses] = useLocalStorage<SavedCross[]>(STORAGE_KEYS.savedCrosses, []);
+
+  const effectiveSeeds = useMemo(
+    () => SEEDS.map((seed) => ({ ...seed, count: inventory[seed.id] ?? seed.count ?? 0 })),
+    [inventory],
+  );
+  const byId = useMemo(() => new Map(effectiveSeeds.map((seed) => [seed.id, seed])), [effectiveSeeds]);
+
   const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
   const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
   const [salt, setSalt] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+  const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<SeedType | "All">("All");
+  const [openBreeders, setOpenBreeders] = useState<Record<string, boolean>>({});
+  const [profileSeed, setProfileSeed] = useState<Seed | null>(null);
+
+  const liveA = parentA ? byId.get(parentA.id) ?? parentA : null;
+  const liveB = parentB ? byId.get(parentB.id) ?? parentB : null;
 
   const report = useMemo(() => {
-    if (!parentA || !parentB) return null;
-    return getCrossReport(parentA, parentB, selectedGoals);
-  }, [parentA, parentB, selectedGoals]);
+    if (!liveA || !liveB) return null;
+    return getCrossReport(liveA, liveB, selectedGoals);
+  }, [liveA, liveB, selectedGoals]);
 
   const names = useMemo(() => {
-    if (!parentA || !parentB) return [];
-    return generateCrossNames(parentA, parentB, salt, selectedGoals);
-  }, [parentA, parentB, salt, selectedGoals]);
+    if (!liveA || !liveB) return [];
+    return generateCrossNames(liveA, liveB, salt, selectedGoals);
+  }, [liveA, liveB, salt, selectedGoals]);
 
   const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
 
-  const breederTypeTotals = useMemo(
+  const typeTotals = useMemo(
     () =>
-      VAULT_TOTALS.map((group) => {
-        const seeds = SEEDS.filter((seed) => seed.breeder === group.breeder);
+      (["Feminized", "Regular", "Autoflower", "Unknown Photo"] as SeedType[]).map((type) => {
+        const seeds = effectiveSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type);
+        return {
+          type,
+          total: seeds.reduce((sum, seed) => sum + (seed.count ?? 0), 0),
+          strains: seeds.length,
+        };
+      }),
+    [effectiveSeeds],
+  );
+
+  const mainTotal = useMemo(
+    () => effectiveSeeds.filter((s) => s.breeder !== "Burn Pile").reduce((sum, s) => sum + (s.count ?? 0), 0),
+    [effectiveSeeds],
+  );
+  const burnTotal = useMemo(
+    () => effectiveSeeds.filter((s) => s.breeder === "Burn Pile").reduce((sum, s) => sum + (s.count ?? 0), 0),
+    [effectiveSeeds],
+  );
+  const grandTotal = mainTotal + burnTotal;
+
+  const breederGroups = useMemo(
+    () =>
+      BREEDERS.map((breeder) => {
+        const seeds = effectiveSeeds.filter((seed) => seed.breeder === breeder);
         const byType = (["Feminized", "Regular", "Autoflower", "Unknown Photo"] as SeedType[])
           .map((type) => ({
             type,
@@ -264,28 +330,75 @@ const Index = () => {
           }))
           .filter((entry) => entry.total > 0);
         const strains = [...seeds].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
-        return { ...group, byType, strains };
+        return { breeder, total: seeds.reduce((sum, seed) => sum + (seed.count ?? 0), 0), byType, strains };
       }),
-    [],
+    [effectiveSeeds],
   );
-
-  const [openBreeders, setOpenBreeders] = useState<Record<string, boolean>>({});
-  const toggleBreeder = (breeder: string) =>
-    setOpenBreeders((current) => ({ ...current, [breeder]: !current[breeder] }));
 
   const preservationShortlist = useMemo(
     () =>
-      SEEDS.map((seed) => ({ seed, priority: getKeeperPriority(seed) }))
+      effectiveSeeds
+        .map((seed) => ({ seed, priority: getKeeperPriority(seed) }))
         .filter(({ priority }) => priority.level === "High" || priority.level === "Medium")
         .sort((a, b) => b.priority.score - a.priority.score)
         .slice(0, 8),
-    [],
+    [effectiveSeeds],
   );
 
+  const searchActive = search.trim() !== "" || typeFilter !== "All";
+  const matchStrain = (seed: Seed) => {
+    const term = search.trim().toLowerCase();
+    const typeOk = typeFilter === "All" || seed.type === typeFilter;
+    const textOk =
+      term === "" || seed.name.toLowerCase().includes(term) || seed.breeder.toLowerCase().includes(term);
+    return typeOk && textOk;
+  };
+
+  const toggleBreeder = (breeder: string) =>
+    setOpenBreeders((current) => ({ ...current, [breeder]: !current[breeder] }));
+
+  const setSeedCount = (id: string, count: number) =>
+    setInventory((current) => ({ ...current, [id]: Math.max(0, count) }));
+
+  const updateJournal = (id: string, entry: JournalEntry) =>
+    setJournal((current) => ({ ...current, [id]: entry }));
+
+  const crossSaved = liveA && liveB ? savedCrosses.some((c) => c.key === crossKey(liveA, liveB)) : false;
+
+  const saveCross = () => {
+    if (!liveA || !liveB || !report) return;
+    const key = crossKey(liveA, liveB);
+    if (savedCrosses.some((c) => c.key === key)) return;
+    const entry: SavedCross = {
+      key,
+      parentAId: liveA.id,
+      parentBId: liveB.id,
+      parentAName: liveA.name,
+      parentBName: liveB.name,
+      name: names[0]?.name ?? `${liveA.name} × ${liveB.name}`,
+      score: report.scores.overall,
+      goals: selectedGoals,
+      savedAt: Date.now(),
+    };
+    setSavedCrosses((current) => [...current, entry]);
+    showSuccess("Cross saved");
+  };
+
+  const removeCross = (key: string) => setSavedCrosses((current) => current.filter((c) => c.key !== key));
+
+  const loadCross = (cross: SavedCross) => {
+    const a = byId.get(cross.parentAId);
+    const b = byId.get(cross.parentBId);
+    if (a) setParentA(a);
+    if (b) setParentB(b);
+    if (cross.goals) setSelectedGoals(cross.goals);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
   const randomPair = () => {
-    const a = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    let b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
-    while (b.id === a.id) b = SEEDS[Math.floor(Math.random() * SEEDS.length)];
+    const a = effectiveSeeds[Math.floor(Math.random() * effectiveSeeds.length)];
+    let b = effectiveSeeds[Math.floor(Math.random() * effectiveSeeds.length)];
+    while (b.id === a.id) b = effectiveSeeds[Math.floor(Math.random() * effectiveSeeds.length)];
     setParentA(a);
     setParentB(b);
     setSalt((value) => value + 1);
@@ -308,17 +421,18 @@ const Index = () => {
               <p className="text-sm text-muted-foreground">Vault-aware breeder planning with FEM / REG / AUTO labels</p>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {MAIN_VAULT_TOTAL}</span>
-            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {BURN_PILE_TOTAL}</span>
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {GRAND_TOTAL}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainTotal}</span>
+            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {burnTotal}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
+            <ThemeToggle />
           </div>
         </div>
       </header>
 
       <main className="container max-w-6xl pb-20 pt-8">
         <section className="grid gap-4 md:grid-cols-3">
-          {VAULT_TYPE_TOTALS.filter((entry) => entry.total > 0).map((entry) => (
+          {typeTotals.filter((entry) => entry.total > 0).map((entry) => (
             <div key={entry.type} className={`rounded-[1.75rem] border-2 p-5 shadow-sm ${typeStyles[entry.type]}`}>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-black uppercase tracking-[0.22em]">{entry.type}</p>
@@ -331,19 +445,57 @@ const Index = () => {
         </section>
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
+          <div className="mb-5 flex items-center gap-2">
+            <PieChartIcon className="h-5 w-5 text-primary" />
+            <h2 className="font-display text-2xl font-black">Vault composition</h2>
+          </div>
+          <VaultDonut data={typeTotals.map((entry) => ({ type: entry.type, total: entry.total }))} />
+        </section>
+
+        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-start gap-3">
             <PackagePlus className="mt-1 h-5 w-5 text-primary" />
             <div>
               <h1 className="font-display text-3xl font-black tracking-tight">Revised vault breakdown</h1>
               <p className="mt-1 text-sm text-muted-foreground">
-                Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Burn Pile remains separated from preservation pressure.
+                Tap a breeder to expand its strains. Tap a strain for its full profile, yield estimate, grow journal, and to edit your live seed count.
               </p>
             </div>
           </div>
 
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                placeholder="Search strains or breeders…"
+                className="h-11 rounded-2xl pl-9"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {(["All", "Feminized", "Regular", "Autoflower", "Unknown Photo"] as const).map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  onClick={() => setTypeFilter(option)}
+                  className={`rounded-full border-2 px-3 py-1.5 text-xs font-bold transition ${
+                    typeFilter === option
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border bg-card text-muted-foreground hover:border-primary"
+                  }`}
+                >
+                  {option === "All" ? "All" : typeShort[option]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid gap-3 lg:grid-cols-2">
-            {breederTypeTotals.map((group) => {
-              const isOpen = openBreeders[group.breeder] ?? false;
+            {breederGroups.map((group) => {
+              const filteredStrains = group.strains.filter(matchStrain);
+              if (searchActive && filteredStrains.length === 0) return null;
+              const isOpen = searchActive || (openBreeders[group.breeder] ?? false);
               return (
                 <Collapsible
                   key={group.breeder}
@@ -351,18 +503,20 @@ const Index = () => {
                   onOpenChange={() => toggleBreeder(group.breeder)}
                   className="rounded-3xl border border-border bg-background p-4"
                 >
-                  <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 text-left">
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 text-left" disabled={searchActive}>
                     <div className="min-w-0">
                       <h2 className="font-display text-lg font-bold leading-tight">{group.breeder}</h2>
                       <p className="text-xs font-semibold text-muted-foreground">
-                        {group.strains.length} {group.strains.length === 1 ? "strain" : "strains"} · tap to {isOpen ? "hide" : "view"}
+                        {searchActive
+                          ? `${filteredStrains.length} matching`
+                          : `${group.strains.length} ${group.strains.length === 1 ? "strain" : "strains"} · tap to ${isOpen ? "hide" : "view"}`}
                       </p>
                     </div>
                     <div className="flex shrink-0 items-center gap-2">
                       <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
-                      <ChevronDown
-                        className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
-                      />
+                      {!searchActive && (
+                        <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                      )}
                     </div>
                   </CollapsibleTrigger>
 
@@ -375,42 +529,61 @@ const Index = () => {
                   </div>
 
                   <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
-                    {group.strains.map((seed) => (
-                      <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="min-w-0 truncate text-sm font-semibold">{seed.name}</p>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <TypeBadge type={seed.type} />
-                            <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
-                              {seed.count ?? 0}
-                            </span>
-                          </div>
-                        </div>
+                    {filteredStrains.map((seed) => {
+                      const entry = journal[seed.id];
+                      return (
+                        <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
+                          <button
+                            type="button"
+                            onClick={() => setProfileSeed(seed)}
+                            className="flex w-full items-center justify-between gap-3 text-left"
+                          >
+                            <div className="flex min-w-0 items-center gap-2">
+                              <p className="min-w-0 truncate text-sm font-semibold hover:text-primary">{seed.name}</p>
+                              {entry && (
+                                <span className={`shrink-0 rounded-full border px-1.5 py-0.5 text-[9px] font-black uppercase ${statusTone[entry.status]}`}>
+                                  {entry.status}
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex shrink-0 items-center gap-2">
+                              <TypeBadge type={seed.type} />
+                              <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
+                                {seed.count ?? 0}
+                              </span>
+                            </div>
+                          </button>
 
-                        <div className="mt-2.5">
-                          <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                            Est. dry yield · single plant
-                          </p>
-                          <div className="grid gap-1.5 sm:grid-cols-3">
-                            {estimateSeedGrowth(seed).map((env) => (
-                              <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[10px] font-black uppercase tracking-wide text-primary">
-                                    {env.wattage}
-                                  </span>
-                                  <span className="font-display text-sm font-black leading-none">
-                                    {env.yieldG.min}–{env.yieldG.max}g
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
-                                  {env.gear}
+                          <div className="mt-2.5">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <p className="mb-1.5 inline-flex cursor-help items-center gap-1 text-[10px] font-black uppercase tracking-wide text-muted-foreground underline decoration-dotted">
+                                  Est. dry yield · single plant
                                 </p>
-                              </div>
-                            ))}
+                              </TooltipTrigger>
+                              <TooltipContent className="max-w-xs">
+                                <p className="text-xs leading-relaxed">
+                                  Rough per-plant estimate inferred from the strain name (lineage, auto/mutant cues) — not a guarantee. Real results depend on pheno, training, and environment.
+                                </p>
+                              </TooltipContent>
+                            </Tooltip>
+                            <div className="grid gap-1.5 sm:grid-cols-3">
+                              {estimateSeedGrowth(seed).map((env) => (
+                                <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-primary">{env.wattage}</span>
+                                    <span className="font-display text-sm font-black leading-none">
+                                      {env.yieldG.min}–{env.yieldG.max}g
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">{env.gear}</p>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               );
@@ -439,7 +612,12 @@ const Index = () => {
             </div>
             <div className="grid gap-3 md:grid-cols-2">
               {preservationShortlist.map(({ seed, priority }) => (
-                <div key={`${seed.id}-shortlist`} className={`rounded-2xl border p-3 ${priority.tone}`}>
+                <button
+                  key={`${seed.id}-shortlist`}
+                  type="button"
+                  onClick={() => setProfileSeed(seed)}
+                  className={`rounded-2xl border p-3 text-left transition hover:brightness-105 ${priority.tone}`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
@@ -450,7 +628,7 @@ const Index = () => {
                   <p className="mt-2 text-xs leading-relaxed">
                     <span className="font-black">{priority.level}:</span> {priority.reasons.join(" · ")}
                   </p>
-                </div>
+                </button>
               ))}
             </div>
           </div>
@@ -463,17 +641,17 @@ const Index = () => {
           </div>
 
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+            <SeedSelect label="A" accent="green" value={liveA} onChange={setParentA} seeds={effectiveSeeds} seedCounts={inventory} />
             <div className="grid place-items-center">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-muted font-display text-xl font-black text-muted-foreground">×</span>
             </div>
-            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+            <SeedSelect label="B" accent="purple" value={liveB} onChange={setParentB} seeds={effectiveSeeds} seedCounts={inventory} />
           </div>
 
-          {parentA && parentB && (
+          {liveA && liveB && (
             <div className="mt-5 space-y-3 rounded-3xl bg-muted/50 p-4">
               <div className="grid gap-3 sm:grid-cols-2">
-                {[parentA, parentB].map((seed) => (
+                {[liveA, liveB].map((seed) => (
                   <div key={seed.id} className="rounded-2xl bg-card p-4">
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <p className="font-display text-lg font-bold leading-tight">{seed.name}</p>
@@ -488,9 +666,9 @@ const Index = () => {
 
               <div className="rounded-2xl border border-primary/20 bg-card p-4">
                 <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Pollen / seed route advice</p>
-                <p className="text-sm font-semibold leading-relaxed">{getPairingAdvice(parentA, parentB)}</p>
+                <p className="text-sm font-semibold leading-relaxed">{getPairingAdvice(liveA, liveB)}</p>
                 <div className="mt-4 grid gap-3 lg:grid-cols-2">
-                  {[parentA, parentB].map((seed) => {
+                  {[liveA, liveB].map((seed) => {
                     const advice = seed.breeder === "Burn Pile"
                       ? {
                           ...SEED_TYPE_ADVICE[seed.type],
@@ -524,7 +702,7 @@ const Index = () => {
                 <div className="mt-4 rounded-2xl bg-primary/10 p-4 text-primary">
                   <p className="text-xs font-black uppercase tracking-wide">Once pollen + receiver are chosen</p>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-xs font-semibold leading-relaxed">
-                    {getPairingTips(parentA, parentB).map((tip) => (
+                    {getPairingTips(liveA, liveB).map((tip) => (
                       <li key={tip}>{tip}</li>
                     ))}
                   </ul>
@@ -601,7 +779,31 @@ const Index = () => {
             </div>
           </section>
         )}
+
+        {liveA && liveB && report && (
+          <CrossReportPanel
+            parentA={liveA}
+            parentB={liveB}
+            report={report}
+            names={names}
+            isSaved={crossSaved}
+            onSave={saveCross}
+            onRemove={() => removeCross(crossKey(liveA, liveB))}
+          />
+        )}
+
+        <SavedCrosses saved={savedCrosses} onLoad={loadCross} onRemove={removeCross} />
       </main>
+
+      <SeedProfileDialog
+        seed={profileSeed}
+        open={profileSeed !== null}
+        onOpenChange={(open) => !open && setProfileSeed(null)}
+        count={profileSeed ? inventory[profileSeed.id] ?? profileSeed.count ?? 0 : 0}
+        onCountChange={(count) => profileSeed && setSeedCount(profileSeed.id, count)}
+        journal={profileSeed ? journal[profileSeed.id] : undefined}
+        onJournalChange={(entry) => profileSeed && updateJournal(profileSeed.id, entry)}
+      />
 
       <MadeWithDyad />
     </div>

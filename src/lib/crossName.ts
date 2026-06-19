@@ -410,6 +410,7 @@ export type SingleSeedProfile = {
   heritage: string[];
   breederBlurb: string;
   terpeneBlurb: string;
+  bestGuess: string;
   selfing: SelfingRecommendation;
   flags: string[];
   goals: TraitGoal[];
@@ -574,6 +575,15 @@ export function getSingleSeedProfile(seed: Seed, seedCount?: number): SingleSeed
     flags.length ? `Detected markers: ${flags.join(", ")}.` : "No special auto/mutant/BX/S-line markers detected from the name."
   }`;
 
+  const sizeFactor = growthVigor(seed);
+  const yieldFactor = yieldVigor(seed);
+  const heightWord = sizeFactor >= 1.08 ? "tall, stretchy" : sizeFactor <= 0.85 ? "short, compact" : "medium-height";
+  const yieldWord = yieldFactor >= 1.08 ? "heavy" : yieldFactor <= 0.85 ? "modest" : "moderate";
+  const autoNote = flags.includes("Auto") ? " Auto influence should keep it faster and shorter." : "";
+  const mutantNote = flags.includes("Mutant/ABC") ? " Watch for unusual leaf/structure morphology." : "";
+  const flavorGuess = profile.terps.length ? profile.terps.slice(0, 3).join(", ") : "subtle, hunt-to-confirm";
+  const bestGuess = `Best guess: likely ${dominant ? dominant.name : "mixed terpene"}-leaning (${flavorGuess}); expect ${heightWord} plants with ${yieldWord} yield potential.${autoNote}${mutantNote} Hunt for the loudest, frostiest pheno and log what you find.`;
+
   return {
     seed,
     terpenes,
@@ -581,6 +591,7 @@ export function getSingleSeedProfile(seed: Seed, seedCount?: number): SingleSeed
     heritage,
     breederBlurb,
     terpeneBlurb,
+    bestGuess,
     selfing: getSelfingRecommendation(seed, seedCount),
     flags,
     goals: profile.goals,

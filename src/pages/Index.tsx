@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ChevronDown, Dices, FlaskConical, Leaf, PackagePlus, ShieldAlert, Sparkles, Target } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, Sparkles, Target } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,14 +7,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { Input } from "@/components/ui/input";
 import {
-  BURN_PILE_TOTAL,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   DEFAULT_SEED_COUNTS,
-  GRAND_TOTAL,
-  MAIN_VAULT_TOTAL,
   SEEDS,
   VAULT_TOTALS,
-  VAULT_TYPE_TOTALS,
   type Seed,
   type SeedType,
 } from "@/data/seeds";
@@ -41,6 +44,11 @@ const typeStyles: Record<SeedType, string> = {
   Autoflower: "bg-lime-100 text-lime-800 border-lime-200",
   "Unknown Photo": "bg-slate-100 text-slate-700 border-slate-200",
 };
+
+const SEED_TYPES: SeedType[] = ["Feminized", "Regular", "Autoflower", "Unknown Photo"];
+const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
+
+const clampSeedCount = (value: number) => Math.max(0, Math.min(999, Math.round(Number.isFinite(value) ? value : 0)));
 
 const TypeBadge = ({ type }: { type: SeedType }) => (
   <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${typeStyles[type]}`}>
@@ -240,6 +248,38 @@ const Index = () => {
   const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
   const [salt, setSalt] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+  const [vaultSearch, setVaultSearch] = useState("");
+  const [activeTypes, setActiveTypes] = useState<SeedType[]>([]);
+  const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => {
+    if (typeof window === "undefined") return DEFAULT_SEED_COUNTS;
+
+    try {
+      const stored = window.localStorage.getItem(INVENTORY_STORAGE_KEY);
+      if (!stored) return DEFAULT_SEED_COUNTS;
+      const parsed = JSON.parse(stored) as Record<string, unknown>;
+      const cleaned = Object.fromEntries(
+        Object.entries(parsed).map(([id, value]) => [id, clampSeedCount(Number(value))]),
+      );
+      return { ...DEFAULT_SEED_COUNTS, ...cleaned };
+    } catch {
+      return DEFAULT_SEED_COUNTS;
+    }
+  });
+
+  useEffect(() => {
+    window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(seedCounts));
+  }, [seedCounts]);
+
+  const getSeedCount = (seed: Seed) => seedCounts[seed.id] ?? seed.count ?? 0;
+  const seedWithCount = (seed: Seed): Seed => ({ ...seed, count: getSeedCount(seed) });
+
+  const updateSeedCount = (seed: Seed, nextCount: number) => {
+    setSeedCounts((current) => ({ ...current, [seed.id]: clampSeedCount(nextCount) }));
+  };
+
+  const toggleTypeFilter = (type: SeedType) => {
+    setActiveTypes((current) => (current.includes(type) ? current.filter((item) => item !== type) : [...current, type]));
+  };
 
   const report = useMemo(() => {
     if (!parentA || !parentB) return null;
@@ -253,21 +293,53 @@ const Index = () => {
 
   const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
 
-  const breederTypeTotals = useMemo(
+  const vaultTypeTotals = useMemo(
     () =>
-      VAULT_TOTALS.map((group) => {
-        const seeds = SEEDS.filter((seed) => seed.breeder === group.breeder);
-        const byType = (["Feminized", "Regular", "Autoflower", "Unknown Photo"] as SeedType[])
-          .map((type) => ({
-            type,
-            total: seeds.filter((seed) => seed.type === type).reduce((sum, seed) => sum + (seed.count ?? 0), 0),
-          }))
-          .filter((entry) => entry.total > 0);
-        const strains = [...seeds].sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
-        return { ...group, byType, strains };
-      }),
-    [],
+      SEED_TYPES.map((type) => ({
+        type,
+        total: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).reduce(
+          (sum, seed) => sum + getSeedCount(seed),
+          0,
+        ),
+        strains: SEEDS.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
+      })),
+    [seedCounts],
   );
+
+  const mainVaultTotal = useMemo(
+    () => SEEDS.filter((seed) => seed.breeder !== "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    [seedCounts],
+  );
+  const burnPileTotal = useMemo(
+    () => SEEDS.filter((seed) => seed.breeder === "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    [seedCounts],
+  );
+  const grandTotal = mainVaultTotal + burnPileTotal;
+
+  const breederTypeTotals = useMemo(
+    () => {
+      const search = vaultSearch.trim().toLowerCase();
+      return VAULT_TOTALS.map((group) => {
+        const allSeeds = SEEDS.filter((seed) => seed.breeder === group.breeder);
+        const strains = allSeeds
+          .filter((seed) => {
+            const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
+            const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
+            return matchesSearch && matchesType;
+          })
+          .sort((a, b) => getSeedCount(b) - getSeedCount(a));
+        const byType = SEED_TYPES.map((type) => ({
+          type,
+          total: strains.filter((seed) => seed.type === type).reduce((sum, seed) => sum + getSeedCount(seed), 0),
+        })).filter((entry) => entry.total > 0);
+        const total = strains.reduce((sum, seed) => sum + getSeedCount(seed), 0);
+        return { ...group, total, byType, strains };
+      }).filter((group) => group.strains.length > 0);
+    },
+    [activeTypes, seedCounts, vaultSearch],
+  );
+
+  const visibleStrainCount = breederTypeTotals.reduce((sum, group) => sum + group.strains.length, 0);
 
   const [openBreeders, setOpenBreeders] = useState<Record<string, boolean>>({});
   const toggleBreeder = (breeder: string) =>
@@ -275,11 +347,14 @@ const Index = () => {
 
   const preservationShortlist = useMemo(
     () =>
-      SEEDS.map((seed) => ({ seed, priority: getKeeperPriority(seed) }))
+      SEEDS.map((seed) => {
+        const countedSeed = seedWithCount(seed);
+        return { seed: countedSeed, priority: getKeeperPriority(countedSeed) };
+      })
         .filter(({ priority }) => priority.level === "High" || priority.level === "Medium")
         .sort((a, b) => b.priority.score - a.priority.score)
         .slice(0, 8),
-    [],
+    [seedCounts],
   );
 
   const randomPair = () => {
@@ -296,7 +371,8 @@ const Index = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <TooltipProvider delayDuration={200}>
+      <div className="min-h-screen bg-background text-foreground">
       <header className="border-b border-border/70 bg-card/90 backdrop-blur">
         <div className="container flex flex-col gap-4 py-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
@@ -309,16 +385,16 @@ const Index = () => {
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {MAIN_VAULT_TOTAL}</span>
-            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {BURN_PILE_TOTAL}</span>
-            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {GRAND_TOTAL}</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainVaultTotal}</span>
+            <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800">Burn pile {burnPileTotal}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
           </div>
         </div>
       </header>
 
       <main className="container max-w-6xl pb-20 pt-8">
         <section className="grid gap-4 md:grid-cols-3">
-          {VAULT_TYPE_TOTALS.filter((entry) => entry.total > 0).map((entry) => (
+          {vaultTypeTotals.filter((entry) => entry.total > 0).map((entry) => (
             <div key={entry.type} className={`rounded-[1.75rem] border-2 p-5 shadow-sm ${typeStyles[entry.type]}`}>
               <div className="mb-3 flex items-center justify-between gap-3">
                 <p className="text-xs font-black uppercase tracking-[0.22em]">{entry.type}</p>
@@ -338,6 +414,62 @@ const Index = () => {
               <p className="mt-1 text-sm text-muted-foreground">
                 Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Burn Pile remains separated from preservation pressure.
               </p>
+            </div>
+          </div>
+
+          <div className="mb-5 rounded-3xl border border-border bg-background p-4">
+            <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
+              <div className="relative">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={vaultSearch}
+                  onChange={(event) => setVaultSearch(event.target.value)}
+                  placeholder="Search strains or breeders…"
+                  className="h-11 rounded-2xl pl-9 font-semibold"
+                />
+              </div>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl border-2 font-bold"
+                  onClick={() => {
+                    setVaultSearch("");
+                    setActiveTypes([]);
+                  }}
+                >
+                  Clear filters
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-2xl border-2 font-bold"
+                  onClick={() => setSeedCounts(DEFAULT_SEED_COUNTS)}
+                >
+                  <RotateCcw className="mr-2 h-4 w-4" />
+                  Reset counts
+                </Button>
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              {SEED_TYPES.map((type) => {
+                const active = activeTypes.includes(type);
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => toggleTypeFilter(type)}
+                    className={`rounded-full border px-3 py-1 text-xs font-black transition ${
+                      active ? typeStyles[type] : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {typeShort[type]}
+                  </button>
+                );
+              })}
+              <span className="ml-auto text-xs font-bold text-muted-foreground">
+                Showing {visibleStrainCount} strains
+              </span>
             </div>
           </div>
 
@@ -375,42 +507,84 @@ const Index = () => {
                   </div>
 
                   <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
-                    {group.strains.map((seed) => (
-                      <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="min-w-0 truncate text-sm font-semibold">{seed.name}</p>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <TypeBadge type={seed.type} />
-                            <span className="rounded-full bg-card px-2 py-0.5 text-[11px] font-black text-muted-foreground">
-                              {seed.count ?? 0}
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="mt-2.5">
-                          <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                            Est. dry yield · single plant
-                          </p>
-                          <div className="grid gap-1.5 sm:grid-cols-3">
-                            {estimateSeedGrowth(seed).map((env) => (
-                              <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
-                                <div className="flex items-center justify-between gap-1">
-                                  <span className="text-[10px] font-black uppercase tracking-wide text-primary">
-                                    {env.wattage}
-                                  </span>
-                                  <span className="font-display text-sm font-black leading-none">
-                                    {env.yieldG.min}–{env.yieldG.max}g
-                                  </span>
-                                </div>
-                                <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
-                                  {env.gear}
-                                </p>
+                    {group.strains.map((seed) => {
+                      const count = getSeedCount(seed);
+                      return (
+                        <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <p className="truncate text-sm font-semibold">{seed.name}</p>
+                              <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                              <TypeBadge type={seed.type} />
+                              <div className="flex items-center rounded-full border border-border bg-card p-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full"
+                                  onClick={() => updateSeedCount(seed, count - 1)}
+                                >
+                                  <Minus className="h-3.5 w-3.5" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={count}
+                                  onChange={(event) => updateSeedCount(seed, Number(event.target.value))}
+                                  className="h-7 w-14 border-0 bg-transparent p-0 text-center text-xs font-black shadow-none focus-visible:ring-0"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full"
+                                  onClick={() => updateSeedCount(seed, count + 1)}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
-                            ))}
+                            </div>
+                          </div>
+
+                          <div className="mt-2.5">
+                            <div className="mb-1.5 flex items-center gap-1.5">
+                              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                Est. dry yield · single plant
+                              </p>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="text-muted-foreground hover:text-primary">
+                                    <HelpCircle className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                                  Estimates are single-plant dry-yield ranges based on name/lineage cues for vigor, structure, auto or mutant traits, and each listed grow environment. They are planning ranges, not guarantees.
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <div className="grid gap-1.5 sm:grid-cols-3">
+                              {estimateSeedGrowth(seed).map((env) => (
+                                <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-primary">
+                                      {env.wattage}
+                                    </span>
+                                    <span className="font-display text-sm font-black leading-none">
+                                      {env.yieldG.min}–{env.yieldG.max}g
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
+                                    {env.gear}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </CollapsibleContent>
                 </Collapsible>
               );
@@ -463,11 +637,11 @@ const Index = () => {
           </div>
 
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
-            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+            <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} seeds={SEEDS} seedCounts={seedCounts} />
             <div className="grid place-items-center">
               <span className="grid h-10 w-10 place-items-center rounded-full bg-muted font-display text-xl font-black text-muted-foreground">×</span>
             </div>
-            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} seeds={SEEDS} seedCounts={DEFAULT_SEED_COUNTS} />
+            <SeedSelect label="B" accent="purple" value={parentB} onChange={setParentB} seeds={SEEDS} seedCounts={seedCounts} />
           </div>
 
           {parentA && parentB && (
@@ -480,7 +654,7 @@ const Index = () => {
                       <TypeBadge type={seed.type} />
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {seed.breeder} · {seed.type} · {seed.count ?? 0} seeds
+                      {seed.breeder} · {seed.type} · {getSeedCount(seed)} seeds
                     </p>
                   </div>
                 ))}
@@ -498,7 +672,8 @@ const Index = () => {
                           watch: "Watch-outs: evaluate only as personal smoke/test stock; do not use it as breeding evidence or preservation material.",
                         }
                       : SEED_TYPE_ADVICE[seed.type];
-                    const priority = getKeeperPriority(seed);
+                    const countedSeed = seedWithCount(seed);
+                    const priority = getKeeperPriority(countedSeed);
                     return (
                       <div key={`${seed.id}-advice`} className="rounded-2xl bg-muted/70 p-4">
                         <div className="mb-3 flex items-center justify-between gap-2">
@@ -599,12 +774,123 @@ const Index = () => {
                 ))}
               </div>
             </div>
+
+            <div className="rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7 lg:col-span-2">
+              <div className="mb-5">
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Full cross report</p>
+                <h2 className="font-display text-2xl font-black tracking-tight">{parentA?.name} × {parentB?.name}</h2>
+                <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{report.profile.summary}</p>
+              </div>
+
+              <div className="grid gap-4 lg:grid-cols-3">
+                <div className="rounded-3xl bg-background p-4">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Score breakdown</p>
+                  <div className="space-y-2">
+                    {[
+                      ["Flavor synergy", report.scores.flavorSynergy],
+                      ["Terpene contrast", report.scores.terpeneContrast],
+                      ["Breeder interest", report.scores.breederInterest],
+                      ["Name potential", report.scores.namePotential],
+                      ["Goal match", report.scores.goalMatch],
+                    ].map(([label, score]) => (
+                      <div key={label}>
+                        <div className="mb-1 flex justify-between text-xs font-bold">
+                          <span>{label}</span>
+                          <span>{score}/100</span>
+                        </div>
+                        <div className="h-2 overflow-hidden rounded-full bg-muted">
+                          <div className="h-full rounded-full bg-primary" style={{ width: `${score}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-background p-4 lg:col-span-2">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Phenotype preview</p>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {report.phenotypes.map((pheno) => (
+                      <div key={pheno.title} className="rounded-2xl border border-border bg-card p-3">
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black uppercase text-primary">
+                          {pheno.likelihood}
+                        </span>
+                        <p className="mt-2 font-display text-base font-bold leading-tight">{pheno.title}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{pheno.description}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-background p-4 lg:col-span-3">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Cross size / dry-yield estimates</p>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {report.growthEstimates.map((estimate) => {
+                      const gear = estimate.wattage === "<100W" ? "Vivosun VGrow smart box" : estimate.wattage === "220W" ? "AC Infinity 2×2" : "AC Infinity 4×4";
+                      return (
+                        <div key={estimate.wattage} className="rounded-2xl border border-border bg-card p-4">
+                          <div className="flex items-center justify-between gap-2">
+                            <div>
+                              <p className="text-[10px] font-black uppercase tracking-wide text-primary">{estimate.wattage}</p>
+                              <p className="text-xs font-bold text-muted-foreground">{gear}</p>
+                            </div>
+                            <p className="font-display text-xl font-black">{estimate.yieldG.min}–{estimate.yieldG.max}g</p>
+                          </div>
+                          <div className="mt-3 grid grid-cols-2 gap-2 text-xs font-semibold text-muted-foreground">
+                            <span>H: {estimate.heightCm.min}–{estimate.heightCm.max}cm</span>
+                            <span>W: {estimate.widthCm.min}–{estimate.widthCm.max}cm</span>
+                          </div>
+                          <p className="mt-3 text-xs leading-relaxed text-muted-foreground">{estimate.note}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-background p-4 lg:col-span-2">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Genetic notes</p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {report.geneticNotes.map((note) => (
+                      <div key={note.label} className="rounded-2xl border border-border bg-card p-3">
+                        <p className="font-bold">{note.label}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{note.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl bg-background p-4">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Lineage map</p>
+                  <div className="space-y-3">
+                    {report.lineage.map((node) => (
+                      <div key={node.parent} className="rounded-2xl border border-border bg-card p-3">
+                        <p className="text-[10px] font-black uppercase text-primary">Parent {node.parent}</p>
+                        <p className="mt-1 font-display text-base font-bold leading-tight">{node.name}</p>
+                        <p className="mt-1 text-xs font-semibold text-muted-foreground">{node.breeder}</p>
+                        {node.pieces.length > 0 && (
+                          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{node.pieces.join(" × ")}</p>
+                        )}
+                        {node.flags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-1">
+                            {node.flags.map((flag) => (
+                              <span key={flag} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                                {flag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
           </section>
         )}
       </main>
 
-      <MadeWithDyad />
-    </div>
+        <MadeWithDyad />
+      </div>
+    </TooltipProvider>
   );
 };
 

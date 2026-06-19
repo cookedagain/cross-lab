@@ -8,6 +8,7 @@ import VaultAnalytics from "@/components/VaultAnalytics";
 import BestParents from "@/components/BestParents";
 import BreedingLots from "@/components/BreedingLots";
 import { TypeBadge } from "@/components/TypeBadge";
+import { RarityBadge } from "@/components/RarityBadge";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -25,6 +26,7 @@ import { SEEDS, VAULT_TOTALS, type Seed, type SeedType } from "@/data/seeds";
 import { clampSeedCount, MULTIPASS_BREEDER, useVault } from "@/hooks/useVaultStore";
 import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
 import { getKeeperPriority } from "@/lib/keeper";
+import { getSeedRarity } from "@/lib/rarity";
 import {
   TRAIT_GOALS,
   estimateCannabinoids,
@@ -40,6 +42,7 @@ import { MadeWithDyad } from "@/components/made-with-dyad";
 
 type SortMode =
   | "count"
+  | "rarity-desc"
   | "yield-desc"
   | "yield-asc"
   | "height-desc"
@@ -60,6 +63,7 @@ type SortMode =
 
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "count", label: "Seed count" },
+  { mode: "rarity-desc", label: "Rarity high → low" },
   { mode: "yield-desc", label: "Yield high → low" },
   { mode: "yield-asc", label: "Yield low → high" },
   { mode: "height-desc", label: "Height tall → short" },
@@ -312,6 +316,8 @@ const Index = () => {
             const priorityB = getKeeperPriority(seedWithCount(b)).score;
 
             switch (sortMode) {
+              case "rarity-desc":
+                return getSeedRarity(seedWithCount(b)).score - getSeedRarity(seedWithCount(a)).score;
               case "yield-desc":
                 return seedYieldMetric(b) - seedYieldMetric(a);
               case "yield-asc":
@@ -647,6 +653,7 @@ const Index = () => {
                               <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
+                              <RarityBadge rarity={getSeedRarity(seedWithCount(seed))} />
                               <TypeBadge type={seed.type} />
                               <div className="flex items-center rounded-full border border-border bg-card p-1">
                                 <Button

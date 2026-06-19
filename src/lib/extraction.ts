@@ -66,3 +66,28 @@ export function estimateExtractionProfile(seed: Seed): ExtractionProfile {
     overall,
   };
 }
+
+const avg = (a: number, b: number) => clamp((a + b) / 2);
+
+// Blends two parent profiles into an estimated outlook for their offspring.
+export function estimateCrossExtraction(parentA: Seed, parentB: Seed): ExtractionProfile {
+  const a = estimateExtractionProfile(parentA);
+  const b = estimateExtractionProfile(parentB);
+  return {
+    rosin: {
+      flower: avg(a.rosin.flower, b.rosin.flower),
+      drySift: avg(a.rosin.drySift, b.rosin.drySift),
+      bubbleHash: avg(a.rosin.bubbleHash, b.rosin.bubbleHash),
+    },
+    liveRosin: avg(a.liveRosin, b.liveRosin),
+    resin: avg(a.resin, b.resin),
+    liveResin: avg(a.liveResin, b.liveResin),
+    cart: {
+      rosin: avg(a.cart.rosin, b.cart.rosin),
+      liveRosin: avg(a.cart.liveRosin, b.cart.liveRosin),
+      resin: avg(a.cart.resin, b.cart.resin),
+      liveResin: avg(a.cart.liveResin, b.cart.liveResin),
+    },
+    overall: avg(a.overall, b.overall),
+  };
+}

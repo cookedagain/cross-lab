@@ -5,6 +5,8 @@ import { showError, showSuccess } from "@/utils/toast";
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
+const POLLEN_STORAGE_KEY = "crosslab-pollen-logs";
+const HARVEST_STORAGE_KEY = "crosslab-harvest-logs";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
 
 export type MultipassEntry = {
@@ -27,6 +29,25 @@ export type BreedingLot = {
   notes: string;
 };
 
+export type PollenStorage = "room" | "fridge" | "freezer";
+
+export type PollenLog = {
+  id: string;
+  source: string;
+  collected: string;
+  storage: PollenStorage;
+  notes: string;
+};
+
+export type HarvestLog = {
+  id: string;
+  strain: string;
+  dryWeightG: number;
+  harvestDate: string;
+  environment: string;
+  notes: string;
+};
+
 export const clampSeedCount = (value: number) =>
   Math.max(0, Math.min(999, Math.round(Number.isFinite(value) ? value : 0)));
 
@@ -34,6 +55,8 @@ type VaultContextValue = {
   seedCounts: Record<string, number>;
   multipass: MultipassEntry[];
   lots: BreedingLot[];
+  pollenLogs: PollenLog[];
+  harvestLogs: HarvestLog[];
   arrivedSeeds: Seed[];
   vaultSeeds: Seed[];
   getSeedCount: (seed: Seed) => number;
@@ -45,6 +68,10 @@ type VaultContextValue = {
   toggleArrived: (id: string) => void;
   addLot: (data: Omit<BreedingLot, "id">) => void;
   removeLot: (id: string) => void;
+  addPollenLog: (data: Omit<PollenLog, "id">) => void;
+  removePollenLog: (id: string) => void;
+  addHarvestLog: (data: Omit<HarvestLog, "id">) => void;
+  removeHarvestLog: (id: string) => void;
   exportData: () => string;
   importData: (json: string) => void;
 };
@@ -81,6 +108,16 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     return Array.isArray(parsed) ? parsed : [];
   });
 
+  const [pollenLogs, setPollenLogs] = useState<PollenLog[]>(() => {
+    const parsed = loadJSON<PollenLog[]>(POLLEN_STORAGE_KEY, []);
+    return Array.isArray(parsed) ? parsed : [];
+  });
+
+  const [harvestLogs, setHarvestLogs] = useState<HarvestLog[]>(() => {
+    const parsed = loadJSON<HarvestLog[]>(HARVEST_STORAGE_KEY, []);
+    return Array.isArray(parsed) ? parsed : [];
+  });
+
   useEffect(() => {
     window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(seedCounts));
   }, [seedCounts]);
@@ -92,6 +129,14 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     window.localStorage.setItem(LOTS_STORAGE_KEY, JSON.stringify(lots));
   }, [lots]);
+
+  useEffect(() => {
+    window.localStorage.setItem(POLLEN_STORAGE_KEY, JSON.stringify(pollenLogs));
+  }, [pollenLogs]);
+
+  useEffect(() => {
+    window.localStorage.setItem(HARVEST_STORAGE_KEY, JSON.stringify(harvestLogs));
+  }, [harvestLogs]);
 
   const arrivedSeeds = useMemo<Seed[]>(
     () =>
@@ -133,7 +178,24 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
 
   const removeLot = (id: string) => setLots((current) => current.filter((lot) => lot.id !== id));
 
-  const exportData = () => JSON.stringify({ version: 1, seedCounts, multipass, lots }, null, 2);
+  const addPollenLog = (data: Omit<PollenLog, "id">) =>
+    setPollenLogs((current) => [
+      { ...data, id: `pollen-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` },
+      ...current,
+    ]);
+
+  const removePollenLog = (id: string) => setPollenLogs((current) => current.filter((log) => log.id !== id));
+
+  const addHarvestLog = (data: Omit<HarvestLog, "id">) =>
+    setHarvestLogs((current) => [
+      { ...data, id: `harvest-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` },
+      ...current,
+    ]);
+
+  const removeHarvestLog = (id: string) => setHarvestLogs((current) => current.filter((log) => log.id !== id));
+
+  const exportData = () =>
+    JSON.stringify({ version: 2, seedCounts, multipass, lots, pollenLogs, harvestLogs }, null, 2);
 
   const importData = (json: string) => {
     try {
@@ -141,6 +203,8 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
         seedCounts?: Record<string, unknown>;
         multipass?: MultipassEntry[];
         lots?: BreedingLot[];
+        pollenLogs?: PollenLog[];
+        harvestLogs?: HarvestLog[];
       };
       if (parsed.seedCounts) {
         const cleaned = Object.fromEntries(
@@ -150,6 +214,8 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
       }
       if (Array.isArray(parsed.multipass)) setMultipass(parsed.multipass);
       if (Array.isArray(parsed.lots)) setLots(parsed.lots);
+      if (Array.isArray(parsed.pollenLogs)) setPollenLogs(parsed.pollenLogs);
+      if (Array.isArray(parsed.harvestLogs)) setHarvestLogs(parsed.harvestLogs);
       showSuccess("Vault data restored from backup.");
     } catch {
       showError("That file could not be read as a CrossLab backup.");
@@ -160,6 +226,8 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     seedCounts,
     multipass,
     lots,
+    pollenLogs,
+    harvestLogs,
     arrivedSeeds,
     vaultSeeds,
     getSeedCount,
@@ -171,6 +239,10 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     toggleArrived,
     addLot,
     removeLot,
+    addPollenLog,
+    removePollenLog,
+    addHarvestLog,
+    removeHarvestLog,
     exportData,
     importData,
   };

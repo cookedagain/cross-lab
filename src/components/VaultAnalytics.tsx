@@ -1,13 +1,11 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
 import {
-  Bar,
-  BarChart,
   Cell,
+  Pie,
+  PieChart,
   ResponsiveContainer,
   Tooltip as RTooltip,
-  XAxis,
-  YAxis,
 } from "recharts";
 import { useVault } from "@/hooks/useVaultStore";
 import { estimateAdvancedMetrics, estimateCannabinoids } from "@/lib/crossName";
@@ -20,6 +18,17 @@ const TYPE_COLORS: Record<string, string> = {
   "Unknown Photo": "#94a3b8",
 };
 
+const BREEDER_COLORS = [
+  "#16a34a",
+  "#7c3aed",
+  "#ec4899",
+  "#f97316",
+  "#0ea5e9",
+  "#eab308",
+  "#dc2626",
+  "#14b8a6",
+];
+
 const StatCard = ({ label, value, sub }: { label: string; value: string; sub?: string }) => (
   <div className="rounded-2xl border border-border bg-background p-4">
     <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">{label}</p>
@@ -27,6 +36,27 @@ const StatCard = ({ label, value, sub }: { label: string; value: string; sub?: s
     {sub && <p className="mt-0.5 text-xs font-semibold text-muted-foreground">{sub}</p>}
   </div>
 );
+
+const DonutLegend = ({
+  entries,
+}: {
+  entries: { key: string; label: string; value: number; color: string }[];
+}) => {
+  const total = entries.reduce((sum, entry) => sum + entry.value, 0);
+  return (
+    <div className="mt-3 flex flex-wrap justify-center gap-3">
+      {entries.map((entry) => (
+        <div key={entry.key} className="flex items-center gap-1.5 text-xs font-bold">
+          <span className="h-3 w-3 rounded-full" style={{ backgroundColor: entry.color }} />
+          <span>{entry.label}</span>
+          <span className="text-muted-foreground">
+            {entry.value} · {total ? Math.round((entry.value / total) * 100) : 0}%
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+};
 
 const VaultAnalytics = () => {
   const { vaultSeeds, getSeedCount } = useVault();
@@ -79,29 +109,65 @@ const VaultAnalytics = () => {
         <div className="rounded-3xl border border-border bg-background p-4">
           <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Seeds by type</p>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.typeData}>
-              <XAxis dataKey="name" tick={{ fontSize: 12, fontWeight: 700 }} />
-              <YAxis tick={{ fontSize: 12 }} width={32} />
-              <RTooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-              <Bar dataKey="seeds" radius={[6, 6, 0, 0]}>
+            <PieChart>
+              <Pie
+                data={data.typeData}
+                dataKey="seeds"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={2}
+                stroke="none"
+              >
                 {data.typeData.map((entry) => (
                   <Cell key={entry.type} fill={TYPE_COLORS[entry.type]} />
                 ))}
-              </Bar>
-            </BarChart>
+              </Pie>
+              <RTooltip />
+            </PieChart>
           </ResponsiveContainer>
+          <DonutLegend
+            entries={data.typeData.map((entry) => ({
+              key: entry.type,
+              label: entry.name,
+              value: entry.seeds,
+              color: TYPE_COLORS[entry.type],
+            }))}
+          />
         </div>
 
         <div className="rounded-3xl border border-border bg-background p-4">
           <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Top breeders by seed count</p>
           <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data.breederData} layout="vertical" margin={{ left: 8 }}>
-              <XAxis type="number" tick={{ fontSize: 12 }} />
-              <YAxis type="category" dataKey="name" tick={{ fontSize: 11, fontWeight: 700 }} width={96} />
-              <RTooltip cursor={{ fill: "rgba(0,0,0,0.05)" }} />
-              <Bar dataKey="seeds" fill="hsl(var(--primary))" radius={[0, 6, 6, 0]} />
-            </BarChart>
+            <PieChart>
+              <Pie
+                data={data.breederData}
+                dataKey="seeds"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={85}
+                paddingAngle={2}
+                stroke="none"
+              >
+                {data.breederData.map((entry, index) => (
+                  <Cell key={entry.name} fill={BREEDER_COLORS[index % BREEDER_COLORS.length]} />
+                ))}
+              </Pie>
+              <RTooltip />
+            </PieChart>
           </ResponsiveContainer>
+          <DonutLegend
+            entries={data.breederData.map((entry, index) => ({
+              key: entry.name,
+              label: entry.name,
+              value: entry.seeds,
+              color: BREEDER_COLORS[index % BREEDER_COLORS.length],
+            }))}
+          />
         </div>
       </div>
     </section>

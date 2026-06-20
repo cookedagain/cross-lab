@@ -6,9 +6,28 @@ export type WebLineageResult = {
   syncedAt: string;
 };
 
-const CACHE_KEY = "crosslab-web-lineage-cache-v1";
+const CACHE_KEY = "crosslab-web-lineage-cache-v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+
+// Breeder / brand words that should never appear inside a parent name.
+const BREEDER_NOISE = [
+  "ethos",
+  "genetics",
+  "seeds",
+  "seed",
+  "company",
+  "selections",
+  "humboldt",
+  "binchickens",
+  "terpyz",
+  "wolfpack",
+  "grimm",
+  "greenspace",
+  "leafly",
+  "seedfinder",
+  "allbud",
+];
 
 const normalize = (value: string) =>
   value
@@ -51,35 +70,60 @@ const htmlToText = (html: string) =>
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&amp;/g, "&")
+    .replace(/&/g, "&")
     .replace(/&nbsp;/g, " ")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
     .trim();
 
-const cleanParent = (value: string) =>
-  value
-    .replace(/\b(strain|cannabis|marijuana|seeds?|genetics?|lineage|parents?|hybrid|cross(?:ed)?|created|bred|from|between|with|by)\b/gi, " ")
+// Removes filler words, breeder noise, and trailing junk tokens (stray single
+// letters, breeder tags, dangling suffixes) so the parent name stays clean.
+const cleanParent = (value: string) => {
+  let cleaned = value
+    .replace(/\b(strain|cannabis|marijuana|seeds?|genetics?|lineage|parents?|hybrid|cross(?:ed)?|created|bred|from|between|with|by|crossing)\b/gi, " ")
     .replace(/[|:;,.()[\]{}]/g, " ")
     .replace(/\s+/g, " ")
     .trim()
     .replace(/^and\s+/i, "")
     .replace(/\s+and$/i, "");
 
+  // Drop breeder/brand noise words anywhere in the string.
+  const noise = new RegExp(`\\b(${BREEDER_NOISE.join("|")})\\b`, "gi");
+  cleaned = cleaned.replace(noise, " ").replace(/\s+/g, " ").trim();
+
+  // Trim trailing junk tokens: stray single letters or dangling generation tags
+  // left at the very end (e.g. "... BX3 i" -> "...").
+  let tokens = cleaned.split(" ").filter(Boolean);
+  while (tokens.length > 1) {
+    const last = tokens[tokens.length - 1];
+    if (/^[a-z]$/i.test(last) || /^(bx\d*|rbx|s\d+|r\d+|v\d+|f\d+)$/i.test(last)) {
+      tokens.pop();
+      continue;
+    }
+    break;
+  }
+
+  // Cap at a sensible number of words so we don't stitch two strains together.
+  if (tokens.length > 4) tokens = tokens.slice(0, 4);
+
+  return tokens.join(" ").trim();
+};
+
 const looksLikeParent = (candidate: string, strainName: string) => {
   const cleaned = cleanParent(candidate);
-  if (cleaned.length < 3 || cleaned.length > 48) return false;
+  if (cleaned.length < 3 || cleaned.length > 40) return false;
   const lowered = cleaned.toLowerCase();
   if (lowered === normalize(strainName)) return false;
   if (/\b(review|info|menu|shop|buy|flowering|thc|cbd|yield|effects|flavor|aroma|seedfinder|leafly|allbud)\b/i.test(cleaned)) return false;
+  if (BREEDER_NOISE.some((word) => lowered === word)) return false;
   return /[a-z]/i.test(cleaned);
 };
 
 const explicitPairPatterns = [
-  /(?:cross|crossed|hybrid|bred|created|made|genetics|lineage|parents?)\s+(?:is\s+)?(?:a\s+)?(?:between|of|from)?\s*([A-Za-z0-9'# .-]{3,48})\s+(?:and|x|×)\s+([A-Za-z0-9'# .-]{3,48})/gi,
-  /(?:between|from)\s+([A-Za-z0-9'# .-]{3,48})\s+(?:and|x|×)\s+([A-Za-z0-9'# .-]{3,48})/gi,
-  /([A-Z][A-Za-z0-9'# .-]{2,40})\s+(?:x|×)\s+([A-Z][A-Za-z0-9'# .-]{2,40})/g,
+  /(?:cross|crossed|hybrid|bred|created|made|genetics|lineage|parents?)\s+(?:is\s+)?(?:a\s+)?(?:between|of|from)?\s*([A-Za-z0-9'# .-]{3,40})\s+(?:and|x|×)\s+([A-Za-z0-9'# .-]{3,40})/gi,
+  /(?:between|from)\s+([A-Za-z0-9'# .-]{3,40})\s+(?:and|x|×)\s+([A-Za-z0-9'# .-]{3,40})/gi,
+  /([A-Z][A-Za-z0-9'# .-]{2,34})\s+(?:x|×)\s+([A-Z][A-Za-z0-9'# .-]{2,34})/g,
 ];
 
 const extractParents = (text: string, strainName: string): [string, string] | null => {

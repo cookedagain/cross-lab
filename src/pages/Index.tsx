@@ -415,7 +415,7 @@ const Index = () => {
               <Leaf className="h-6 w-6" />
             </span>
             <div>
-              <p className="font-display text-2xl font-black tracking-tight">Vault Tool</p>
+              <p className="font-display text-2xl font-black tracking-tight">Vault Lab</p>
               <p className="text-sm text-muted-foreground">Vault-aware breeder planning with FEM / REG / AUTO labels</p>
             </div>
           </div>

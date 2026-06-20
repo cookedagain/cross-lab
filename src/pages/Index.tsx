@@ -6,6 +6,8 @@ import ThemeToggle from "@/components/ThemeToggle";
 import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
 import BestParents from "@/components/BestParents";
+import RecommendedCrosses from "@/components/RecommendedCrosses";
+import RecommendedPickups from "@/components/RecommendedPickups";
 import BreedingLots from "@/components/BreedingLots";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
@@ -847,6 +849,10 @@ const Index = () => {
         </section>
 
         <BestParents />
+
+        <RecommendedCrosses />
+
+        <RecommendedPickups />
 
         <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="mb-5 flex items-start gap-3">

@@ -36,7 +36,7 @@ const RecommendedPickups = () => {
 
   const recommendations = useMemo(() => {
     if (!catalog) return [];
-    return recommendPickups(catalog.items, counted, goals, 6);
+    return recommendPickups(catalog.items, counted, goals, 20);
   }, [catalog, counted, goals]);
 
   const toggleGoal = (goal: TraitGoal) =>
@@ -153,6 +153,15 @@ const RecommendedPickups = () => {
                 ))}
               </div>
 
+              <div className="mt-3 rounded-2xl bg-primary/10 p-3">
+                <p className="text-[10px] font-black uppercase tracking-wide text-primary">
+                  What it brings to the vault
+                </p>
+                <p className="mt-1 text-xs font-semibold leading-relaxed text-foreground">
+                  {rec.contribution}
+                </p>
+              </div>
+
               <ul className="mt-3 space-y-1.5">
                 {rec.reasons.map((reason) => (
                   <li key={reason} className="flex items-start gap-2 text-xs font-semibold leading-relaxed">
@@ -161,16 +170,6 @@ const RecommendedPickups = () => {
                   </li>
                 ))}
               </ul>
-
-              <a
-                href={rec.item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border-2 border-border px-3 py-2 text-xs font-bold transition hover:border-primary hover:text-primary"
-              >
-                View on Brotanical Gardens
-                <ExternalLink className="h-3.5 w-3.5" />
-              </a>
             </div>
           ))}
         </div>

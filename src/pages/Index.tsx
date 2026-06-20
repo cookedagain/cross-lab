@@ -12,6 +12,7 @@ import RecommendedPickups from "@/components/RecommendedPickups";
 import BreedingLots from "@/components/BreedingLots";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
+import StrainName from "@/components/StrainName";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
 import { buildCrossLineageTree, buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
@@ -663,9 +664,9 @@ const Index = () => {
                             <div className="min-w-0">
                               <Link
                                 to={`/strain/${encodeURIComponent(seed.id)}`}
-                                className="truncate text-sm font-semibold hover:text-primary hover:underline"
+                                className="text-sm font-semibold hover:text-primary hover:underline"
                               >
-                                {seed.name}
+                                <StrainName name={seed.name} />
                               </Link>
                               <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
                             </div>

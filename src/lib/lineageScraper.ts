@@ -166,36 +166,59 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   const cached = cache[key];
   if (cached && fresh(cached)) return cached;
 
-  // Source lineage from Brotanical Gardens (product pages + freebies listings)
-  // instead of generic web/breeder sites.
-  const queries = [
-    `site:${BROTANICAL_DOMAIN} ${name} ${breeder ?? ""} lineage`,
-    `site:${BROTANICAL_DOMAIN} ${name} genetics parents`,
-    `site:${BROTANICAL_DOMAIN} freebies ${name} ${breeder ?? ""}`,
-    `${name} ${breeder ?? ""} brotanical gardens lineage parents`,
+  // Fallback chain: try Brotanical Gardens first, then Leafly, then a generic
+  // web search. Each tier carries its own source label and verify note.
+  const tiers: { source: string; note: string; queries: string[] }[] = [
+    {
+      source: "Brotanical Gardens",
+      note: "Scraped from Brotanical Gardens listings (including freebies) and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      queries: [
+        `site:${BROTANICAL_DOMAIN} ${name} ${breeder ?? ""} lineage`,
+        `site:${BROTANICAL_DOMAIN} ${name} genetics parents`,
+        `site:${BROTANICAL_DOMAIN} freebies ${name} ${breeder ?? ""}`,
+      ],
+    },
+    {
+      source: "Leafly",
+      note: "Scraped from Leafly strain results and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      queries: [
+        `site:leafly.com ${name} ${breeder ?? ""} genetics parents`,
+        `site:leafly.com ${name} strain lineage`,
+      ],
+    },
+    {
+      source: "web search",
+      note: "Scraped from public web-search result text and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      queries: [
+        `${name} ${breeder ?? ""} cannabis strain parents lineage`,
+        `${name} cannabis cross parents`,
+      ],
+    },
   ];
 
   try {
-    for (const query of queries) {
-      const text = await fetchSearchText(query);
-      const parents = extractParents(text, name);
-      if (parents) {
-        const result: WebLineageResult = {
-          status: "resolved",
-          parents,
-          source: "Brotanical Gardens",
-          note: "Scraped from Brotanical Gardens listings (including freebies) and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
-          syncedAt,
-        };
-        cache[key] = result;
-        writeCache(cache);
-        return result;
+    for (const tier of tiers) {
+      for (const query of tier.queries) {
+        const text = await fetchSearchText(query);
+        const parents = extractParents(text, name);
+        if (parents) {
+          const result: WebLineageResult = {
+            status: "resolved",
+            parents,
+            source: tier.source,
+            note: tier.note,
+            syncedAt,
+          };
+          cache[key] = result;
+          writeCache(cache);
+          return result;
+        }
       }
     }
 
     const result: WebLineageResult = {
       status: "not-found",
-      note: "No confident parent pair was found in the Brotanical Gardens listings. Try adding breeder context or checking the pack label.",
+      note: "No confident parent pair was found on Brotanical Gardens, Leafly, or general web results. Try adding breeder context or checking the pack label.",
       syncedAt,
     };
     cache[key] = result;

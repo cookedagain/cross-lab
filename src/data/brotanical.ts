@@ -5,7 +5,7 @@
 // replaced by a live, once-a-day scraped feed:
 //
 //   1. Stand up a backend route (e.g. /api/brotanical-seeds) that scrapes
-//      brotanicalgardens.com.au once per 24h and returns the same BrotanicalItem[]
+//      brotanicalgardens.com once per 24h and returns the same BrotanicalItem[]
 //      shape (Shopify stores expose /products.json which maps cleanly to this).
 //   2. Point BROTANICAL_FEED_URL at that route.
 //
@@ -34,7 +34,7 @@ export type BrotanicalCatalog = {
 // Optional: set to a backend route that returns BrotanicalItem[] to go fully live.
 const BROTANICAL_FEED_URL: string | null = null;
 
-export const BROTANICAL_SITE = "https://brotanicalgardens.com.au";
+export const BROTANICAL_SITE = "https://brotanicalgardens.com";
 
 // Brotanical Gardens runs on Shopify, whose search endpoint is /search?q=...
 // (the previous WordPress-style /?s=... URL 404'd).

@@ -703,6 +703,8 @@ const Index = () => {
                             </div>
                           </div>
 
+                          <WebLineageLookup name={seed.name} breeder={seed.breeder} compact />
+
                           <div className="mt-2.5">
                             <div className="mb-1.5 flex items-center gap-1.5">
                               <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">

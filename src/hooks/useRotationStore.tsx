@@ -3,6 +3,16 @@ import { showSuccess } from "@/utils/toast";
 
 const STORAGE_KEY = "vaultlab-rotation-products";
 const ARCHIVE_STORAGE_KEY = "vaultlab-rotation-archive";
+const ROTATION_WIPE_STORAGE_KEY = "vaultlab-rotation-entry-wipe-v1";
+
+const clearStoredRotationEntries = () => {
+  if (typeof window === "undefined") return;
+  if (window.localStorage.getItem(ROTATION_WIPE_STORAGE_KEY) === "done") return;
+
+  window.localStorage.removeItem(STORAGE_KEY);
+  window.localStorage.removeItem(ARCHIVE_STORAGE_KEY);
+  window.localStorage.setItem(ROTATION_WIPE_STORAGE_KEY, "done");
+};
 
 export const ROTATION_CATEGORIES = [
   "Flower",
@@ -64,6 +74,8 @@ const loadJSON = <T,>(key: string, fallback: T): T => {
 };
 
 export const RotationProvider = ({ children }: { children: ReactNode }) => {
+  clearStoredRotationEntries();
+
   const [products, setProducts] = useState<RotationProduct[]>(() =>
     loadJSON<RotationProduct[]>(STORAGE_KEY, []).map((product) => ({ rating: 0, ...product })),
   );

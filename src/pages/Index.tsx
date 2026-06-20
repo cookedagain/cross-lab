@@ -393,6 +393,8 @@ const Index = () => {
   );
 
   const randomPair = () => {
+    if (vaultSeeds.length < 2) return;
+
     const a = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
     let b = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
     while (b.id === a.id) b = vaultSeeds[Math.floor(Math.random() * vaultSeeds.length)];
@@ -614,6 +616,11 @@ const Index = () => {
           </div>
 
           <div className="grid gap-3 lg:grid-cols-2">
+            {breederTypeTotals.length === 0 && (
+              <p className="rounded-2xl bg-muted/50 p-4 text-sm font-semibold text-muted-foreground lg:col-span-2">
+                No seed vault entries are logged yet. Add incoming packs below or restore a backup when you are ready.
+              </p>
+            )}
             {breederTypeTotals.map((group) => {
               const isOpen = openBreeders[group.breeder] ?? false;
               return (
@@ -1101,11 +1108,11 @@ const Index = () => {
           </div>
 
           <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-            <Button className="h-12 flex-1 rounded-2xl text-base font-bold" onClick={() => setSalt((value) => value + 1)}>
+            <Button className="h-12 flex-1 rounded-2xl text-base font-bold" onClick={() => setSalt((value) => value + 1)} disabled={!parentA || !parentB}>
               <Sparkles className="mr-2 h-4 w-4" />
               Generate names
             </Button>
-            <Button variant="outline" className="h-12 rounded-2xl border-2 text-base font-bold" onClick={randomPair}>
+            <Button variant="outline" className="h-12 rounded-2xl border-2 text-base font-bold" onClick={randomPair} disabled={vaultSeeds.length < 2}>
               <Dices className="mr-2 h-4 w-4" />
               Random pair
             </Button>

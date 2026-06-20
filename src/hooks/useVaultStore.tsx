@@ -5,7 +5,18 @@ import { showError, showSuccess } from "@/utils/toast";
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
+const VAULT_WIPE_STORAGE_KEY = "crosslab-vault-entry-wipe-v1";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
+
+const clearStoredVaultEntries = () => {
+  if (typeof window === "undefined") return;
+  if (window.localStorage.getItem(VAULT_WIPE_STORAGE_KEY) === "done") return;
+
+  window.localStorage.removeItem(INVENTORY_STORAGE_KEY);
+  window.localStorage.removeItem(MULTIPASS_STORAGE_KEY);
+  window.localStorage.removeItem(LOTS_STORAGE_KEY);
+  window.localStorage.setItem(VAULT_WIPE_STORAGE_KEY, "done");
+};
 
 export type MultipassEntry = {
   id: string;
@@ -63,6 +74,8 @@ const loadJSON = <T,>(key: string, fallback: T): T => {
 };
 
 export const VaultProvider = ({ children }: { children: ReactNode }) => {
+  clearStoredVaultEntries();
+
   const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => {
     const parsed = loadJSON<Record<string, unknown>>(INVENTORY_STORAGE_KEY, {});
     const cleaned = Object.fromEntries(

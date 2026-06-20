@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState, type ReactNode } from "
 import { showSuccess } from "@/utils/toast";
 
 const STORAGE_KEY = "vaultlab-rotation-products";
+const ARCHIVE_STORAGE_KEY = "vaultlab-rotation-archive";
 
 export const ROTATION_CATEGORIES = [
   "Flower",
@@ -25,38 +26,58 @@ export type RotationProduct = {
   startWeight: number;
   remainingWeight: number;
   notes: string;
+  rating: number;
 };
+
+export type ArchivedProduct = RotationProduct & { archivedAt: string };
 
 export const clampWeight = (value: number) =>
   Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 100) / 100);
 
+export const clampRating = (value: number) =>
+  Math.max(0, Math.min(5, Math.round(Number.isFinite(value) ? value : 0)));
+
 type RotationContextValue = {
   products: RotationProduct[];
+  archived: ArchivedProduct[];
   addProduct: (data: Omit<RotationProduct, "id">) => void;
   updateRemaining: (id: string, next: number) => void;
+  updateRating: (id: string, next: number) => void;
   removeProduct: (id: string) => void;
+  archiveProduct: (id: string) => void;
+  restoreProduct: (id: string) => void;
+  removeArchived: (id: string) => void;
 };
 
 const RotationContext = createContext<RotationContextValue | null>(null);
 
-const loadProducts = (): RotationProduct[] => {
-  if (typeof window === "undefined") return [];
+const loadJSON = <T,>(key: string, fallback: T): T => {
+  if (typeof window === "undefined") return fallback;
   try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    if (!stored) return [];
-    const parsed = JSON.parse(stored) as RotationProduct[];
-    return Array.isArray(parsed) ? parsed : [];
+    const stored = window.localStorage.getItem(key);
+    if (!stored) return fallback;
+    const parsed = JSON.parse(stored);
+    return Array.isArray(parsed) ? (parsed as T) : fallback;
   } catch {
-    return [];
+    return fallback;
   }
 };
 
 export const RotationProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<RotationProduct[]>(loadProducts);
+  const [products, setProducts] = useState<RotationProduct[]>(() =>
+    loadJSON<RotationProduct[]>(STORAGE_KEY, []).map((product) => ({ rating: 0, ...product })),
+  );
+  const [archived, setArchived] = useState<ArchivedProduct[]>(() =>
+    loadJSON<ArchivedProduct[]>(ARCHIVE_STORAGE_KEY, []),
+  );
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
   }, [products]);
+
+  useEffect(() => {
+    window.localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(archived));
+  }, [archived]);
 
   const addProduct = (data: Omit<RotationProduct, "id">) => {
     setProducts((current) => [
@@ -73,11 +94,54 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
       ),
     );
 
+  const updateRating = (id: string, next: number) =>
+    setProducts((current) =>
+      current.map((product) =>
+        product.id === id ? { ...product, rating: clampRating(next) } : product,
+      ),
+    );
+
   const removeProduct = (id: string) =>
     setProducts((current) => current.filter((product) => product.id !== id));
 
+  const archiveProduct = (id: string) =>
+    setProducts((current) => {
+      const target = current.find((product) => product.id === id);
+      if (target) {
+        setArchived((list) => [{ ...target, archivedAt: new Date().toISOString() }, ...list]);
+        showSuccess("Moved to previously used.");
+      }
+      return current.filter((product) => product.id !== id);
+    });
+
+  const restoreProduct = (id: string) =>
+    setArchived((current) => {
+      const target = current.find((product) => product.id === id);
+      if (target) {
+        const { archivedAt, ...rest } = target;
+        setProducts((list) => [rest, ...list]);
+        showSuccess("Restored to rotation.");
+      }
+      return current.filter((product) => product.id !== id);
+    });
+
+  const removeArchived = (id: string) =>
+    setArchived((current) => current.filter((product) => product.id !== id));
+
   return (
-    <RotationContext.Provider value={{ products, addProduct, updateRemaining, removeProduct }}>
+    <RotationContext.Provider
+      value={{
+        products,
+        archived,
+        addProduct,
+        updateRemaining,
+        updateRating,
+        removeProduct,
+        archiveProduct,
+        restoreProduct,
+        removeArchived,
+      }}
+    >
       {children}
     </RotationContext.Provider>
   );

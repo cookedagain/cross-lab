@@ -1,14 +1,19 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
+  Archive,
   ArrowLeft,
+  History,
   Minus,
   Pill,
   Plus,
+  RotateCcw,
+  Star,
   Trash2,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CollapsibleSection from "@/components/CollapsibleSection";
+import RecommendedProducts from "@/components/RecommendedProducts";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -28,8 +33,46 @@ const CATEGORY_STYLES: Record<RotationCategory, string> = {
   Other: "bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800/60 dark:text-slate-200 dark:border-slate-700",
 };
 
+const StarRating = ({
+  value,
+  onChange,
+  readOnly = false,
+}: {
+  value: number;
+  onChange?: (next: number) => void;
+  readOnly?: boolean;
+}) => (
+  <span className="inline-flex items-center gap-0.5">
+    {Array.from({ length: 5 }).map((_, index) => {
+      const filled = index < value;
+      return (
+        <button
+          key={index}
+          type="button"
+          disabled={readOnly}
+          onClick={() => onChange?.(index + 1)}
+          className={`text-amber-500 ${readOnly ? "cursor-default" : "cursor-pointer hover:scale-110"} transition`}
+          aria-label={`${index + 1} star${index === 0 ? "" : "s"}`}
+        >
+          <Star className={`h-4 w-4 ${filled ? "fill-current" : "opacity-30"}`} />
+        </button>
+      );
+    })}
+  </span>
+);
+
 const Rotation = () => {
-  const { products, addProduct, updateRemaining, removeProduct } = useRotation();
+  const {
+    products,
+    archived,
+    addProduct,
+    updateRemaining,
+    updateRating,
+    removeProduct,
+    archiveProduct,
+    restoreProduct,
+    removeArchived,
+  } = useRotation();
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -51,6 +94,7 @@ const Rotation = () => {
       startWeight: clampWeight(startWeight),
       remainingWeight: clampWeight(startWeight),
       notes: notes.trim(),
+      rating: 0,
     });
     setName("");
     setBrand("");
@@ -110,9 +154,9 @@ const Rotation = () => {
             <p className="mt-1 text-sm font-semibold text-muted-foreground">across all products</p>
           </div>
           <div className="rounded-[1.75rem] border-2 border-border bg-card p-5 shadow-sm">
-            <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">Started with</p>
-            <p className="mt-2 font-display text-4xl font-black">{totals.totalStart}g</p>
-            <p className="mt-1 text-sm font-semibold text-muted-foreground">total logged weight</p>
+            <p className="text-xs font-black uppercase tracking-[0.22em] text-muted-foreground">Previously used</p>
+            <p className="mt-2 font-display text-4xl font-black">{archived.length}</p>
+            <p className="mt-1 text-sm font-semibold text-muted-foreground">in your history</p>
           </div>
         </section>
 
@@ -206,7 +250,7 @@ const Rotation = () => {
         <CollapsibleSection
           title="In rotation"
           icon={<Pill className="h-5 w-5" />}
-          description="Adjust remaining weight as you use each product."
+          description="Rate each product and adjust remaining weight as you use it. When you finish one, send it to your history."
           badge={
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
               {products.length}
@@ -239,20 +283,38 @@ const Rotation = () => {
                           THC {product.thc}% · CBD {product.cbd}%
                         </p>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 shrink-0 rounded-full text-muted-foreground hover:text-destructive"
-                        onClick={() => removeProduct(product.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-1">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary"
+                          onClick={() => archiveProduct(product.id)}
+                          title="Move to previously used"
+                        >
+                          <Archive className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
+                          onClick={() => removeProduct(product.id)}
+                          title="Delete"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
 
                     {product.notes && (
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{product.notes}</p>
                     )}
+
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="text-[11px] font-bold text-muted-foreground">Your rating:</span>
+                      <StarRating value={product.rating} onChange={(next) => updateRating(product.id, next)} />
+                    </div>
 
                     <div className="mt-3">
                       <div className="mb-1 flex justify-between text-[11px] font-bold">
@@ -300,6 +362,80 @@ const Rotation = () => {
             </div>
           )}
         </CollapsibleSection>
+
+        <CollapsibleSection
+          title="Previously used"
+          icon={<History className="h-5 w-5" />}
+          description="Products you've finished or moved out of rotation. Restore one to bring it back, with your rating kept."
+          badge={
+            <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">
+              {archived.length}
+            </span>
+          }
+          defaultOpen={false}
+        >
+          {archived.length === 0 ? (
+            <p className="rounded-2xl bg-muted/50 p-4 text-sm font-semibold text-muted-foreground">
+              Nothing here yet. When you finish a product, use the archive button to move it into your history.
+            </p>
+          ) : (
+            <div className="grid gap-3 lg:grid-cols-2">
+              {archived.map((product) => (
+                <div key={product.id} className="rounded-3xl border border-border bg-muted/30 p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="mb-1 flex flex-wrap items-center gap-2">
+                        <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${CATEGORY_STYLES[product.category]}`}>
+                          {product.category}
+                        </span>
+                        {product.brand && (
+                          <span className="text-xs font-semibold text-muted-foreground">{product.brand}</span>
+                        )}
+                      </div>
+                      <p className="font-display text-lg font-bold leading-tight">{product.name}</p>
+                      <p className="mt-0.5 text-[11px] font-bold text-muted-foreground">
+                        THC {product.thc}% · CBD {product.cbd}% · finished {new Date(product.archivedAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-muted-foreground hover:text-primary"
+                        onClick={() => restoreProduct(product.id)}
+                        title="Restore to rotation"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full text-muted-foreground hover:text-destructive"
+                        onClick={() => removeArchived(product.id)}
+                        title="Delete from history"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  {product.notes && (
+                    <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{product.notes}</p>
+                  )}
+
+                  <div className="mt-3 flex items-center gap-2">
+                    <span className="text-[11px] font-bold text-muted-foreground">Rated:</span>
+                    <StarRating value={product.rating} readOnly />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CollapsibleSection>
+
+        <RecommendedProducts />
       </main>
     </div>
   );

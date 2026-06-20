@@ -213,8 +213,8 @@ const Index = () => {
     toggleArrived,
   } = useVault();
 
-  const [parentA, setParentA] = useState<Seed | null>(SEEDS[0] ?? null);
-  const [parentB, setParentB] = useState<Seed | null>(SEEDS[1] ?? null);
+  const [parentA, setParentA] = useState<Seed | null>(null);
+  const [parentB, setParentB] = useState<Seed | null>(null);
   const [salt, setSalt] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
   const [vaultSearch, setVaultSearch] = useState("");

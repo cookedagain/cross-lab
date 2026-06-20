@@ -7,6 +7,8 @@ import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import CannabinoidPanel from "@/components/CannabinoidPanel";
 import WebLineageLookup from "@/components/WebLineageLookup";
+import GeneticsTree from "@/components/GeneticsTree";
+import { buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
 import { useVault } from "@/hooks/useVaultStore";
 import {
   estimateAdvancedMetrics,
@@ -49,6 +51,8 @@ const StrainDetail = () => {
   const keeper = getKeeperPriority(counted);
   const growth = estimateSeedGrowth(seed);
   const rarity = getSeedRarity(counted);
+  const lineageTree = buildStrainLineageTree(seed.name);
+  const hasLineage = lineageTreeDepth(lineageTree) > 0;
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -147,6 +151,13 @@ const StrainDetail = () => {
               </div>
             </div>
           </div>
+
+          {hasLineage && (
+            <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
+              <p className="mb-3 text-xs font-black uppercase tracking-wide text-primary">Genetics tree</p>
+              <GeneticsTree root={lineageTree} />
+            </div>
+          )}
 
           <CannabinoidPanel seed={seed} />
 

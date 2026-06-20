@@ -6,7 +6,7 @@ export type WebLineageResult = {
   syncedAt: string;
 };
 
-const CACHE_KEY = "crosslab-web-lineage-cache-v2";
+const CACHE_KEY = "crosslab-web-lineage-cache-v3-brotanical";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 
@@ -141,6 +141,8 @@ const extractParents = (text: string, strainName: string): [string, string] | nu
   return null;
 };
 
+const BROTANICAL_DOMAIN = "brotanicalgardens.com";
+
 const fetchSearchText = async (query: string) => {
   const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
   const response = await fetch(`${ALL_ORIGINS_RAW}${encodeURIComponent(url)}`);
@@ -164,10 +166,13 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   const cached = cache[key];
   if (cached && fresh(cached)) return cached;
 
+  // Source lineage from Brotanical Gardens (product pages + freebies listings)
+  // instead of generic web/breeder sites.
   const queries = [
-    `${name} ${breeder ?? ""} cannabis strain parents`,
-    `${name} strain genetics lineage parents`,
-    `${name} cannabis cross parents`,
+    `site:${BROTANICAL_DOMAIN} ${name} ${breeder ?? ""} lineage`,
+    `site:${BROTANICAL_DOMAIN} ${name} genetics parents`,
+    `site:${BROTANICAL_DOMAIN} freebies ${name} ${breeder ?? ""}`,
+    `${name} ${breeder ?? ""} brotanical gardens lineage parents`,
   ];
 
   try {
@@ -178,8 +183,8 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
         const result: WebLineageResult = {
           status: "resolved",
           parents,
-          source: "web search snippets",
-          note: "Scraped from public web-search result text and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+          source: "Brotanical Gardens",
+          note: "Scraped from Brotanical Gardens listings (including freebies) and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
           syncedAt,
         };
         cache[key] = result;
@@ -190,7 +195,7 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
 
     const result: WebLineageResult = {
       status: "not-found",
-      note: "No confident parent pair was found in the scraped web results. Try adding breeder context or checking the pack label.",
+      note: "No confident parent pair was found in the Brotanical Gardens listings. Try adding breeder context or checking the pack label.",
       syncedAt,
     };
     cache[key] = result;

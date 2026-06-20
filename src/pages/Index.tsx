@@ -621,7 +621,7 @@ const Index = () => {
             </div>
           </div>
 
-          <div className="grid gap-3 lg:grid-cols-2">
+          <div className="grid items-start gap-3 lg:grid-cols-2">
             {breederTypeTotals.map((group) => {
               const isOpen = openBreeders[group.breeder] ?? false;
               return (

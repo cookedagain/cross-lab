@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, Dices, FlaskConical, GitBranch, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import ThemeToggle from "@/components/ThemeToggle";
 import VaultBackup from "@/components/VaultBackup";
@@ -13,6 +13,8 @@ import BreedingLots from "@/components/BreedingLots";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import WebLineageLookup from "@/components/WebLineageLookup";
+import GeneticsTree from "@/components/GeneticsTree";
+import { buildCrossLineageTree } from "@/lib/lineageTree";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -271,6 +273,11 @@ const Index = () => {
     if (!parentA || !parentB) return [];
     return generateCrossNames(parentA, parentB, salt, selectedGoals);
   }, [parentA, parentB, salt, selectedGoals]);
+
+  const lineageTree = useMemo(() => {
+    if (!parentA || !parentB) return null;
+    return buildCrossLineageTree(parentA.name, parentB.name);
+  }, [parentA, parentB]);
 
   const groupedNames = useMemo(() => groupNamesByCategory(names), [names]);
 
@@ -1200,6 +1207,16 @@ const Index = () => {
                     ))}
                   </div>
                 </div>
+
+                {lineageTree && (
+                  <div className="rounded-3xl bg-background p-4 lg:col-span-3">
+                    <div className="mb-3 flex items-center gap-2">
+                      <GitBranch className="h-4 w-4 text-primary" />
+                      <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Genetics tree</p>
+                    </div>
+                    <GeneticsTree root={lineageTree} />
+                  </div>
+                )}
 
                 <div className="rounded-3xl bg-background p-4 lg:col-span-3">
                   <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Cross size / dry-yield estimates</p>

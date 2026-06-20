@@ -11,6 +11,7 @@ import RecommendedPickups from "@/components/RecommendedPickups";
 import BreedingLots from "@/components/BreedingLots";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
+import WebLineageLookup from "@/components/WebLineageLookup";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -1247,6 +1248,7 @@ const Index = () => {
                         {node.pieces.length > 0 && (
                           <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{node.pieces.join(" × ")}</p>
                         )}
+                        <WebLineageLookup name={node.name} breeder={node.breeder} compact />
                         {node.flags.length > 0 && (
                           <div className="mt-2 flex flex-wrap gap-1">
                             {node.flags.map((flag) => (

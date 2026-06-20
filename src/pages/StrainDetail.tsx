@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import CannabinoidPanel from "@/components/CannabinoidPanel";
+import WebLineageLookup from "@/components/WebLineageLookup";
 import { useVault } from "@/hooks/useVaultStore";
 import {
   estimateAdvancedMetrics,
@@ -125,6 +126,7 @@ const StrainDetail = () => {
           <div className="rounded-3xl border border-border bg-card p-5">
             <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Lineage & breeder</p>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.breederBlurb}</p>
+            <WebLineageLookup name={seed.name} breeder={seed.breeder} />
             {profile.flags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
                 {profile.flags.map((flag) => (

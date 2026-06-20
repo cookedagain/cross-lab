@@ -14,7 +14,7 @@ import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
-import { buildCrossLineageTree } from "@/lib/lineageTree";
+import { buildCrossLineageTree, buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -463,7 +463,7 @@ const Index = () => {
         <VaultAnalytics />
 
         <CollapsibleSection
-          title="Revised vault breakdown"
+          title="Vault Breakdown"
           icon={<PackagePlus className="h-5 w-5" />}
           description={
             <>
@@ -811,6 +811,19 @@ const Index = () => {
                               </div>
                             </div>
                           </div>
+
+                          {(() => {
+                            const tree = buildStrainLineageTree(seed.name);
+                            if (lineageTreeDepth(tree) === 0) return null;
+                            return (
+                              <div className="mt-3 border-t border-border/40 pt-2.5">
+                                <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                  Genetics tree
+                                </p>
+                                <GeneticsTree root={tree} />
+                              </div>
+                            );
+                          })()}
                         </div>
                       );
                     })}

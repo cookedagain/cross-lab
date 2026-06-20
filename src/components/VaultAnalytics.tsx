@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { BarChart3 } from "lucide-react";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import {
   Cell,
   Pie,
@@ -92,12 +93,7 @@ const VaultAnalytics = () => {
   }, [vaultSeeds, getSeedCount]);
 
   return (
-    <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-      <div className="mb-5 flex items-center gap-2">
-        <BarChart3 className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-2xl font-black">Vault analytics</h2>
-      </div>
-
+    <CollapsibleSection title="Vault analytics" icon={<BarChart3 className="h-5 w-5" />}>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Main-vault strains" value={String(data.strains)} />
         <StatCard label="Main-vault seeds" value={String(data.totalSeeds)} />
@@ -170,7 +166,7 @@ const VaultAnalytics = () => {
           />
         </div>
       </div>
-    </section>
+    </CollapsibleSection>
   );
 };
 

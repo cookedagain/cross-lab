@@ -10,6 +10,7 @@ import {
 } from "@/lib/crossName";
 import { getKeeperPriority } from "@/lib/keeper";
 import { TypeBadge } from "@/components/TypeBadge";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import type { Seed } from "@/data/seeds";
 
 const scoreSeed = (seed: Seed, goal: TraitGoal | null) => {
@@ -93,15 +94,11 @@ const BestParents = () => {
   const females = useMemo(() => counted.filter((seed) => seed.type === "Feminized"), [counted]);
 
   return (
-    <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-      <div className="mb-5 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-2xl font-black">Best parent finder</h2>
-      </div>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Ranks vault stock for pollen and seed roles using keeper value, terpene and resin estimates. Pick a trait goal to bias the results.
-      </p>
-
+    <CollapsibleSection
+      title="Best parent finder"
+      icon={<Sparkles className="h-5 w-5" />}
+      description="Ranks vault stock for pollen and seed roles using keeper value, terpene and resin estimates. Pick a trait goal to bias the results."
+    >
       <div className="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
@@ -146,7 +143,7 @@ const BestParents = () => {
           accent="text-pink-500"
         />
       </div>
-    </section>
+    </CollapsibleSection>
   );
 };
 

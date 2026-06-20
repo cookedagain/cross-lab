@@ -4,6 +4,7 @@ import { useVault } from "@/hooks/useVaultStore";
 import { TRAIT_GOALS, type TraitGoal } from "@/lib/crossName";
 import { recommendCrosses } from "@/lib/recommendedCrosses";
 import { TypeBadge } from "@/components/TypeBadge";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 const RecommendedCrosses = () => {
   const { vaultSeeds, seedWithCount } = useVault();
@@ -22,17 +23,11 @@ const RecommendedCrosses = () => {
     );
 
   return (
-    <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-      <div className="mb-5 flex items-center gap-2">
-        <GitFork className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-2xl font-black">Recommended crosses</h2>
-      </div>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Auto-scanned from your in-stock vault. Pairs are ranked by cross potential, keeper value, and
-        breeder diversity — true-male donors are paired with strong receivers first. Pick trait goals
-        to re-bias the results.
-      </p>
-
+    <CollapsibleSection
+      title="Recommended crosses"
+      icon={<GitFork className="h-5 w-5" />}
+      description="Auto-scanned from your in-stock vault. Pairs are ranked by cross potential, keeper value, and breeder diversity — true-male donors are paired with strong receivers first. Pick trait goals to re-bias the results."
+    >
       <div className="mb-5 flex flex-wrap gap-2">
         <button
           type="button"
@@ -123,7 +118,7 @@ const RecommendedCrosses = () => {
           ))}
         </div>
       )}
-    </section>
+    </CollapsibleSection>
   );
 };
 

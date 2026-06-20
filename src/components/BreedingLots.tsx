@@ -2,6 +2,7 @@ import { useState } from "react";
 import { FlaskRound, Minus, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import { clampSeedCount, useVault } from "@/hooks/useVaultStore";
 
 const BreedingLots = () => {
@@ -33,15 +34,11 @@ const BreedingLots = () => {
   const seedLots = lots.filter((lot) => lot.kind === "seed");
 
   return (
-    <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-      <div className="mb-5 flex items-center gap-2">
-        <FlaskRound className="h-5 w-5 text-primary" />
-        <h2 className="font-display text-2xl font-black">Pollen & seed lots</h2>
-      </div>
-      <p className="mb-4 text-sm text-muted-foreground">
-        Track pollen you've collected and seed lots you've made from your own crosses — closing the loop from plan to new stock.
-      </p>
-
+    <CollapsibleSection
+      title="Pollen & seed lots"
+      icon={<FlaskRound className="h-5 w-5" />}
+      description="Track pollen you've collected and seed lots you've made from your own crosses — closing the loop from plan to new stock."
+    >
       <div className="rounded-3xl border border-border bg-background p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <span className="text-xs font-bold text-muted-foreground">Type:</span>
@@ -147,7 +144,7 @@ const BreedingLots = () => {
           No lots logged yet. Record pollen or seed you produce so your own genetics become part of the plan.
         </p>
       )}
-    </section>
+    </CollapsibleSection>
   );
 };
 

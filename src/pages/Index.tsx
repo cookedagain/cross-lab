@@ -5,6 +5,7 @@ import SeedSelect from "@/components/SeedSelect";
 import ThemeToggle from "@/components/ThemeToggle";
 import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import BestParents from "@/components/BestParents";
 import RecommendedCrosses from "@/components/RecommendedCrosses";
 import RecommendedPickups from "@/components/RecommendedPickups";
@@ -447,16 +448,15 @@ const Index = () => {
 
         <VaultAnalytics />
 
-        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-          <div className="mb-5 flex items-start gap-3">
-            <PackagePlus className="mt-1 h-5 w-5 text-primary" />
-            <div>
-              <h1 className="font-display text-3xl font-black tracking-tight">Revised vault breakdown</h1>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Tap any strain to open its full detail page. Burn Pile remains separated from preservation pressure.
-              </p>
-            </div>
-          </div>
+        <CollapsibleSection
+          title="Revised vault breakdown"
+          icon={<PackagePlus className="h-5 w-5" />}
+          description={
+            <>
+              Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Tap any strain to open its full detail page. Burn Pile remains separated from preservation pressure.
+            </>
+          }
+        >
 
           <div className="mb-5 rounded-3xl border border-border bg-background p-4">
             <div className="grid gap-3 lg:grid-cols-[1fr_auto] lg:items-center">
@@ -847,7 +847,7 @@ const Index = () => {
               ))}
             </div>
           </div>
-        </section>
+        </CollapsibleSection>
 
         <BestParents />
 
@@ -855,16 +855,15 @@ const Index = () => {
 
         <RecommendedPickups />
 
-        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-          <div className="mb-5 flex items-start gap-3">
-            <PackageCheck className="mt-1 h-5 w-5 text-primary" />
-            <div>
-              <h2 className="font-display text-2xl font-black tracking-tight">Ethos Multipass — incoming additions</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
-                Pre-log packs coming later in the year. When one lands, hit <b>Mark arrived</b> and it drops straight into the vault under {MULTIPASS_BREEDER} — counted, searchable, and selectable in the cross planner.
-              </p>
-            </div>
-          </div>
+        <CollapsibleSection
+          title="Ethos Multipass — incoming additions"
+          icon={<PackageCheck className="h-5 w-5" />}
+          description={
+            <>
+              Pre-log packs coming later in the year. When one lands, hit <b>Mark arrived</b> and it drops straight into the vault under {MULTIPASS_BREEDER} — counted, searchable, and selectable in the cross planner.
+            </>
+          }
+        >
 
           <div className="rounded-3xl border border-border bg-background p-4">
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-primary">Add an incoming pack</p>
@@ -1005,16 +1004,11 @@ const Index = () => {
               No Multipass packs logged yet. Add the strains you expect to receive and they'll be ready to fold into the vault the moment they arrive.
             </p>
           )}
-        </section>
+        </CollapsibleSection>
 
         <BreedingLots />
 
-        <section className="mt-8 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
-          <div className="mb-5 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <h2 className="font-display text-2xl font-black">Cross planner</h2>
-          </div>
-
+        <CollapsibleSection title="Cross planner" icon={<Sparkles className="h-5 w-5" />}>
           <div className="grid items-center gap-4 lg:grid-cols-[1fr_auto_1fr]">
             <SeedSelect label="A" accent="green" value={parentA} onChange={setParentA} onClear={() => setParentA(null)} seeds={vaultSeeds} seedCounts={seedCounts} />
             <div className="grid place-items-center">
@@ -1109,7 +1103,7 @@ const Index = () => {
               Random pair
             </Button>
           </div>
-        </section>
+        </CollapsibleSection>
 
         {report && (
           <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">

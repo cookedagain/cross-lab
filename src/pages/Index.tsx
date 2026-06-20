@@ -14,7 +14,10 @@ import RecommendedPickups from "@/components/RecommendedPickups";
 import BreedingLots from "@/components/BreedingLots";
 import PollenTimer from "@/components/PollenTimer";
 import HarvestLog from "@/components/HarvestLog";
+import { TypeBadge } from "@/components/TypeBadge";
+=======
 import LineageTree from "@/components/LineageTree";
+import { TypeBadge } from "@/components/TypeBadge";
 =======
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";

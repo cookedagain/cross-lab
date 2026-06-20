@@ -11,13 +11,41 @@ const DOT_TONES = ["bg-primary", "bg-emerald-500", "bg-violet-500", "bg-amber-50
 
 const tone = (depth: number) => Math.min(depth, NODE_TONES.length - 1);
 
+// Splits a label on the cross separator so each parent sits on its own line.
+const splitLabel = (label: string) =>
+  label
+    .split("×")
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+const NodeLabel = ({ label }: { label: string }) => {
+  const parts = splitLabel(label);
+
+  if (parts.length <= 1) {
+    return <span className="font-display text-sm font-bold leading-tight">{label}</span>;
+  }
+
+  return (
+    <span className="flex flex-col gap-0.5">
+      {parts.map((part, index) => (
+        <span key={`${part}-${index}`} className="contents">
+          <span className="font-display text-sm font-bold leading-tight">{part}</span>
+          {index < parts.length - 1 && (
+            <span className="font-display text-xs font-black leading-none text-muted-foreground">×</span>
+          )}
+        </span>
+      ))}
+    </span>
+  );
+};
+
 const TreeNode = ({ node, depth }: { node: LineageTreeNode; depth: number }) => {
   const index = tone(depth);
   return (
     <li className="relative">
-      <div className={`inline-flex max-w-full items-center gap-2 rounded-2xl border px-3 py-1.5 ${NODE_TONES[index]}`}>
-        <span className={`h-2 w-2 shrink-0 rounded-full ${DOT_TONES[index]}`} />
-        <span className="font-display text-sm font-bold leading-tight">{node.label}</span>
+      <div className={`inline-flex max-w-full items-start gap-2 rounded-2xl border px-3 py-1.5 ${NODE_TONES[index]}`}>
+        <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${DOT_TONES[index]}`} />
+        <NodeLabel label={node.label} />
       </div>
       {node.children.length > 0 && (
         <ul className="mt-2 space-y-2 border-l-2 border-dashed border-border pl-4">

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
+import { ChevronDown, Dices, FlaskConical, HelpCircle, Leaf, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import ThemeToggle from "@/components/ThemeToggle";
 import VaultBackup from "@/components/VaultBackup";
@@ -423,6 +423,13 @@ const Index = () => {
             <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainVaultTotal}</span>
             <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800 dark:bg-orange-950/50 dark:text-orange-200">Burn pile {burnPileTotal}</span>
             <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
+            <Link
+              to="/rotation"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-3 py-1.5 text-xs font-black text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <Pill className="h-3.5 w-3.5" />
+              Rotation
+            </Link>
             <ThemeToggle />
           </div>
         </div>

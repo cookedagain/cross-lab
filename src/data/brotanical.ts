@@ -36,8 +36,10 @@ const BROTANICAL_FEED_URL: string | null = null;
 
 export const BROTANICAL_SITE = "https://brotanicalgardens.com.au";
 
+// Brotanical Gardens runs on Shopify, whose search endpoint is /search?q=...
+// (the previous WordPress-style /?s=... URL 404'd).
 export const brotanicalSearchUrl = (query: string) =>
-  `${BROTANICAL_SITE}/?s=${encodeURIComponent(query)}&post_type=product`;
+  `${BROTANICAL_SITE}/search?q=${encodeURIComponent(query)}&type=product`;
 
 type RawItem = Omit<BrotanicalItem, "id" | "url">;
 
@@ -80,7 +82,7 @@ const buildItem = (raw: RawItem, index: number): BrotanicalItem => ({
 
 export const BROTANICAL_CATALOG: BrotanicalItem[] = RAW_CATALOG.map(buildItem);
 
-const CACHE_KEY = "crosslab-brotanical-catalog";
+const CACHE_KEY = "crosslab-brotanical-catalog-v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // once a day
 
 type CachedCatalog = { syncedAt: string; items: BrotanicalItem[]; source: BrotanicalCatalog["source"] };

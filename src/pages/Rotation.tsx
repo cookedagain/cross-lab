@@ -61,6 +61,47 @@ const StarRating = ({
   </span>
 );
 
+type ProductInfoInput = {
+  name: string;
+  category: RotationCategory;
+  thc: number;
+  cbd: number;
+  notes: string;
+};
+
+const getPotencyInfo = (product: ProductInfoInput) => {
+  if (product.cbd >= 20 && product.thc <= 2) return "CBD-dominant / low intoxication";
+  if (product.cbd >= 8 && product.thc >= 5) return "Balanced THC:CBD";
+  if (product.category === "Vape" || product.category === "Rosin") return "Very high potency / rapid onset";
+  if (product.category === "Hash") return "High potency / longer body effect";
+  if (product.thc >= 26) return "High THC";
+  if (product.thc >= 18) return "Moderate THC";
+  return "Low-to-moderate potency";
+};
+
+const inferEffects = (product: ProductInfoInput) => {
+  const text = `${product.name} ${product.notes}`.toLowerCase();
+  if (product.cbd >= 20 && product.thc <= 2) return ["Calming", "Clear", "Daytime-friendly"];
+  if (/diesel|sour|haze|jack|lemon|vape|sativa/i.test(text)) return ["Uplifting", "Fast relief", "Functional"];
+  if (/pink|kush|cookies|gelato|indica|night|sleep|hash|rosin/i.test(text)) return ["Relaxing", "Body comfort", "Sleepy"];
+  if (product.thc >= 26) return ["Strong relief", "Heavy", "Appetite support"];
+  return ["Balanced", "Comfort", "Mood support"];
+};
+
+const inferTreatmentUses = (product: ProductInfoInput) => {
+  const effects = inferEffects(product).join(" ").toLowerCase();
+  if (product.cbd >= 20 && product.thc <= 2) return ["Anxiety", "Inflammation", "Daytime baseline support"];
+  if (/sleepy|relaxing|body|heavy/.test(effects)) return ["Insomnia", "Pain", "Muscle tension"];
+  if (/uplifting|functional|fast/.test(effects)) return ["Breakthrough symptoms", "Fatigue", "Low mood"];
+  return ["Stress", "Mild pain", "Appetite support"];
+};
+
+const getProductBlurb = (product: ProductInfoInput) => {
+  const potency = getPotencyInfo(product).toLowerCase();
+  const effects = inferEffects(product).join(", ").toLowerCase();
+  return `${product.name} reads as a ${potency} ${product.category.toLowerCase()} option with ${effects} effects based on its format, potency, and your notes.`;
+};
+
 const Rotation = () => {
   const {
     products,
@@ -311,6 +352,25 @@ const Rotation = () => {
                       <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{product.notes}</p>
                     )}
 
+                    <div className="mt-3 rounded-2xl bg-primary/10 p-3">
+                      <p className="text-[10px] font-black uppercase tracking-wide text-primary">Product info</p>
+                      <p className="mt-1 text-xs font-semibold leading-relaxed text-foreground">{getProductBlurb(product)}</p>
+                      <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                        <div className="rounded-xl bg-card p-2">
+                          <p className="text-[9px] font-black uppercase text-muted-foreground">Potency</p>
+                          <p className="mt-0.5 text-[11px] font-bold">{getPotencyInfo(product)}</p>
+                        </div>
+                        <div className="rounded-xl bg-card p-2">
+                          <p className="text-[9px] font-black uppercase text-muted-foreground">Effects</p>
+                          <p className="mt-0.5 text-[11px] font-bold">{inferEffects(product).join(", ")}</p>
+                        </div>
+                        <div className="rounded-xl bg-card p-2">
+                          <p className="text-[9px] font-black uppercase text-muted-foreground">May help with</p>
+                          <p className="mt-0.5 text-[11px] font-bold">{inferTreatmentUses(product).join(", ")}</p>
+                        </div>
+                      </div>
+                    </div>
+
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-[11px] font-bold text-muted-foreground">Your rating:</span>
                       <StarRating value={product.rating} onChange={(next) => updateRating(product.id, next)} />
@@ -424,6 +484,24 @@ const Rotation = () => {
                   {product.notes && (
                     <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{product.notes}</p>
                   )}
+
+                  <div className="mt-3 rounded-2xl bg-background p-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Product info</p>
+                    <p className="mt-1 text-xs font-semibold leading-relaxed text-foreground">{getProductBlurb(product)}</p>
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
+                        {getPotencyInfo(product)}
+                      </span>
+                      {inferEffects(product).map((effect) => (
+                        <span key={effect} className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
+                          {effect}
+                        </span>
+                      ))}
+                    </div>
+                    <p className="mt-2 text-[11px] font-semibold text-muted-foreground">
+                      Used for: {inferTreatmentUses(product).join(", ")}
+                    </p>
+                  </div>
 
                   <div className="mt-3 flex items-center gap-2">
                     <span className="text-[11px] font-bold text-muted-foreground">Rated:</span>

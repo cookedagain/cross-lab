@@ -52,13 +52,15 @@ export function recommendPickups(
     const broughtTraits: TraitGoal[] = [];
     let score = 20; // base desirability
 
-    // Breeder diversity — favour breeders not already in the vault.
+    // Breeder familiarity — give a slight edge to new breeders, but keep
+    // breeders you already own competitive so they still make the top 20.
     const newBreeder = !profile.breeders.has(item.breeder);
     if (newBreeder) {
-      score += 22;
+      score += 16;
       reasons.push(`New breeder for your vault: ${item.breeder}`);
     } else {
-      score += 4;
+      score += 12;
+      reasons.push(`Expands your existing ${item.breeder} line`);
     }
 
     // Selected goals are the strongest signal.

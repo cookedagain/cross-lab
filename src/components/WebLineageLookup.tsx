@@ -59,7 +59,7 @@ const WebLineageLookup = ({ name, breeder, compact = false }: WebLineageLookupPr
   }
 
   return (
-    <div className="mt-3 rounded-2xl border border-primary/30 bg-primary/5 p-3">
+    <div className="mt-3 rounded-2xl border border-border bg-muted/40 p-3">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide text-primary">

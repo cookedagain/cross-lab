@@ -142,6 +142,9 @@ const extractParents = (text: string, strainName: string): [string, string] | nu
 };
 
 const BROTANICAL_DOMAIN = "brotanicalgardens.com";
+const ETHOS_DOMAIN = "ethosgenetics.com";
+
+const isEthos = (breeder?: string) => /ethos/i.test(breeder ?? "");
 
 const fetchSearchText = async (query: string) => {
   const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
@@ -166,9 +169,23 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   const cached = cache[key];
   if (cached && fresh(cached)) return cached;
 
-  // Fallback chain: try Brotanical Gardens first, then Leafly, then a generic
-  // web search. Each tier carries its own source label and verify note.
-  const tiers: { source: string; note: string; queries: string[] }[] = [
+  // Fallback chain. For Ethos Genetics strains we lead with the official
+  // ethosgenetics.com/genetics catalog; everything else uses Brotanical first.
+  const tiers: { source: string; note: string; queries: string[] }[] = [];
+
+  if (isEthos(breeder)) {
+    tiers.push({
+      source: "Ethos Genetics",
+      note: "Scraped from the official ethosgenetics.com/genetics catalog and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      queries: [
+        `site:${ETHOS_DOMAIN}/genetics ${name} lineage parents`,
+        `site:${ETHOS_DOMAIN} ${name} genetics parents`,
+        `${name} ethos genetics lineage parents`,
+      ],
+    });
+  }
+
+  tiers.push(
     {
       source: "Brotanical Gardens",
       note: "Scraped from Brotanical Gardens listings (including freebies) and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
@@ -194,7 +211,7 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
         `${name} cannabis cross parents`,
       ],
     },
-  ];
+  );
 
   try {
     for (const tier of tiers) {

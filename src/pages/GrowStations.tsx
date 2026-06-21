@@ -2,6 +2,10 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Boxes, Cpu, Sprout } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CloneRegister from "@/components/CloneRegister";
+import BestParents from "@/components/BestParents";
+import RecommendedCrosses from "@/components/RecommendedCrosses";
+import BreedingLots from "@/components/BreedingLots";
+import CrossPlanner from "@/components/CrossPlanner";
 import { CloneRegisterProvider } from "@/hooks/useCloneRegister";
 import { GROW_STATIONS } from "@/lib/growStations";
 
@@ -22,8 +26,8 @@ const GrowStations = () => {
                 <Boxes className="h-6 w-6" />
               </span>
               <div>
-                <p className="font-display text-2xl font-black tracking-tight">Grow Stations</p>
-                <p className="text-sm text-muted-foreground">Equipment specs & clone register</p>
+                <p className="font-display text-2xl font-black tracking-tight">Growing</p>
+                <p className="text-sm text-muted-foreground">Equipment, clone register & breeding tools</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -86,6 +90,14 @@ const GrowStations = () => {
           </section>
 
           <CloneRegister />
+
+          <BestParents />
+
+          <RecommendedCrosses />
+
+          <BreedingLots />
+
+          <CrossPlanner />
 
           <div className="mt-6 rounded-3xl bg-muted/50 p-4 text-xs font-semibold leading-relaxed text-muted-foreground">
             Specs are taken from each kit's published contents. The VGrow runs DWC; the 2×2 and 4×4 run coco/soil

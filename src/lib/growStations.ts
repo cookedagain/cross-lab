@@ -43,7 +43,7 @@ export const GROW_STATIONS: GrowStation[] = [
     name: "AC Infinity Advanced 2×2 Kit (1 plant)",
     role: "Single-plant tent · veg or compact flower",
     category: "220W",
-    controller: "AC Infinity Controller 69 Pro (UIS)",
+    controller: "AC Infinity Controller 69 Pro+ (Wi-Fi/Bluetooth UIS)",
     medium: "5 gallon (~19L) bucket · coco/soil",
     mediumNote: "One 5-gallon grow bucket, hand-fed. Coco runs daily feed; soil feeds as the pot dries.",
     specs: [
@@ -51,7 +51,7 @@ export const GROW_STATIONS: GrowStation[] = [
       { label: "Light", value: "IONBOARD S22, 100W full-spectrum LED" },
       { label: "Fan", value: "CLOUDLINE T4 — 4\" inline (PWM)" },
       { label: "Filter", value: "4\" carbon filter + ducting" },
-      { label: "Controller", value: "Controller 69 Pro — temp/humidity automation" },
+      { label: "Controller", value: "Controller 69 Pro+ — Wi-Fi app automation" },
     ],
     storeUrl:
       "https://www.quickbloomlights.com.au/products/advanced-2x2-grow-kit-by-ac-infinity-1-plant-kit?variant=48836132897082",

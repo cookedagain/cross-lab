@@ -11,13 +11,20 @@
 
 const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
 const BROTANICAL_BASE = "https://brotanicalgardens.com";
-const PRODUCTS_CACHE_KEY = "crosslab-brotanical-products-v1";
+const PRODUCTS_CACHE_PREFIX = "crosslab-store-products-v1:";
 const AVAILABILITY_CACHE_KEY = "crosslab-breeder-availability-v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // once a day
 const MAX_PAGES = 6; // up to 6 × 250 = 1500 products
 
 // Breeders we never source live (excluded by request).
 const EXCLUDED_BREEDERS = new Set(["Greenspace AU", "Mediseedman"]);
+
+// Breeders that have their own dedicated Shopify store. For these we scrape the
+// store directly (the whole catalog is that breeder) instead of filtering the
+// shared Brotanical feed.
+const BREEDER_DIRECT_SHOPS: Record<string, string> = {
+  "Burn Pile": "https://sacredseedsaustralia.co",
+};
 
 // Aliases used to match a Brotanical product (by vendor or title) to a breeder
 // in the vault. Lowercase, matched as substrings.
@@ -61,14 +68,14 @@ type ShopifyProduct = {
   variants?: ShopifyVariant[];
 };
 
-// --- Brotanical product cache (shared across all breeders) ---------------
+// --- Shopify store product cache (keyed per store base URL) --------------
 
 type ProductsCache = { syncedAt: string; products: ShopifyProduct[] };
 
-const readProductsCache = (): ProductsCache | null => {
+const readProductsCache = (base: string): ProductsCache | null => {
   if (typeof window === "undefined") return null;
   try {
-    const stored = window.localStorage.getItem(PRODUCTS_CACHE_KEY);
+    const stored = window.localStorage.getItem(PRODUCTS_CACHE_PREFIX + base);
     if (!stored) return null;
     const parsed = JSON.parse(stored) as ProductsCache;
     if (!parsed?.syncedAt || !Array.isArray(parsed.products)) return null;
@@ -78,10 +85,10 @@ const readProductsCache = (): ProductsCache | null => {
   }
 };
 
-const writeProductsCache = (value: ProductsCache) => {
+const writeProductsCache = (base: string, value: ProductsCache) => {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(PRODUCTS_CACHE_KEY, JSON.stringify(value));
+    window.localStorage.setItem(PRODUCTS_CACHE_PREFIX + base, JSON.stringify(value));
   } catch {
     // ignore quota errors
   }
@@ -89,18 +96,18 @@ const writeProductsCache = (value: ProductsCache) => {
 
 const isFresh = (syncedAt: string) => Date.now() - new Date(syncedAt).getTime() < CACHE_TTL_MS;
 
-// Fetches the whole Brotanical catalog (paginated), syncing at most once a day.
-// Returns null if the store could not be reached and nothing is cached.
-async function fetchBrotanicalProducts(): Promise<ProductsCache | null> {
-  const cached = readProductsCache();
+// Fetches a Shopify store's full catalog (paginated), syncing at most once a
+// day. Returns null if the store could not be reached and nothing is cached.
+async function fetchStoreProducts(base: string): Promise<ProductsCache | null> {
+  const cached = readProductsCache(base);
   if (cached && isFresh(cached.syncedAt)) return cached;
 
   try {
     const all: ShopifyProduct[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const target = `${BROTANICAL_BASE}/products.json?limit=250&page=${page}`;
+      const target = `${base.replace(/\/$/, "")}/products.json?limit=250&page=${page}`;
       const response = await fetch(`${ALL_ORIGINS_RAW}${encodeURIComponent(target)}`);
-      if (!response.ok) throw new Error("brotanical unreachable");
+      if (!response.ok) throw new Error("store unreachable");
       const data = (await response.json()) as { products?: ShopifyProduct[] };
       const products = data.products ?? [];
       all.push(...products);
@@ -108,7 +115,7 @@ async function fetchBrotanicalProducts(): Promise<ProductsCache | null> {
     }
 
     const result: ProductsCache = { syncedAt: new Date().toISOString(), products: all };
-    writeProductsCache(result);
+    writeProductsCache(base, result);
     return result;
   } catch {
     // If a stale cache exists, fall back to it so the UI still shows something.
@@ -184,8 +191,9 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
     };
   }
 
+  const directShop = BREEDER_DIRECT_SHOPS[breeder];
   const aliases = BREEDER_ALIASES[breeder];
-  if (!aliases) {
+  if (!directShop && !aliases) {
     return {
       breeder,
       status: "no-source",
@@ -199,15 +207,20 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
   const cached = cache[breeder];
   if (cached && isFresh(cached.syncedAt)) return cached;
 
-  const catalog = await fetchBrotanicalProducts();
+  // A direct store is entirely this breeder's catalog; Brotanical is shared and
+  // must be filtered down by alias.
+  const sourceBase = directShop ?? BROTANICAL_BASE;
+  const sourceLabel = directShop ? "the breeder's store" : "the Brotanical Gardens catalog";
+
+  const catalog = await fetchStoreProducts(sourceBase);
   if (!catalog) {
     const result: BreederAvailability = {
       breeder,
       status: "unreachable",
       items: [],
-      storeUrl: BROTANICAL_BASE,
+      storeUrl: sourceBase,
       syncedAt,
-      note: "Could not reach the Brotanical Gardens catalog from the browser. Try again later.",
+      note: `Could not reach ${sourceLabel} from the browser. Try again later.`,
     };
     cache[breeder] = result;
     writeAvailabilityCache(cache);
@@ -215,7 +228,7 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
   }
 
   const items = catalog.products
-    .filter((product) => matchesBreeder(product, aliases) && !isMerch(product))
+    .filter((product) => (directShop || matchesBreeder(product, aliases!)) && !isMerch(product))
     .map((product) => toItem(product, breeder))
     // In-stock first, then alphabetical.
     .sort((a, b) => Number(b.available) - Number(a.available) || a.title.localeCompare(b.title));
@@ -224,12 +237,12 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
     breeder,
     status: items.length > 0 ? "live" : "empty",
     items,
-    storeUrl: BROTANICAL_BASE,
+    storeUrl: sourceBase,
     syncedAt: catalog.syncedAt,
     note:
       items.length > 0
-        ? "Live from the Brotanical Gardens catalog, synced daily. Stock can change between syncs."
-        : "No current Brotanical Gardens listings found for this breeder.",
+        ? `Live from ${sourceLabel}, synced daily. Stock can change between syncs.`
+        : `No current listings found for this breeder on ${sourceLabel}.`,
   };
   cache[breeder] = result;
   writeAvailabilityCache(cache);

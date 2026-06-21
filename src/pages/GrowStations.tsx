@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Boxes, Cpu, Droplets, ExternalLink } from "lucide-react";
+import { ArrowLeft, Boxes, Cpu, Sprout } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CloneRegister from "@/components/CloneRegister";
 import { CloneRegisterProvider } from "@/hooks/useCloneRegister";
@@ -54,7 +54,6 @@ const GrowStations = () => {
                     className="inline-flex items-center gap-1 text-[11px] font-black text-primary hover:underline"
                   >
                     Kit
-                    <ExternalLink className="h-3 w-3" />
                   </a>
                 </div>
 
@@ -76,9 +75,9 @@ const GrowStations = () => {
                     <p className="text-xs font-semibold leading-relaxed">{station.controller}</p>
                   </div>
                   <div className="flex items-start gap-2">
-                    <Droplets className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <Sprout className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <p className="text-xs font-semibold leading-relaxed">
-                      ~{station.reservoirL}L reservoir · {station.reservoirNote}
+                      {station.medium} · {station.mediumNote}
                     </p>
                   </div>
                 </div>
@@ -89,8 +88,8 @@ const GrowStations = () => {
           <CloneRegister />
 
           <div className="mt-6 rounded-3xl bg-muted/50 p-4 text-xs font-semibold leading-relaxed text-muted-foreground">
-            Specs are taken from each kit's published contents. Reservoir volumes are DWC working estimates —
-            confirm against your own buckets and trust your EC/pH meter over any chart.
+            Specs are taken from each kit's published contents. The VGrow runs DWC; the 2×2 and 4×4 run coco/soil
+            in 5-gallon grow buckets — adjust feed style to your medium and trust your EC/pH meter over any chart.
           </div>
         </main>
       </div>

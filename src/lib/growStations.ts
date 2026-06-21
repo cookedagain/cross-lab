@@ -1,6 +1,6 @@
 // Grow station equipment specs, built from the three kits actually in use.
-// Specs reflect the published kit contents; reservoir volumes are DWC working
-// estimates you can adjust against your own buckets.
+// Specs reflect the published kit contents. The VGrow runs DWC; the 2×2 and 4×4
+// run coco/soil in 5-gallon (~19L) grow buckets, hand-fed.
 
 export type StationSpec = {
   label: string;
@@ -13,8 +13,8 @@ export type GrowStation = {
   role: string;
   category: "<100W" | "220W" | "500W";
   controller: string;
-  reservoirL: number;
-  reservoirNote: string;
+  medium: string;
+  mediumNote: string;
   specs: StationSpec[];
   storeUrl: string;
 };
@@ -26,8 +26,8 @@ export const GROW_STATIONS: GrowStation[] = [
     role: "Solo / micro grow · self-contained smart box",
     category: "<100W",
     controller: "VIVOSUN GrowHub app + built-in smart controller",
-    reservoirL: 11,
-    reservoirNote: "Single DWC bucket — top up daily, full change weekly.",
+    medium: "~11L DWC reservoir",
+    mediumNote: "Single DWC bucket with airstone — top up daily, full change weekly.",
     specs: [
       { label: "Footprint", value: "Self-contained box (~40×40cm grow area)" },
       { label: "Light", value: "Built-in full-spectrum LED (~100W draw)" },
@@ -44,8 +44,8 @@ export const GROW_STATIONS: GrowStation[] = [
     role: "Single-plant tent · veg or compact flower",
     category: "220W",
     controller: "AC Infinity Controller 69 Pro (UIS)",
-    reservoirL: 15,
-    reservoirNote: "Single DWC bucket sized to the 2×2 footprint.",
+    medium: "5 gallon (~19L) bucket · coco/soil",
+    mediumNote: "One 5-gallon grow bucket, hand-fed. Coco runs daily feed; soil feeds as the pot dries.",
     specs: [
       { label: "Tent", value: "CLOUDLAB 422 — 60×60×120cm (2'×2'×4')" },
       { label: "Light", value: "IONBOARD S22, 100W full-spectrum LED" },
@@ -62,8 +62,8 @@ export const GROW_STATIONS: GrowStation[] = [
     role: "Main flower tent · up to 4 plants",
     category: "500W",
     controller: "AC Infinity Controller 69 Pro+ (Wi-Fi/Bluetooth UIS)",
-    reservoirL: 30,
-    reservoirNote: "Scale per plant if running separate DWC buckets.",
+    medium: "4 × 5 gallon (~19L) buckets · coco/soil",
+    mediumNote: "Up to four 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
     specs: [
       { label: "Tent", value: "CLOUDLAB 644 — 120×120×200cm (4'×4'×6'7\")" },
       { label: "Light", value: "IonFrame EVO8, 730W full-spectrum LED" },

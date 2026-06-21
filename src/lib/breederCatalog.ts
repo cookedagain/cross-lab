@@ -33,8 +33,7 @@ export type AvailabilityItem = {
   id: string;
   title: string;
   available: boolean;
-  price?: string;
-  url?: string;
+  info: string[];
 };
 
 export type BreederAvailability = {
@@ -46,12 +45,13 @@ export type BreederAvailability = {
   note: string;
 };
 
-type ShopifyVariant = { available?: boolean; price?: string };
+type ShopifyVariant = { available?: boolean };
 type ShopifyProduct = {
   id: number | string;
   title: string;
   handle: string;
   product_type?: string;
+  tags?: string[] | string;
   variants?: ShopifyVariant[];
 };
 
@@ -79,7 +79,7 @@ const writeCache = (cache: CacheShape) => {
 const isFresh = (syncedAt: string) => Date.now() - new Date(syncedAt).getTime() < CACHE_TTL_MS;
 
 // Pull "seed"-like products out of a Shopify products feed.
-const parseShopify = (products: ShopifyProduct[], storeUrl: string): AvailabilityItem[] =>
+const parseShopify = (products: ShopifyProduct[]): AvailabilityItem[] =>
   products
     .filter((product) => {
       const type = (product.product_type ?? "").toLowerCase();
@@ -89,13 +89,22 @@ const parseShopify = (products: ShopifyProduct[], storeUrl: string): Availabilit
       return true;
     })
     .map((product) => {
-      const variant = product.variants?.[0];
+      const tags = Array.isArray(product.tags)
+        ? product.tags
+        : typeof product.tags === "string"
+          ? product.tags.split(",").map((tag) => tag.trim())
+          : [];
+      const info = [product.product_type, ...tags]
+        .map((value) => (value ?? "").trim())
+        .filter(Boolean)
+        .filter((value, index, self) => self.indexOf(value) === index)
+        .slice(0, 4);
+
       return {
         id: String(product.id),
         title: product.title,
         available: product.variants ? product.variants.some((v) => v.available) : true,
-        price: variant?.price,
-        url: `${storeUrl}/products/${product.handle}`,
+        info,
       };
     });
 
@@ -125,7 +134,7 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
 
     const data = (await response.json()) as { products?: ShopifyProduct[] };
     const products = data.products ?? [];
-    const items = parseShopify(products, storeUrl.replace(/\/$/, ""));
+    const items = parseShopify(products);
 
     const result: BreederAvailability = {
       breeder,

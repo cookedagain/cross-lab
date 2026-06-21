@@ -66,17 +66,23 @@ const BreederAvailability = ({ breeder }: { breeder: string }) => {
         <>
           <div className="grid gap-2 sm:grid-cols-2">
             {data.items.map((item) => (
-              <a
+              <div
                 key={item.id}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:border-primary"
+                className="flex items-start justify-between gap-3 rounded-2xl border border-border bg-card p-3"
               >
                 <div className="min-w-0">
-                  <p className="truncate text-sm font-bold leading-tight">{item.title}</p>
-                  {item.price && Number(item.price) > 0 && (
-                    <p className="mt-0.5 text-[11px] font-semibold text-muted-foreground">${item.price}</p>
+                  <p className="text-sm font-bold leading-tight">{item.title}</p>
+                  {item.info.length > 0 && (
+                    <div className="mt-1.5 flex flex-wrap gap-1">
+                      {item.info.map((tag) => (
+                        <span
+                          key={tag}
+                          className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
                   )}
                 </div>
                 <span
@@ -88,7 +94,7 @@ const BreederAvailability = ({ breeder }: { breeder: string }) => {
                 >
                   {item.available ? "In stock" : "Sold out"}
                 </span>
-              </a>
+              </div>
             ))}
           </div>
           <p className="mt-3 text-[11px] font-semibold leading-relaxed text-muted-foreground">{data.note}</p>

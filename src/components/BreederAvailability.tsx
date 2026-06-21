@@ -57,7 +57,7 @@ const BreederAvailability = ({ breeder }: { breeder: string }) => {
               rel="noopener noreferrer"
               className="mt-2 inline-flex items-center gap-1.5 text-xs font-black text-primary hover:underline"
             >
-              Visit store
+              Browse Brotanical Gardens
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
           )}

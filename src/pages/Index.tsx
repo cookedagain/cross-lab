@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, Dices, FlaskConical, GitBranch, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
+import { Boxes, ChevronDown, Dices, FlaskConical, GitBranch, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sparkles, Target, Trash2, Undo2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import ThemeToggle from "@/components/ThemeToggle";
 import VaultBackup from "@/components/VaultBackup";
@@ -437,6 +437,13 @@ const Index = () => {
             >
               <Library className="h-3.5 w-3.5" />
               Breeders
+            </Link>
+            <Link
+              to="/stations"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-3 py-1.5 text-xs font-black text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <Boxes className="h-3.5 w-3.5" />
+              Stations
             </Link>
             <Link
               to="/rotation"

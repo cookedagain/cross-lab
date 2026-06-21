@@ -5,6 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import StrainName from "@/components/StrainName";
+import BreederAvailability from "@/components/BreederAvailability";
 import { useVault } from "@/hooks/useVaultStore";
 import { getBreederInfo } from "@/lib/breederInfo";
 import { getSeedRarity, rarityRank } from "@/lib/rarity";
@@ -112,6 +113,8 @@ const BreederDetail = () => {
             );
           })}
         </div>
+
+        <BreederAvailability breeder={decoded} />
       </main>
     </div>
   );

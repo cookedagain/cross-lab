@@ -16,17 +16,17 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // once a day
 // Known breeder storefronts. Shopify stores work automatically via
 // `/products.json`. Leave a breeder out (or null) to mark it "no live source".
 export const BREEDER_SHOPS: Record<string, string | null> = {
-  "Ethos Genetics": "https://www.ethosgenetics.com",
+  "Ethos Genetics": "https://officialethosseeds.com",
+  "Happy Valley Genetics": "https://happyvalleygenetics.com",
+  "Black Leaf Genetics": "https://blackleafgenetics.ca",
+  "Terpyz Mutant Genetics": "https://terpyz.eu",
   "Humboldt Seed Company": "https://humboldtseedcompany.com",
-  "In-House Genetics": "https://inhousegenetics.com",
+  "In-House Genetics": "https://www.northatlanticseed.com/product-category/seeds/in-house-genetics/",
+  "Greenspace AU": "https://greenspacegenetics.com",
   "Brothers Grimm": "https://brothersgrimmseeds.com",
+  "WolfPack Selections": "https://wolfpackselections.com",
+  "Burn Pile": "https://sacredseedsaustralia.co",
   "Binchickens Genetics": null,
-  "Terpyz Mutant Genetics": null,
-  "Black Leaf Genetics": null,
-  "WolfPack Selections": null,
-  "Happy Valley Genetics": null,
-  "Greenspace AU": null,
-  "Burn Pile": null,
 };
 
 export type AvailabilityItem = {

@@ -8,6 +8,8 @@ import { RotationProvider } from "@/hooks/useRotationStore";
 import Index from "./pages/Index";
 import StrainDetail from "./pages/StrainDetail";
 import Rotation from "./pages/Rotation";
+import Breeders from "./pages/Breeders";
+import BreederDetail from "./pages/BreederDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -24,6 +26,8 @@ const App = () => (
               <Route path="/" element={<Index />} />
               <Route path="/strain/:id" element={<StrainDetail />} />
               <Route path="/rotation" element={<Rotation />} />
+              <Route path="/breeders" element={<Breeders />} />
+              <Route path="/breeders/:breeder" element={<BreederDetail />} />
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
               <Route path="*" element={<NotFound />} />
             </Routes>

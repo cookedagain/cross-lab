@@ -8,6 +8,7 @@ import { RarityBadge } from "@/components/RarityBadge";
 import CannabinoidPanel from "@/components/CannabinoidPanel";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
+import AiGrowNotes from "@/components/AiGrowNotes";
 import { buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
 import { useVault } from "@/hooks/useVaultStore";
 import {
@@ -160,6 +161,8 @@ const StrainDetail = () => {
           )}
 
           <CannabinoidPanel seed={seed} />
+
+          <AiGrowNotes seed={seed} count={count} />
 
           <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
             <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Est. dry yield · single plant</p>

@@ -1,19 +1,23 @@
 import { useMemo, useState } from "react";
-import { Dices, FlaskConical, GitBranch, Sparkles, Target } from "lucide-react";
+import { Dices, FlaskConical, GitBranch, Loader2, Sparkles, Target, Wand2 } from "lucide-react";
 import SeedSelect from "@/components/SeedSelect";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { TypeBadge } from "@/components/TypeBadge";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
+import AiKeyForm from "@/components/AiKeyForm";
 import { buildCrossLineageTree } from "@/lib/lineageTree";
 import { Button } from "@/components/ui/button";
 import { useVault } from "@/hooks/useVaultStore";
+import { useAiSettings } from "@/hooks/useAiSettings";
+import { generateAiCrossNames } from "@/lib/aiFeatures";
 import { getKeeperPriority } from "@/lib/keeper";
 import {
   TRAIT_GOALS,
   generateCrossNames,
   getCrossReport,
   groupNamesByCategory,
+  type CrossName,
   type TraitGoal,
 } from "@/lib/crossName";
 import type { Seed, SeedType } from "@/data/seeds";
@@ -115,11 +119,37 @@ const getPairingTips = (parentA: Seed, parentB: Seed) => {
 
 const CrossPlanner = () => {
   const { seedCounts, vaultSeeds, getSeedCount, seedWithCount } = useVault();
+  const { hasKey } = useAiSettings();
 
   const [parentA, setParentA] = useState<Seed | null>(null);
   const [parentB, setParentB] = useState<Seed | null>(null);
   const [salt, setSalt] = useState(0);
   const [selectedGoals, setSelectedGoals] = useState<TraitGoal[]>([]);
+
+  const [aiNames, setAiNames] = useState<CrossName[]>([]);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
+  const [showKeyForm, setShowKeyForm] = useState(false);
+
+  const groupedAiNames = useMemo(() => groupNamesByCategory(aiNames), [aiNames]);
+
+  const runAiNames = async () => {
+    if (!parentA || !parentB) return;
+    if (!hasKey) {
+      setShowKeyForm(true);
+      return;
+    }
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const result = await generateAiCrossNames(parentA, parentB, selectedGoals);
+      setAiNames(result);
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : "Something went wrong.");
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   const report = useMemo(() => {
     if (!parentA || !parentB) return null;
@@ -247,7 +277,52 @@ const CrossPlanner = () => {
             <Dices className="mr-2 h-4 w-4" />
             Random pair
           </Button>
+          <Button
+            variant="outline"
+            className="h-12 rounded-2xl border-2 text-base font-bold"
+            onClick={runAiNames}
+            disabled={!parentA || !parentB || aiLoading}
+          >
+            {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
+            AI name ideas
+          </Button>
         </div>
+
+        {showKeyForm && !hasKey && (
+          <div className="mt-4">
+            <AiKeyForm description="Paste your OpenAI API key to generate AI strain names." />
+          </div>
+        )}
+
+        {aiError && (
+          <p className="mt-4 rounded-2xl bg-destructive/10 px-3 py-2 text-xs font-semibold text-destructive">
+            {aiError}
+          </p>
+        )}
+
+        {groupedAiNames.length > 0 && (
+          <div className="mt-5 rounded-3xl border-2 border-primary/20 bg-card p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Wand2 className="h-4 w-4 text-primary" />
+              <p className="text-xs font-black uppercase tracking-wide text-primary">AI-generated name ideas</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {groupedAiNames.map((group) => (
+                <div key={group.category} className="rounded-3xl bg-background p-4">
+                  <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">{group.category}</p>
+                  <div className="space-y-2">
+                    {group.names.map((item) => (
+                      <div key={item.name} className="rounded-2xl border border-border bg-card p-3">
+                        <p className="font-display text-lg font-bold leading-tight">{item.name}</p>
+                        <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{item.note}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </CollapsibleSection>
 
       {report && (

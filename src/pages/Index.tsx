@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sprout, Trash2, Undo2, RefreshCw } from "lucide-react";
+import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sprout, Trash2, Undo2, RefreshCw, ClipboardPaste, AlertCircle } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
@@ -20,6 +20,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
@@ -38,6 +39,7 @@ import {
   estimateAdvancedMetrics,
 } from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
+import { showSuccess, showError } from "@/utils/toast";
 
 type SortMode =
   | "count"
@@ -97,6 +99,58 @@ const seedHeightMetric = (seed: Seed) => {
 const seedSativaMetric = (seed: Seed) => estimateLineageSplit(seed).sativa;
 const seedPotencyMetric = (seed: Seed) => estimateCannabinoids(seed).thc.max;
 
+const parsePlaintextSeeds = (text: string): Omit<Seed, "id">[] => {
+  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
+  const parsed: Omit<Seed, "id">[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("#") || line.startsWith("//")) continue;
+
+    let name = line;
+    let breeder = "Custom";
+    let type: SeedType = "Feminized";
+    let count = 10;
+
+    // 1. Extract count (e.g., "x 5", "x5", "- 5", "5 seeds", "5s")
+    const countMatch = name.match(/(?:\s*[x×-]\s*|\s+)(\d+)(?:\s*seeds?|\s*s)?$/i);
+    if (countMatch) {
+      count = parseInt(countMatch[1], 10);
+      name = name.slice(0, countMatch.index).trim();
+    }
+
+    // 2. Extract type (e.g., "(FEM)", "(REG)", "(AUTO)", "[FEM]", etc.)
+    const typeMatch = name.match(/\((FEM|REG|AUTO|PHOTO\s*\?|Feminized|Regular|Autoflower|Unknown\s*Photo)\)/i) ||
+                      name.match(/\[(FEM|REG|AUTO|PHOTO\s*\?|Feminized|Regular|Autoflower|Unknown\s*Photo)\]/i);
+    if (typeMatch) {
+      const tStr = typeMatch[1].toUpperCase();
+      if (tStr.includes("FEM")) type = "Feminized";
+      else if (tStr.includes("REG")) type = "Regular";
+      else if (tStr.includes("AUTO")) type = "Autoflower";
+      else if (tStr.includes("PHOTO")) type = "Unknown Photo";
+      name = name.replace(typeMatch[0], "").trim();
+    }
+
+    // 3. Extract breeder (e.g., "Breeder - Strain", "Strain [Breeder]", "Breeder | Strain")
+    const breederBracketMatch = name.match(/\[([^\]]+)\]/);
+    if (breederBracketMatch) {
+      breeder = breederBracketMatch[1].trim();
+      name = name.replace(breederBracketMatch[0], "").trim();
+    } else {
+      const parts = name.split(/\s*[-|/]\s+/);
+      if (parts.length >= 2) {
+        breeder = parts[0].trim();
+        name = parts.slice(1).join(" - ").trim();
+      }
+    }
+
+    name = name.replace(/\s+/g, " ").trim();
+    if (name) {
+      parsed.push({ name, breeder, type, count });
+    }
+  }
+  return parsed;
+};
+
 const Index = () => {
   const {
     customSeeds,
@@ -129,6 +183,10 @@ const Index = () => {
   const [seedType, setSeedType] = useState<SeedType>("Feminized");
   const [seedCount, setSeedCount] = useState(10);
 
+  // Plaintext Bulk Importer
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkSeedsText, setBulkSeedsText] = useState("");
+
   const [newPassName, setNewPassName] = useState("");
   const [newPassParentA, setNewPassParentA] = useState("");
   const [newPassParentB, setNewPassParentB] = useState("");
@@ -148,6 +206,20 @@ const Index = () => {
     addSeed({ name, breeder, type: seedType, count: clampSeedCount(seedCount) });
     setSeedName("");
     setSeedCount(10);
+  };
+
+  const handleBulkImportSeeds = () => {
+    const parsed = parsePlaintextSeeds(bulkSeedsText);
+    if (parsed.length === 0) {
+      showError("Could not parse any valid seeds from the pasted text.");
+      return;
+    }
+    parsed.forEach((seed) => {
+      addSeed(seed);
+    });
+    showSuccess(`Successfully imported ${parsed.length} seeds into your vault.`);
+    setBulkSeedsText("");
+    setShowBulkImport(false);
   };
 
   const handleAddMultipass = () => {
@@ -424,7 +496,7 @@ const Index = () => {
               ))}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <div className="flex items-center rounded-2xl border border-border bg-card p-1">
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setSeedCount((value) => clampSeedCount(value - 1))}>
                   <Minus className="h-3.5 w-3.5" />
@@ -444,7 +516,41 @@ const Index = () => {
                 <Plus className="mr-1.5 h-4 w-4" />
                 Add seed
               </Button>
+              <Button type="button" variant="outline" className="h-11 rounded-2xl border-2 font-bold" onClick={() => setShowBulkImport(!showBulkImport)}>
+                <ClipboardPaste className="mr-1.5 h-4 w-4" />
+                Plaintext Bulk Import
+              </Button>
             </div>
+
+            {showBulkImport && (
+              <div className="mt-4 border-t border-border/60 pt-4">
+                <div className="mb-3 flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
+                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  <div>
+                    <p className="font-bold">Plaintext Bulk Importer</p>
+                    <p className="mt-1 leading-relaxed">
+                      Paste a list of strains (one per line). The parser will automatically extract the breeder, strain name, type, and seed count using smart fallback rules.
+                    </p>
+                    <p className="mt-2 font-mono text-[10px] leading-relaxed">
+                      Examples:<br />
+                      - Ethos Genetics - Lilac Diesel (FEM) x 5<br />
+                      - Humboldt Seed Company - Squirt (AUTO) x 10<br />
+                      - Brothers Grimm - Cinderella 99 (REG) x 12
+                    </p>
+                  </div>
+                </div>
+                <Textarea
+                  value={bulkSeedsText}
+                  onChange={(e) => setBulkSeedsText(e.target.value)}
+                  placeholder="Paste your list of strains here..."
+                  className="min-h-[150px] rounded-2xl font-mono text-xs leading-6"
+                />
+                <Button type="button" className="mt-3 h-11 rounded-2xl font-bold" onClick={handleBulkImportSeeds} disabled={!bulkSeedsText.trim()}>
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Parse & Import Seeds
+                </Button>
+              </div>
+            )}
           </div>
         </CollapsibleSection>
 

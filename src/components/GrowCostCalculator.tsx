@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Calculator, DollarSign, HelpCircle, Info, Lightbulb, Sparkles, TrendingUp, Beaker } from "lucide-react";
+import { Calculator, DollarSign, HelpCircle, Info, Lightbulb, Sparkles, TrendingUp, Beaker, Layers } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -63,7 +63,67 @@ const GrowCostCalculator = () => {
     setResCount(preset.resCount);
   };
 
-  // Calculate Cyco Nutrients needed for the run
+  // Helper to calculate total mL and costs for a given reservoir count
+  const calculateForScale = (count: number) => {
+    const totalsMl: Record<CycoKey, number> = {
+      ryzofuel: 0, growA: 0, growB: 0, bloomA: 0, bloomB: 0,
+      silica: 0, b1boost: 0, zyme: 0, xl: 0, swell: 0,
+      potashPlus: 0, drRepair: 0, uptake: 0, kleanse: 0
+    };
+
+    const totalVeg = Math.max(1, vegWeeks);
+    const totalFlower = Math.max(1, flowerWeeks);
+    const totalWeeks = 1 + totalVeg + 1 + totalFlower + 1; // Seedling + Veg + Transition + Flower + Flush
+
+    for (let w = 1; w <= totalWeeks; w++) {
+      let rates: Partial<Record<CycoKey, number>> = {};
+
+      if (w === 1) {
+        rates = CYCO_SCHEDULE[0].rates;
+      } else if (w <= 1 + totalVeg) {
+        const vegWeekNum = w - 1;
+        const schedIndex = Math.min(1 + (vegWeekNum - 1), 3);
+        rates = CYCO_SCHEDULE[schedIndex].rates;
+      } else if (w === 1 + totalVeg + 1) {
+        rates = CYCO_SCHEDULE[4].rates;
+      } else if (w <= 1 + totalVeg + 1 + totalFlower) {
+        const flowerWeekNum = w - (1 + totalVeg + 1);
+        const schedIndex = Math.min(5 + (flowerWeekNum - 1), 9);
+        rates = CYCO_SCHEDULE[schedIndex].rates;
+      } else {
+        rates = CYCO_SCHEDULE[10].rates;
+      }
+
+      Object.entries(rates).forEach(([key, rate]) => {
+        const cycoKey = key as CycoKey;
+        const weeklyMl = (rate ?? 0) * resSize * count * changesPerWeek;
+        totalsMl[cycoKey] = (totalsMl[cycoKey] ?? 0) + weeklyMl;
+      });
+    }
+
+    let totalConsumedCost = 0;
+    let totalUpfrontCost = 0;
+    let totalMlUsed = 0;
+
+    Object.entries(totalsMl).forEach(([key, ml]) => {
+      const cycoKey = key as CycoKey;
+      const price = bottlePrices[cycoKey] ?? 0;
+      const bottlesNeeded = Math.ceil(ml / 5000);
+      
+      totalConsumedCost += (ml / 5000) * price;
+      totalUpfrontCost += bottlesNeeded * price;
+      totalMlUsed += ml;
+    });
+
+    return {
+      totalMlUsed,
+      totalConsumedCost,
+      totalUpfrontCost,
+      totalWeeks,
+    };
+  };
+
+  // Calculate Cyco Nutrients needed for the run (current setup)
   const cycoNutrientCalculations = useMemo(() => {
     const totalsMl: Record<CycoKey, number> = {
       ryzofuel: 0, growA: 0, growB: 0, bloomA: 0, bloomB: 0,
@@ -136,6 +196,21 @@ const GrowCostCalculator = () => {
       totalUpfrontCost,
     };
   }, [vegWeeks, flowerWeeks, resSize, resCount, changesPerWeek, bottlePrices]);
+
+  // Scale comparison data (1, 2, 4, 6 plants)
+  const scaleComparison = useMemo(() => {
+    return [1, 2, 4, 6].map((count) => {
+      const data = calculateForScale(count);
+      const cost = costType === "consumed" ? data.totalConsumedCost : data.totalUpfrontCost;
+      return {
+        plants: count,
+        totalMl: data.totalMlUsed,
+        totalCost: cost,
+        weeklyCost: cost / data.totalWeeks,
+        weeklyMl: data.totalMlUsed / data.totalWeeks,
+      };
+    });
+  }, [vegWeeks, flowerWeeks, resSize, changesPerWeek, bottlePrices, costType]);
 
   // Update bottle price
   const handlePriceChange = (key: CycoKey, val: number) => {
@@ -537,55 +612,91 @@ const GrowCostCalculator = () => {
           </div>
 
           {/* Product Breakdown & Prices */}
-          <div className="rounded-3xl border border-border bg-background p-4 lg:col-span-2">
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-black uppercase tracking-wide text-primary">Nutrient Breakdown & 5L Bottle Prices</p>
-              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-                Total: ${costType === "consumed" ? cycoNutrientCalculations.totalConsumedCost.toFixed(2) : cycoNutrientCalculations.totalUpfrontCost.toFixed(2)}
-              </span>
+          <div className="rounded-3xl border border-border bg-background p-4 lg:col-span-2 space-y-6">
+            <div>
+              <div className="mb-3 flex items-center justify-between">
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Nutrient Breakdown & 5L Bottle Prices</p>
+                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
+                  Total: ${costType === "consumed" ? cycoNutrientCalculations.totalConsumedCost.toFixed(2) : cycoNutrientCalculations.totalUpfrontCost.toFixed(2)}
+                </span>
+              </div>
+
+              <div className="max-h-[300px] overflow-y-auto space-y-2 pr-1">
+                {cycoNutrientCalculations.productBreakdown.map((item) => (
+                  <div key={item.key} className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.product.color }} />
+                        <p className="text-sm font-bold truncate">{item.product.name}</p>
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Total needed: <span className="font-bold text-foreground">{item.ml.toLocaleString()} mL</span> ({item.litersNeeded.toFixed(2)}L)
+                      </p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Requires <span className="font-bold text-foreground">{item.bottlesNeeded}</span> × 5L bottle(s)
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="w-28">
+                        <span className="block text-[9px] font-black uppercase text-muted-foreground">5L Bottle Price ($)</span>
+                        <Input
+                          type="number"
+                          value={bottlePrices[item.key]}
+                          onChange={(e) => handlePriceChange(item.key, Number(e.target.value))}
+                          className="h-8 rounded-lg font-semibold text-xs"
+                        />
+                      </div>
+                      <div className="text-right w-20">
+                        <span className="block text-[9px] font-black uppercase text-muted-foreground">Cost</span>
+                        <span className="text-sm font-black text-primary">
+                          ${costType === "consumed" ? item.consumedCost.toFixed(2) : item.upfrontCost.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {cycoNutrientCalculations.productBreakdown.length === 0 && (
+                  <p className="text-center py-8 text-sm text-muted-foreground font-semibold">
+                    No nutrients calculated. Ensure Veg/Flower weeks and reservoir sizes are set.
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
-              {cycoNutrientCalculations.productBreakdown.map((item) => (
-                <div key={item.key} className="flex flex-col gap-2 rounded-2xl border border-border bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: item.product.color }} />
-                      <p className="text-sm font-bold truncate">{item.product.name}</p>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      Total needed: <span className="font-bold text-foreground">{item.ml.toLocaleString()} mL</span> ({item.litersNeeded.toFixed(2)}L)
+            {/* Scale Comparison Section */}
+            <div className="border-t border-border/60 pt-4">
+              <div className="mb-3 flex items-center gap-2">
+                <Layers className="h-4 w-4 text-primary" />
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Scale Comparison (1, 2, 4, 6 Plants)</p>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {scaleComparison.map((scale) => (
+                  <div key={scale.plants} className="rounded-2xl border border-border bg-card p-3">
+                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                      {scale.plants} Plant{scale.plants > 1 ? "s" : ""}
                     </p>
-                    <p className="text-[11px] text-muted-foreground">
-                      Requires <span className="font-bold text-foreground">{item.bottlesNeeded}</span> × 5L bottle(s)
+                    <p className="mt-1 font-display text-lg font-black text-primary">
+                      ${scale.totalCost.toFixed(2)}
                     </p>
-                  </div>
-
-                  <div className="flex items-center gap-4 shrink-0">
-                    <div className="w-28">
-                      <span className="block text-[9px] font-black uppercase text-muted-foreground">5L Bottle Price ($)</span>
-                      <Input
-                        type="number"
-                        value={bottlePrices[item.key]}
-                        onChange={(e) => handlePriceChange(item.key, Number(e.target.value))}
-                        className="h-8 rounded-lg font-semibold text-xs"
-                      />
-                    </div>
-                    <div className="text-right w-20">
-                      <span className="block text-[9px] font-black uppercase text-muted-foreground">Cost</span>
-                      <span className="text-sm font-black text-primary">
-                        ${costType === "consumed" ? item.consumedCost.toFixed(2) : item.upfrontCost.toFixed(2)}
-                      </span>
+                    <div className="mt-2 space-y-1 text-[11px] font-semibold text-muted-foreground">
+                      <div className="flex justify-between">
+                        <span>Weekly Cost:</span>
+                        <span className="text-foreground">${scale.weeklyCost.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Total Volume:</span>
+                        <span className="text-foreground">{(scale.totalMl / 1000).toFixed(2)}L</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Weekly Vol:</span>
+                        <span className="text-foreground">{(scale.weeklyMl).toFixed(0)} mL</span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-
-              {cycoNutrientCalculations.productBreakdown.length === 0 && (
-                <p className="text-center py-8 text-sm text-muted-foreground font-semibold">
-                  No nutrients calculated. Ensure Veg/Flower weeks and reservoir sizes are set.
-                </p>
-              )}
+                ))}
+              </div>
             </div>
           </div>
         </div>

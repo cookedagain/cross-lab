@@ -31,6 +31,9 @@ const DEFAULT_BOTTLE_PRICES: Record<CycoKey, number> = {
   kleanse: 20,
   drRepair: 25,
   uptake: 30,
+  phUp: 20,
+  phDown: 20,
+  greatWhite: 95,
 };
 
 const MIXING_GUIDE = {
@@ -60,11 +63,6 @@ const formatWeekRange = (index: number) => {
   if (index === 4) return "Transition";
   if (index >= 5 && index <= 9) return `Flower Week ${index - 4}`;
   return "Flush";
-};
-
-const getWeekMixAmount = (rate: number, resSize: number, resCount: number, changesPerWeek: number, medium: keyof typeof MIXING_GUIDE) => {
-  const batchSize = resSize * resCount * changesPerWeek;
-  return rate * batchSize * MIXING_GUIDE[medium].perLiter;
 };
 
 const GrowCostCalculator = () => {
@@ -99,7 +97,7 @@ const GrowCostCalculator = () => {
     const totalsMl: Record<CycoKey, number> = {
       ryzofuel: 0, growA: 0, growB: 0, bloomA: 0, bloomB: 0,
       silica: 0, b1boost: 0, zyme: 0, xl: 0, swell: 0,
-      potashPlus: 0, drRepair: 0, uptake: 0, kleanse: 0
+      potashPlus: 0, drRepair: 0, uptake: 0, kleanse: 0, phUp: 0, phDown: 0, greatWhite: 0
     };
 
     const totalVeg = Math.max(1, vegWeeks);
@@ -158,7 +156,7 @@ const GrowCostCalculator = () => {
     const totalsMl: Record<CycoKey, number> = {
       ryzofuel: 0, growA: 0, growB: 0, bloomA: 0, bloomB: 0,
       silica: 0, b1boost: 0, zyme: 0, xl: 0, swell: 0,
-      potashPlus: 0, drRepair: 0, uptake: 0, kleanse: 0
+      potashPlus: 0, drRepair: 0, uptake: 0, kleanse: 0, phUp: 0, phDown: 0, greatWhite: 0
     };
 
     const totalVeg = Math.max(1, vegWeeks);
@@ -600,7 +598,7 @@ const GrowCostCalculator = () => {
                 <div key={week.label} className="rounded-2xl border border-border bg-card p-3">
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                     <div>
-                      <p className="text-sm font-bold text-foreground">{formatWeekRange(index)}</p>
+                      <p className="text-sm font-bold text-foreground">{week.label}</p>
                       <p className="text-[11px] text-muted-foreground">
                         Total mix: <span className="font-bold text-foreground">{week.totalMl.toFixed(0)} mL</span>
                       </p>
@@ -683,7 +681,9 @@ const GrowCostCalculator = () => {
                     <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
                       {scale.plants} Plant{scale.plants > 1 ? "s" : ""}
                     </p>
-                    <p className="mt-1 font-display text-lg font-black text-primary">${scale.totalCost.toFixed(2)}</p>
+                    <p className="mt-1 font-display text-lg font-black text-primary">
+                      ${scale.totalCost.toFixed(2)}
+                    </p>
                     <div className="mt-2 space-y-1 text-[11px] font-semibold text-muted-foreground">
                       <div className="flex justify-between">
                         <span>Weekly Cost:</span>

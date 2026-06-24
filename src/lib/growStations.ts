@@ -1,3 +1,5 @@
+"use client";
+
 // Grow station equipment specs, built from the three kits actually in use.
 // Specs reflect the published kit contents. The VGrow runs DWC; the 2×2 and 4×4
 // run coco/soil in 5-gallon (~19L) grow buckets, hand-fed.
@@ -40,15 +42,15 @@ export const GROW_STATIONS: GrowStation[] = [
   },
   {
     id: "ac2x2",
-    name: "AC Infinity Advanced 2×2 Kit (1 plant)",
-    role: "Single-plant tent · veg or compact flower",
+    name: "AC Infinity Advanced 2×2 Kit (2 plant)",
+    role: "Two-plant tent · veg or compact flower",
     category: "220W",
     controller: "AC Infinity Controller 69 Pro+ (Wi-Fi/Bluetooth UIS)",
-    medium: "5 gallon (~19L) bucket · coco/soil",
-    mediumNote: "One 5-gallon grow bucket, hand-fed. Coco runs daily feed; soil feeds as the pot dries.",
+    medium: "2 × 5 gallon (~19L) buckets · coco/soil",
+    mediumNote: "Two 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
     specs: [
       { label: "Tent", value: "CLOUDLAB 422 — 60×60×120cm (2'×2'×4')" },
-      { label: "Light", value: "IONBOARD S22, 100W full-spectrum LED" },
+      { label: "Light", value: "IONBOARD S22, 220W full-spectrum LED" },
       { label: "Fan", value: "CLOUDLINE T4 — 4\" inline (PWM)" },
       { label: "Filter", value: "4\" carbon filter + ducting" },
       { label: "Controller", value: "Controller 69 Pro+ — Wi-Fi app automation" },
@@ -66,7 +68,7 @@ export const GROW_STATIONS: GrowStation[] = [
     mediumNote: "Up to four 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
     specs: [
       { label: "Tent", value: "CLOUDLAB 644 — 120×120×200cm (4'×4'×6'7\")" },
-      { label: "Light", value: "IonFrame EVO8, 730W full-spectrum LED" },
+      { label: "Light", value: "IonFrame EVO8, 500W full-spectrum LED" },
       { label: "Fan", value: "CLOUDLINE T6 — 6\" inline (PWM)" },
       { label: "Filter", value: "6\" carbon filter + ducting" },
       { label: "Controller", value: "Controller 69 Pro+ — Wi-Fi app automation" },

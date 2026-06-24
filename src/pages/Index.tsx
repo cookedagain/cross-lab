@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Sprout, Trash2, Undo2, RefreshCw, ClipboardPaste, AlertCircle } from "lucide-react";
+import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
@@ -20,14 +20,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type Seed, type SeedType } from "@/data/seeds";
+import { VAULT_TOTALS, type Seed, type SeedType } from "@/data/seeds";
 import { clampSeedCount, MULTIPASS_BREEDER, useVault } from "@/hooks/useVaultStore";
 import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
 import { getKeeperPriority } from "@/lib/keeper";
@@ -39,7 +38,6 @@ import {
   estimateAdvancedMetrics,
 } from "@/lib/crossName";
 import { MadeWithDyad } from "@/components/made-with-dyad";
-import { showSuccess, showError } from "@/utils/toast";
 
 type SortMode =
   | "count"
@@ -99,68 +97,13 @@ const seedHeightMetric = (seed: Seed) => {
 const seedSativaMetric = (seed: Seed) => estimateLineageSplit(seed).sativa;
 const seedPotencyMetric = (seed: Seed) => estimateCannabinoids(seed).thc.max;
 
-const parsePlaintextSeeds = (text: string): Omit<Seed, "id">[] => {
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const parsed: Omit<Seed, "id">[] = [];
-
-  for (const line of lines) {
-    if (line.startsWith("#") || line.startsWith("//")) continue;
-
-    let name = line;
-    let breeder = "Custom";
-    let type: SeedType = "Feminized";
-    let count = 10;
-
-    // 1. Extract count (e.g., "x 5", "x5", "- 5", "5 seeds", "5s")
-    const countMatch = name.match(/(?:\s*[x×-]\s*|\s+)(\d+)(?:\s*seeds?|\s*s)?$/i);
-    if (countMatch) {
-      count = parseInt(countMatch[1], 10);
-      name = name.slice(0, countMatch.index).trim();
-    }
-
-    // 2. Extract type (e.g., "(FEM)", "(REG)", "(AUTO)", "[FEM]", etc.)
-    const typeMatch = name.match(/\((FEM|REG|AUTO|PHOTO\s*\?|Feminized|Regular|Autoflower|Unknown\s*Photo)\)/i) ||
-                      name.match(/\[(FEM|REG|AUTO|PHOTO\s*\?|Feminized|Regular|Autoflower|Unknown\s*Photo)\]/i);
-    if (typeMatch) {
-      const tStr = typeMatch[1].toUpperCase();
-      if (tStr.includes("FEM")) type = "Feminized";
-      else if (tStr.includes("REG")) type = "Regular";
-      else if (tStr.includes("AUTO")) type = "Autoflower";
-      else if (tStr.includes("PHOTO")) type = "Unknown Photo";
-      name = name.replace(typeMatch[0], "").trim();
-    }
-
-    // 3. Extract breeder (e.g., "Breeder - Strain", "Strain [Breeder]", "Breeder | Strain")
-    const breederBracketMatch = name.match(/\[([^\]]+)\]/);
-    if (breederBracketMatch) {
-      breeder = breederBracketMatch[1].trim();
-      name = name.replace(breederBracketMatch[0], "").trim();
-    } else {
-      const parts = name.split(/\s*[-|/]\s+/);
-      if (parts.length >= 2) {
-        breeder = parts[0].trim();
-        name = parts.slice(1).join(" - ").trim();
-      }
-    }
-
-    name = name.replace(/\s+/g, " ").trim();
-    if (name) {
-      parsed.push({ name, breeder, type, count });
-    }
-  }
-  return parsed;
-};
-
 const Index = () => {
   const {
-    customSeeds,
     seedCounts,
     multipass,
     vaultSeeds,
     getSeedCount,
     seedWithCount,
-    addSeed,
-    removeSeed,
     updateSeedCount,
     resetSeedCounts,
     addMultipass,
@@ -177,50 +120,11 @@ const Index = () => {
   const [minResin, setMinResin] = useState(1);
   const [minTerpene, setMinTerpene] = useState(1);
 
-  // Add-a-seed form
-  const [seedName, setSeedName] = useState("");
-  const [seedBreeder, setSeedBreeder] = useState("");
-  const [seedType, setSeedType] = useState<SeedType>("Feminized");
-  const [seedCount, setSeedCount] = useState(10);
-
-  // Plaintext Bulk Importer
-  const [showBulkImport, setShowBulkImport] = useState(false);
-  const [bulkSeedsText, setBulkSeedsText] = useState("");
-
   const [newPassName, setNewPassName] = useState("");
   const [newPassParentA, setNewPassParentA] = useState("");
   const [newPassParentB, setNewPassParentB] = useState("");
   const [newPassType, setNewPassType] = useState<SeedType>("Feminized");
   const [newPassCount, setNewPassCount] = useState(10);
-
-  const customSeedIds = useMemo(() => new Set(customSeeds.map((seed) => seed.id)), [customSeeds]);
-  const existingBreeders = useMemo(
-    () => Array.from(new Set(vaultSeeds.map((seed) => seed.breeder))).sort(),
-    [vaultSeeds],
-  );
-
-  const handleAddSeed = () => {
-    const name = seedName.trim();
-    const breeder = seedBreeder.trim();
-    if (!name || !breeder) return;
-    addSeed({ name, breeder, type: seedType, count: clampSeedCount(seedCount) });
-    setSeedName("");
-    setSeedCount(10);
-  };
-
-  const handleBulkImportSeeds = () => {
-    const parsed = parsePlaintextSeeds(bulkSeedsText);
-    if (parsed.length === 0) {
-      showError("Could not parse any valid seeds from the pasted text.");
-      return;
-    }
-    parsed.forEach((seed) => {
-      addSeed(seed);
-    });
-    showSuccess(`Successfully imported ${parsed.length} seeds into your vault.`);
-    setBulkSeedsText("");
-    setShowBulkImport(false);
-  };
 
   const handleAddMultipass = () => {
     const name = newPassName.trim();
@@ -280,80 +184,76 @@ const Index = () => {
   const breederTypeTotals = useMemo(
     () => {
       const search = vaultSearch.trim().toLowerCase();
-      const breederNames = Array.from(new Set(vaultSeeds.map((seed) => seed.breeder)));
-      return breederNames
-        .map((breeder) => {
-          const allSeeds = vaultSeeds.filter((seed) => seed.breeder === breeder);
-          const strains = allSeeds
-            .filter((seed) => {
-              const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
-              const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
-              const adv = estimateAdvancedMetrics(seed);
-              const matchesThc = seedPotencyMetric(seed) >= minThc;
-              const matchesFlowering = adv.floweringWeeks <= maxFlowering;
-              const matchesResin = adv.resinDensity >= minResin;
-              const matchesTerpene = adv.terpeneIntensity >= minTerpene;
-              return matchesSearch && matchesType && matchesThc && matchesFlowering && matchesResin && matchesTerpene;
-            })
-            .sort((a, b) => {
-              const advA = estimateAdvancedMetrics(a);
-              const advB = estimateAdvancedMetrics(b);
-              const priorityA = getKeeperPriority(seedWithCount(a)).score;
-              const priorityB = getKeeperPriority(seedWithCount(b)).score;
+      return VAULT_TOTALS.map((group) => {
+        const allSeeds = vaultSeeds.filter((seed) => seed.breeder === group.breeder);
+        const strains = allSeeds
+          .filter((seed) => {
+            const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
+            const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
+            const adv = estimateAdvancedMetrics(seed);
+            const matchesThc = seedPotencyMetric(seed) >= minThc;
+            const matchesFlowering = adv.floweringWeeks <= maxFlowering;
+            const matchesResin = adv.resinDensity >= minResin;
+            const matchesTerpene = adv.terpeneIntensity >= minTerpene;
+            return matchesSearch && matchesType && matchesThc && matchesFlowering && matchesResin && matchesTerpene;
+          })
+          .sort((a, b) => {
+            const advA = estimateAdvancedMetrics(a);
+            const advB = estimateAdvancedMetrics(b);
+            const priorityA = getKeeperPriority(seedWithCount(a)).score;
+            const priorityB = getKeeperPriority(seedWithCount(b)).score;
 
-              switch (sortMode) {
-                case "rarity-desc":
-                  return getSeedRarity(seedWithCount(b)).score - getSeedRarity(seedWithCount(a)).score;
-                case "yield-desc":
-                  return seedYieldMetric(b) - seedYieldMetric(a);
-                case "yield-asc":
-                  return seedYieldMetric(a) - seedYieldMetric(b);
-                case "height-desc":
-                  return seedHeightMetric(b) - seedHeightMetric(a);
-                case "height-asc":
-                  return seedHeightMetric(a) - seedHeightMetric(b);
-                case "sativa-desc":
-                  return seedSativaMetric(b) - seedSativaMetric(a);
-                case "indica-desc":
-                  return seedSativaMetric(a) - seedSativaMetric(b);
-                case "potency-desc":
-                  return seedPotencyMetric(b) - seedPotencyMetric(a);
-                case "flowering-asc":
-                  return advA.floweringWeeks - advB.floweringWeeks;
-                case "flowering-desc":
-                  return advB.floweringWeeks - advA.floweringWeeks;
-                case "terpene-desc":
-                  return advB.terpeneIntensity - advA.terpeneIntensity;
-                case "resin-desc":
-                  return advB.resinDensity - advA.resinDensity;
-                case "ease-desc":
-                  return advB.easeOfGrow - advA.easeOfGrow;
-                case "stretch-desc": {
-                  const stretchVal = (s: string) => (s === "High" ? 3 : s === "Medium" ? 2 : 1);
-                  return stretchVal(advB.stretchFactor) - stretchVal(advA.stretchFactor);
-                }
-                case "stress-desc":
-                  return advB.stressResistance - advA.stressResistance;
-                case "mold-desc":
-                  return advB.moldResilience - advA.moldResilience;
-                case "keeper-desc":
-                  return priorityB - priorityA;
-                case "name":
-                  return a.name.localeCompare(b.name);
-                case "count":
-                default:
-                  return getSeedCount(b) - getSeedCount(a);
+            switch (sortMode) {
+              case "rarity-desc":
+                return getSeedRarity(seedWithCount(b)).score - getSeedRarity(seedWithCount(a)).score;
+              case "yield-desc":
+                return seedYieldMetric(b) - seedYieldMetric(a);
+              case "yield-asc":
+                return seedYieldMetric(a) - seedYieldMetric(b);
+              case "height-desc":
+                return seedHeightMetric(b) - seedHeightMetric(a);
+              case "height-asc":
+                return seedHeightMetric(a) - seedHeightMetric(b);
+              case "sativa-desc":
+                return seedSativaMetric(b) - seedSativaMetric(a);
+              case "indica-desc":
+                return seedSativaMetric(a) - seedSativaMetric(b);
+              case "potency-desc":
+                return seedPotencyMetric(b) - seedPotencyMetric(a);
+              case "flowering-asc":
+                return advA.floweringWeeks - advB.floweringWeeks;
+              case "flowering-desc":
+                return advB.floweringWeeks - advA.floweringWeeks;
+              case "terpene-desc":
+                return advB.terpeneIntensity - advA.terpeneIntensity;
+              case "resin-desc":
+                return advB.resinDensity - advA.resinDensity;
+              case "ease-desc":
+                return advB.easeOfGrow - advA.easeOfGrow;
+              case "stretch-desc": {
+                const stretchVal = (s: string) => (s === "High" ? 3 : s === "Medium" ? 2 : 1);
+                return stretchVal(advB.stretchFactor) - stretchVal(advA.stretchFactor);
               }
-            });
-          const byType = SEED_TYPES.map((type) => ({
-            type,
-            total: strains.filter((seed) => seed.type === type).reduce((sum, seed) => sum + getSeedCount(seed), 0),
-          })).filter((entry) => entry.total > 0);
-          const total = strains.reduce((sum, seed) => sum + getSeedCount(seed), 0);
-          return { breeder, total, byType, strains };
-        })
-        .filter((group) => group.strains.length > 0)
-        .sort((a, b) => b.strains.length - a.strains.length);
+              case "stress-desc":
+                return advB.stressResistance - advA.stressResistance;
+              case "mold-desc":
+                return advB.moldResilience - advA.moldResilience;
+              case "keeper-desc":
+                return priorityB - priorityA;
+              case "name":
+                return a.name.localeCompare(b.name);
+              case "count":
+              default:
+                return getSeedCount(b) - getSeedCount(a);
+            }
+          });
+        const byType = SEED_TYPES.map((type) => ({
+          type,
+          total: strains.filter((seed) => seed.type === type).reduce((sum, seed) => sum + getSeedCount(seed), 0),
+        })).filter((entry) => entry.total > 0);
+        const total = strains.reduce((sum, seed) => sum + getSeedCount(seed), 0);
+        return { ...group, total, byType, strains };
+      }).filter((group) => group.strains.length > 0);
     },
     [activeTypes, seedCounts, vaultSearch, vaultSeeds, sortMode, minThc, maxFlowering, minResin, minTerpene, getSeedCount, seedWithCount],
   );
@@ -449,111 +349,6 @@ const Index = () => {
           <VaultBackup />
         </div>
 
-        <CollapsibleSection
-          title="Add a seed"
-          icon={<Sprout className="h-5 w-5" />}
-          description="Build your own vault. Seeds you add are saved locally on this device — your collection stays yours."
-        >
-          <div className="rounded-3xl border border-border bg-background p-4">
-            <Input
-              value={seedName}
-              onChange={(event) => setSeedName(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleAddSeed();
-              }}
-              placeholder="Strain name (e.g. Temple Kush F2 × Wedding Cake)"
-              className="mb-3 h-11 rounded-2xl font-semibold"
-            />
-            <Input
-              list="breeder-options"
-              value={seedBreeder}
-              onChange={(event) => setSeedBreeder(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") handleAddSeed();
-              }}
-              placeholder="Breeder (e.g. Ethos Genetics)"
-              className="mb-3 h-11 rounded-2xl font-semibold"
-            />
-            <datalist id="breeder-options">
-              {existingBreeders.map((breeder) => (
-                <option key={breeder} value={breeder} />
-              ))}
-            </datalist>
-
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <span className="text-xs font-bold text-muted-foreground">Type:</span>
-              {SEED_TYPES.map((type) => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setSeedType(type)}
-                  className={`rounded-full border px-3 py-1 text-xs font-black transition ${
-                    seedType === type ? typeStyles[type] : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
-                  }`}
-                >
-                  {typeShort[type]}
-                </button>
-              ))}
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="flex items-center rounded-2xl border border-border bg-card p-1">
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setSeedCount((value) => clampSeedCount(value - 1))}>
-                  <Minus className="h-3.5 w-3.5" />
-                </Button>
-                <Input
-                  type="number"
-                  min={0}
-                  value={seedCount}
-                  onChange={(event) => setSeedCount(clampSeedCount(Number(event.target.value)))}
-                  className="h-8 w-14 border-0 bg-transparent p-0 text-center text-sm font-black shadow-none focus-visible:ring-0"
-                />
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 rounded-full" onClick={() => setSeedCount((value) => clampSeedCount(value + 1))}>
-                  <Plus className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-              <Button type="button" className="h-11 rounded-2xl font-bold" onClick={handleAddSeed} disabled={!seedName.trim() || !seedBreeder.trim()}>
-                <Plus className="mr-1.5 h-4 w-4" />
-                Add seed
-              </Button>
-              <Button type="button" variant="outline" className="h-11 rounded-2xl border-2 font-bold" onClick={() => setShowBulkImport(!showBulkImport)}>
-                <ClipboardPaste className="mr-1.5 h-4 w-4" />
-                Plaintext Bulk Import
-              </Button>
-            </div>
-
-            {showBulkImport && (
-              <div className="mt-4 border-t border-border/60 pt-4">
-                <div className="mb-3 flex items-start gap-2 rounded-2xl bg-amber-50 p-3 text-xs text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">
-                  <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-                  <div>
-                    <p className="font-bold">Plaintext Bulk Importer</p>
-                    <p className="mt-1 leading-relaxed">
-                      Paste a list of strains (one per line). The parser will automatically extract the breeder, strain name, type, and seed count using smart fallback rules.
-                    </p>
-                    <p className="mt-2 font-mono text-[10px] leading-relaxed">
-                      Examples:<br />
-                      - Ethos Genetics - Lilac Diesel (FEM) x 5<br />
-                      - Humboldt Seed Company - Squirt (AUTO) x 10<br />
-                      - Brothers Grimm - Cinderella 99 (REG) x 12
-                    </p>
-                  </div>
-                </div>
-                <Textarea
-                  value={bulkSeedsText}
-                  onChange={(e) => setBulkSeedsText(e.target.value)}
-                  placeholder="Paste your list of strains here..."
-                  className="min-h-[150px] rounded-2xl font-mono text-xs leading-6"
-                />
-                <Button type="button" className="mt-3 h-11 rounded-2xl font-bold" onClick={handleBulkImportSeeds} disabled={!bulkSeedsText.trim()}>
-                  <Plus className="mr-1.5 h-4 w-4" />
-                  Parse & Import Seeds
-                </Button>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-
         <VaultAnalytics />
 
         <CollapsibleSection
@@ -561,7 +356,7 @@ const Index = () => {
           icon={<PackagePlus className="h-5 w-5" />}
           description={
             <>
-              Every strain carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Tap any strain to open its full detail page. Use the trash icon to remove a seed you added.
+              Every strain now carries a visible type tag: <b>FEM</b>, <b>REG</b>, <b>AUTO</b>, or <b>PHOTO ?</b>. Tap any strain to open its full detail page. Burn Pile remains separated from preservation pressure.
             </>
           }
         >
@@ -714,204 +509,186 @@ const Index = () => {
             </div>
           </div>
 
-          {breederTypeTotals.length === 0 ? (
-            <p className="rounded-3xl bg-muted/50 p-6 text-center text-sm font-semibold text-muted-foreground">
-              Your vault is empty. Use <b>Add a seed</b> above to start building your collection.
-            </p>
-          ) : (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
-              {breederTypeTotals.map((group) => {
-                const isOpen = openBreeders[group.breeder] ?? false;
-                return (
-                  <Collapsible
-                    key={group.breeder}
-                    open={isOpen}
-                    onOpenChange={() => toggleBreeder(group.breeder)}
-                    className="rounded-3xl border border-border bg-background p-4"
-                  >
-                    <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 text-left">
-                      <div className="min-w-0">
-                        <h2 className="font-display text-lg font-bold leading-tight">{group.breeder}</h2>
-                        <p className="text-xs font-semibold text-muted-foreground">
-                          {group.strains.length} {group.strains.length === 1 ? "strain" : "strains"} · tap to {isOpen ? "hide" : "view"}
-                        </p>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
-                        <ChevronDown
-                          className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
-                        />
-                      </div>
-                    </CollapsibleTrigger>
-
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {group.byType.map((entry) => (
-                        <span key={entry.type} className={`rounded-full border px-3 py-1 text-xs font-black ${typeStyles[entry.type]}`}>
-                          {typeShort[entry.type]}: {entry.total}
-                        </span>
-                      ))}
+          <div className="grid items-start gap-3 lg:grid-cols-2">
+            {breederTypeTotals.map((group) => {
+              const isOpen = openBreeders[group.breeder] ?? false;
+              return (
+                <Collapsible
+                  key={group.breeder}
+                  open={isOpen}
+                  onOpenChange={() => toggleBreeder(group.breeder)}
+                  className="rounded-3xl border border-border bg-background p-4"
+                >
+                  <CollapsibleTrigger className="group flex w-full items-center justify-between gap-3 text-left">
+                    <div className="min-w-0">
+                      <h2 className="font-display text-lg font-bold leading-tight">{group.breeder}</h2>
+                      <p className="text-xs font-semibold text-muted-foreground">
+                        {group.strains.length} {group.strains.length === 1 ? "strain" : "strains"} · tap to {isOpen ? "hide" : "view"}
+                      </p>
                     </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <span className="rounded-full bg-muted px-3 py-1 text-xs font-black text-muted-foreground">{group.total} seeds</span>
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? "rotate-180" : ""}`}
+                      />
+                    </div>
+                  </CollapsibleTrigger>
 
-                    <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
-                      {group.strains.map((seed) => {
-                        const count = getSeedCount(seed);
-                        const adv = estimateAdvancedMetrics(seed);
-                        const isCustom = customSeedIds.has(seed.id);
-                        return (
-                          <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                              <div className="min-w-0">
-                                <Link
-                                  to={`/strain/${encodeURIComponent(seed.id)}`}
-                                  className="text-sm font-semibold hover:text-primary hover:underline"
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {group.byType.map((entry) => (
+                      <span key={entry.type} className={`rounded-full border px-3 py-1 text-xs font-black ${typeStyles[entry.type]}`}>
+                        {typeShort[entry.type]}: {entry.total}
+                      </span>
+                    ))}
+                  </div>
+
+                  <CollapsibleContent className="mt-3 space-y-2 border-t border-border/70 pt-3">
+                    {group.strains.map((seed) => {
+                      const count = getSeedCount(seed);
+                      const adv = estimateAdvancedMetrics(seed);
+                      return (
+                        <div key={seed.id} className="rounded-2xl bg-muted/50 p-3">
+                          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
+                              <Link
+                                to={`/strain/${encodeURIComponent(seed.id)}`}
+                                className="text-sm font-semibold hover:text-primary hover:underline"
+                              >
+                                <StrainName name={seed.name} />
+                              </Link>
+                              <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
+                            </div>
+                            <div className="flex shrink-0 flex-wrap items-center gap-2">
+                              <RarityBadge rarity={getSeedRarity(seedWithCount(seed))} />
+                              <TypeBadge type={seed.type} />
+                              <div className="flex items-center rounded-full border border-border bg-card p-1">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full"
+                                  onClick={() => updateSeedCount(seed, count - 1)}
                                 >
-                                  <StrainName name={seed.name} />
-                                </Link>
-                                <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
-                              </div>
-                              <div className="flex shrink-0 flex-wrap items-center gap-2">
-                                <RarityBadge rarity={getSeedRarity(seedWithCount(seed))} />
-                                <TypeBadge type={seed.type} />
-                                <div className="flex items-center rounded-full border border-border bg-card p-1">
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 rounded-full"
-                                    onClick={() => updateSeedCount(seed, count - 1)}
-                                  >
-                                    <Minus className="h-3.5 w-3.5" />
-                                  </Button>
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    value={count}
-                                    onChange={(event) => updateSeedCount(seed, Number(event.target.value))}
-                                    className="h-7 w-14 border-0 bg-transparent p-0 text-center text-xs font-black shadow-none focus-visible:ring-0"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 rounded-full"
-                                    onClick={() => updateSeedCount(seed, count + 1)}
-                                  >
-                                    <Plus className="h-3.5 w-3.5" />
-                                  </Button>
-                                </div>
-                                {isCustom && (
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-7 w-7 rounded-full text-muted-foreground hover:text-destructive"
-                                    onClick={() => removeSeed(seed.id)}
-                                    title="Remove seed"
-                                  >
-                                    <Trash2 className="h-3.5 w-3.5" />
-                                  </Button>
-                                )}
+                                  <Minus className="h-3.5 w-3.5" />
+                                </Button>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={count}
+                                  onChange={(event) => updateSeedCount(seed, Number(event.target.value))}
+                                  className="h-7 w-14 border-0 bg-transparent p-0 text-center text-xs font-black shadow-none focus-visible:ring-0"
+                                />
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 rounded-full"
+                                  onClick={() => updateSeedCount(seed, count + 1)}
+                                >
+                                  <Plus className="h-3.5 w-3.5" />
+                                </Button>
                               </div>
                             </div>
-
-                            <WebLineageLookup name={seed.name} breeder={seed.breeder} compact />
-
-                            <div className="mt-2.5">
-                              <div className="mb-1.5 flex items-center gap-1.5">
-                                <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                                  Est. dry yield · single plant
-                                </p>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <button type="button" className="text-muted-foreground hover:text-primary">
-                                      <HelpCircle className="h-3.5 w-3.5" />
-                                    </button>
-                                  </TooltipTrigger>
-                                  <TooltipContent className="max-w-xs text-xs leading-relaxed">
-                                    Estimates are single-plant dry-yield ranges based on name/lineage cues for vigor, structure, auto or mutant traits, and each listed grow environment. They are planning ranges, not guarantees.
-                                  </TooltipContent>
-                                </Tooltip>
-                              </div>
-                              <div className="grid gap-1.5 sm:grid-cols-3">
-                                {estimateSeedGrowth(seed).map((env) => (
-                                  <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
-                                    <div className="flex items-center justify-between gap-1">
-                                      <span className="text-[10px] font-black uppercase tracking-wide text-primary">
-                                        {env.wattage}
-                                      </span>
-                                      <span className="font-display text-sm font-black leading-none">
-                                        {env.yieldG.min}–{env.yieldG.max}g
-                                      </span>
-                                    </div>
-                                    <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
-                                      {env.gear}
-                                    </p>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-
-                            <div className="mt-3 border-t border-border/40 pt-2.5">
-                              <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                                Advanced Breeder Metrics
-                              </p>
-                              <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4">
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Flowering</span>
-                                  <span className="font-bold text-foreground">{adv.floweringWeeks} weeks</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Terpene Intensity</span>
-                                  <span className="font-bold text-foreground">{"★".repeat(adv.terpeneIntensity)}{"☆".repeat(5 - adv.terpeneIntensity)}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Resin Density</span>
-                                  <span className="font-bold text-foreground">{"★".repeat(adv.resinDensity)}{"☆".repeat(5 - adv.resinDensity)}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Ease of Grow</span>
-                                  <span className="font-bold text-foreground">{"★".repeat(adv.easeOfGrow)}{"☆".repeat(5 - adv.easeOfGrow)}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Stretch Factor</span>
-                                  <span className="font-bold text-foreground">{adv.stretchFactor}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Stress Resistance</span>
-                                  <span className="font-bold text-foreground">{"★".repeat(adv.stressResistance)}{"☆".repeat(5 - adv.stressResistance)}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Mold Resilience</span>
-                                  <span className="font-bold text-foreground">{"★".repeat(adv.moldResilience)}{"☆".repeat(5 - adv.moldResilience)}</span>
-                                </div>
-                                <div className="rounded-lg bg-card p-2">
-                                  <span className="block text-[9px] font-black uppercase text-muted-foreground">Keeper Priority</span>
-                                  <span className="font-bold text-foreground">{getKeeperPriority(seedWithCount(seed)).level}</span>
-                                </div>
-                              </div>
-                            </div>
-
-                            {(() => {
-                              const tree = buildStrainLineageTree(seed.name);
-                              if (lineageTreeDepth(tree) === 0) return null;
-                              return (
-                                <div className="mt-3 border-t border-border/40 pt-2.5">
-                                  <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                                    Genetics tree
-                                  </p>
-                                  <GeneticsTree root={tree} />
-                                </div>
-                              );
-                            })()}
                           </div>
-                        );
-                      })}
-                    </CollapsibleContent>
-                  </Collapsible>
-                );
-              })}
-            </div>
-          )}
+
+                          <WebLineageLookup name={seed.name} breeder={seed.breeder} compact />
+
+                          <div className="mt-2.5">
+                            <div className="mb-1.5 flex items-center gap-1.5">
+                              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                Est. dry yield · single plant
+                              </p>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <button type="button" className="text-muted-foreground hover:text-primary">
+                                    <HelpCircle className="h-3.5 w-3.5" />
+                                  </button>
+                                </TooltipTrigger>
+                                <TooltipContent className="max-w-xs text-xs leading-relaxed">
+                                  Estimates are single-plant dry-yield ranges based on name/lineage cues for vigor, structure, auto or mutant traits, and each listed grow environment. They are planning ranges, not guarantees.
+                                </TooltipContent>
+                              </Tooltip>
+                            </div>
+                            <div className="grid gap-1.5 sm:grid-cols-3">
+                              {estimateSeedGrowth(seed).map((env) => (
+                                <div key={env.wattage} className="rounded-xl bg-card px-2.5 py-2">
+                                  <div className="flex items-center justify-between gap-1">
+                                    <span className="text-[10px] font-black uppercase tracking-wide text-primary">
+                                      {env.wattage}
+                                    </span>
+                                    <span className="font-display text-sm font-black leading-none">
+                                      {env.yieldG.min}–{env.yieldG.max}g
+                                    </span>
+                                  </div>
+                                  <p className="mt-1 text-[10px] font-semibold leading-tight text-muted-foreground">
+                                    {env.gear}
+                                  </p>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Advanced Metrics Readout */}
+                          <div className="mt-3 border-t border-border/40 pt-2.5">
+                            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                              Advanced Breeder Metrics
+                            </p>
+                            <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4">
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Flowering</span>
+                                <span className="font-bold text-foreground">{adv.floweringWeeks} weeks</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Terpene Intensity</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.terpeneIntensity)}{"☆".repeat(5 - adv.terpeneIntensity)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Resin Density</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.resinDensity)}{"☆".repeat(5 - adv.resinDensity)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Ease of Grow</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.easeOfGrow)}{"☆".repeat(5 - adv.easeOfGrow)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Stretch Factor</span>
+                                <span className="font-bold text-foreground">{adv.stretchFactor}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Stress Resistance</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.stressResistance)}{"☆".repeat(5 - adv.stressResistance)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Mold Resilience</span>
+                                <span className="font-bold text-foreground">{"★".repeat(adv.moldResilience)}{"☆".repeat(5 - adv.moldResilience)}</span>
+                              </div>
+                              <div className="rounded-lg bg-card p-2">
+                                <span className="block text-[9px] font-black uppercase text-muted-foreground">Keeper Priority</span>
+                                <span className="font-bold text-foreground">{getKeeperPriority(seedWithCount(seed)).level}</span>
+                              </div>
+                            </div>
+                          </div>
+
+                          {(() => {
+                            const tree = buildStrainLineageTree(seed.name);
+                            if (lineageTreeDepth(tree) === 0) return null;
+                            return (
+                              <div className="mt-3 border-t border-border/40 pt-2.5">
+                                <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                  Genetics tree
+                                </p>
+                                <GeneticsTree root={tree} />
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      );
+                    })}
+                  </CollapsibleContent>
+                </Collapsible>
+              );
+            })}
+          </div>
 
           <div className="mt-5 rounded-3xl bg-orange-50 p-4 text-orange-800 dark:bg-orange-950/40 dark:text-orange-200">
             <div className="flex items-start gap-2">
@@ -919,43 +696,41 @@ const Index = () => {
               <div>
                 <p className="font-bold">Burn Pile rule</p>
                 <p className="mt-1 text-sm leading-relaxed">
-                  Add seeds under the breeder "Burn Pile" to mark them as one-and-only runs. They can be grown, failed, tossed, smoked/tested, or closed out — but they are treated as white-label / potentially mislabelled stock, so they are not breeding, pollen, seed-making, or preservation candidates.
+                  Burn Pile seeds are one-and-only runs. They can be grown, failed, tossed, smoked/tested, or closed out — but they are white-label / potentially mislabelled stock, so they are not breeding, pollen, seed-making, or preservation candidates.
                 </p>
               </div>
             </div>
           </div>
 
-          {preservationShortlist.length > 0 && (
-            <div className="mt-5 rounded-3xl border border-border bg-background p-4">
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wide text-primary">Worth keeping seed / pollen for</p>
-                  <p className="text-sm text-muted-foreground">Auto-ranked by scarcity, breeder value, and sought-after lineage cues.</p>
-                </div>
-                <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Top {preservationShortlist.length}</span>
+          <div className="mt-5 rounded-3xl border border-border bg-background p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Worth keeping seed / pollen for</p>
+                <p className="text-sm text-muted-foreground">Auto-ranked by scarcity, breeder value, and sought-after lineage cues.</p>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {preservationShortlist.map(({ seed, priority }) => (
-                  <Link
-                    key={`${seed.id}-shortlist`}
-                    to={`/strain/${encodeURIComponent(seed.id)}`}
-                    className={`block rounded-2xl border p-3 transition-opacity hover:opacity-80 ${priority.tone}`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div>
-                        <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
-                        <p className="mt-1 text-xs font-semibold opacity-80">{seed.breeder} · {seed.count ?? 0} seeds</p>
-                      </div>
-                      <TypeBadge type={seed.type} />
-                    </div>
-                    <p className="mt-2 text-xs leading-relaxed">
-                      <span className="font-black">{priority.level}:</span> {priority.reasons.join(" · ")}
-                    </p>
-                  </Link>
-                ))}
-              </div>
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Top {preservationShortlist.length}</span>
             </div>
-          )}
+            <div className="grid gap-3 md:grid-cols-2">
+              {preservationShortlist.map(({ seed, priority }) => (
+                <Link
+                  key={`${seed.id}-shortlist`}
+                  to={`/strain/${encodeURIComponent(seed.id)}`}
+                  className={`block rounded-2xl border p-3 transition-opacity hover:opacity-80 ${priority.tone}`}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-display text-base font-bold leading-tight">{seed.name}</p>
+                      <p className="mt-1 text-xs font-semibold opacity-80">{seed.breeder} · {seed.count ?? 0} seeds</p>
+                    </div>
+                    <TypeBadge type={seed.type} />
+                  </div>
+                  <p className="mt-2 text-xs leading-relaxed">
+                    <span className="font-black">{priority.level}:</span> {priority.reasons.join(" · ")}
+                  </p>
+                </Link>
+              ))}
+            </div>
+          </div>
         </CollapsibleSection>
 
         <RecommendedPickups />

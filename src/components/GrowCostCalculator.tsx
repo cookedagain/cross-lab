@@ -146,6 +146,7 @@ const GrowCostCalculator = () => {
   const calculations = useMemo(() => {
     const vegDays = vegWeeks * 7;
     const flowerDays = flowerWeeks * 7;
+    const totalDays = vegDays + flowerDays;
 
     // Light consumption (Veg: 18h/day, Flower: 12h/day)
     const lightVegKwh = (lightWatts * 18 * vegDays) / 1000;

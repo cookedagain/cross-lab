@@ -11,6 +11,7 @@ import {
   Star,
   Trash2,
   RefreshCw,
+  Upload,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CollapsibleSection from "@/components/CollapsibleSection";
@@ -18,6 +19,7 @@ import RecommendedProducts from "@/components/RecommendedProducts";
 import StashMixer from "@/components/StashMixer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   ROTATION_CATEGORIES,
   clampWeight,
@@ -91,7 +93,6 @@ const inferEffects = (product: ProductInfoInput) => {
 };
 
 const inferTreatmentUses = (product: ProductInfoInput) => {
-  const text = `${product.name} ${product.notes}`.toLowerCase();
   const effects = inferEffects(product).join(" ").toLowerCase();
   if (product.cbd >= 20 && product.thc <= 2) return ["Anxiety", "Inflammation", "Daytime baseline support"];
   if (/sleepy|relaxing|body|heavy/.test(effects)) return ["Insomnia", "Pain", "Muscle tension"];
@@ -105,11 +106,89 @@ const getProductBlurb = (product: ProductInfoInput) => {
   return `${product.name} reads as a ${potency} ${product.category.toLowerCase()} option with ${effects} effects based on its format, potency, and your notes.`;
 };
 
+const parseRotationImport = (text: string) => {
+  const lines = text.split("\n").map((line) => line.trim()).filter(Boolean);
+  const parsed: Array<{
+    name: string;
+    brand: string;
+    category: RotationCategory;
+    thc: number;
+    cbd: number;
+    startWeight: number;
+    remainingWeight: number;
+    notes: string;
+    rating: number;
+  }> = [];
+
+  let activeSection = "";
+  let activeCategory: RotationCategory = "Other";
+  let activeBrand = "";
+
+  for (const line of lines) {
+    if (/^(🌿|🔥|🔋|🍬|🧪)/.test(line)) {
+      activeSection = line.toLowerCase();
+      activeBrand = "";
+      continue;
+    }
+
+    if (/^flower$/i.test(line)) activeCategory = "Flower";
+    else if (/^cartridges$/i.test(line)) activeCategory = "Vape";
+    else if (/^disposables$/i.test(line)) activeCategory = "Vape";
+    else if (/^edibles$/i.test(line)) activeCategory = "Edible";
+    else if (/^concentrates/i.test(line)) activeCategory = "Hash";
+    else if (/^extracts$/i.test(line)) activeBrand = "Extracts";
+    else if (/^cannabinoids$/i.test(line)) activeBrand = "Cannabinoids";
+    else if (/^heavy\s*\/\s*evening$/i.test(line) || /^balanced\s*\/\s*modern hybrids$/i.test(line) || /^fruit\s*\/\s*candy$/i.test(line)) {
+      continue;
+    } else {
+      const countMatch = line.match(/^(.*?)(?:\s*[×x]\s*(\d+))$/i);
+      const name = (countMatch?.[1] ?? line).replace(/\s+/g, " ").trim();
+      const count = countMatch ? Number(countMatch[2]) : 1;
+      const isConcentrateGroup = /^~/.test(name);
+      const category = activeCategory;
+      const baseNotes = activeSection ? activeSection.replace(/^[^\w]+/, "").trim() : "";
+      const itemBrand = activeBrand;
+
+      if (isConcentrateGroup) {
+        parsed.push({
+          name,
+          brand: itemBrand || "",
+          category: "Other",
+          thc: 0,
+          cbd: 0,
+          startWeight: 1,
+          remainingWeight: 1,
+          notes: baseNotes,
+          rating: 0,
+        });
+        continue;
+      }
+
+      for (let i = 0; i < count; i += 1) {
+        parsed.push({
+          name,
+          brand: itemBrand || "",
+          category,
+          thc: category === "Edible" ? 0 : 20,
+          cbd: 0,
+          startWeight: category === "Edible" ? 60 : 10,
+          remainingWeight: category === "Edible" ? 60 : 10,
+          notes: baseNotes,
+          rating: 0,
+        });
+      }
+    }
+  }
+
+  return parsed;
+};
+
 const Rotation = () => {
   const {
     products,
     archived,
     addProduct,
+    addProducts,
     updateRemaining,
     updateRating,
     removeProduct,
@@ -125,6 +204,48 @@ const Rotation = () => {
   const [cbd, setCbd] = useState(0);
   const [startWeight, setStartWeight] = useState(10);
   const [notes, setNotes] = useState("");
+  const [bulkImport, setBulkImport] = useState(`🌿 Flower
+Heavy / Evening
+Afghan Layer Cake
+London Pound Cake (2 batches)
+Jealousy
+Sherbert Glue
+Alien Pie
+Balanced / Modern Hybrids
+Game Over
+Cali Octane
+Super Boof
+Cosmic Cherry
+Fruit / Candy
+Lemon Zkittlez
+Diesel Dipped Cookies (currently out, planned rebuy)
+Amethyst
+🔥 Cartridges
+Live Resin
+Harbour LR Night (Granddaddy Bruce)
+Apes In Space
+Sour Tangie
+Distillate
+Grapezilla (Easy-Dose)
+🔋 Disposables
+Peach Crescendo ×2
+Frosted Oranges
+Sticky Papaya
+🍬 Edibles
+Phytoca 60mg Gummies
+🧪 Concentrates & Cannabinoids
+Extracts
+~12g Refined Dry Sift
+~1g Diamonds
+~1g Sugar Wax
+~1g Sauce/Diamonds
+~1g Live Resin Extract
+Cannabinoids
+~40–50g D8 Distillate
+~26g THC-O
+~30g CBD Isolate
+~30g CBG Isolate
+~6g CBN Isolate`);
 
   const handleAdd = () => {
     const trimmed = name.trim();
@@ -146,6 +267,11 @@ const Rotation = () => {
     setCbd(0);
     setStartWeight(10);
     setNotes("");
+  };
+
+  const handleImport = () => {
+    const items = parseRotationImport(bulkImport);
+    addProducts(items);
   };
 
   const totals = useMemo(() => {
@@ -213,6 +339,30 @@ const Rotation = () => {
             <p className="mt-1 text-sm font-semibold text-muted-foreground">in your history</p>
           </div>
         </section>
+
+        <CollapsibleSection
+          title="Quick import"
+          icon={<Upload className="h-5 w-5" />}
+          description="Paste plain text and import the list into rotation."
+        >
+          <div className="rounded-3xl border border-border bg-background p-4">
+            <Textarea
+              value={bulkImport}
+              onChange={(event) => setBulkImport(event.target.value)}
+              className="min-h-[320px] rounded-2xl font-mono text-xs leading-6"
+              placeholder="Paste your rotation list here..."
+            />
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs font-semibold text-muted-foreground">
+                Parsed items: {parseRotationImport(bulkImport).length}
+              </p>
+              <Button type="button" className="h-11 rounded-2xl font-bold" onClick={handleImport}>
+                <Upload className="mr-1.5 h-4 w-4" />
+                Import plaintext
+              </Button>
+            </div>
+          </div>
+        </CollapsibleSection>
 
         <CollapsibleSection
           title="Add a product"

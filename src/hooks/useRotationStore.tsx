@@ -41,6 +41,7 @@ type RotationContextValue = {
   products: RotationProduct[];
   archived: ArchivedProduct[];
   addProduct: (data: Omit<RotationProduct, "id">) => void;
+  addProducts: (data: Omit<RotationProduct, "id">[]) => void;
   updateRemaining: (id: string, next: number) => void;
   updateRating: (id: string, next: number) => void;
   removeProduct: (id: string) => void;
@@ -63,6 +64,8 @@ const loadJSON = <T,>(key: string, fallback: T): T => {
   }
 };
 
+const makeId = () => `rotation-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
 export const RotationProvider = ({ children }: { children: ReactNode }) => {
   const [products, setProducts] = useState<RotationProduct[]>(() =>
     loadJSON<RotationProduct[]>(STORAGE_KEY, []).map((product) => ({ rating: 0, ...product })),
@@ -80,11 +83,14 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
   }, [archived]);
 
   const addProduct = (data: Omit<RotationProduct, "id">) => {
-    setProducts((current) => [
-      { ...data, id: `rotation-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` },
-      ...current,
-    ]);
+    setProducts((current) => [{ ...data, id: makeId() }, ...current]);
     showSuccess("Product added to rotation.");
+  };
+
+  const addProducts = (data: Omit<RotationProduct, "id">[]) => {
+    if (data.length === 0) return;
+    setProducts((current) => [...data.map((item) => ({ ...item, id: makeId() })), ...current]);
+    showSuccess(`Imported ${data.length} products into rotation.`);
   };
 
   const updateRemaining = (id: string, next: number) =>
@@ -134,6 +140,7 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
         products,
         archived,
         addProduct,
+        addProducts,
         updateRemaining,
         updateRating,
         removeProduct,

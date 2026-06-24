@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Disc3 } from "lucide-react";
+import { ArrowLeft, Disc3, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
@@ -10,6 +10,7 @@ import { useVault } from "@/hooks/useVaultStore";
 import { getBreederInfo } from "@/lib/breederInfo";
 import { getSeedRarity, rarityRank } from "@/lib/rarity";
 import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
+import { Button } from "@/components/ui/button";
 
 const BreederDetail = () => {
   const { breeder } = useParams<{ breeder: string }>();
@@ -63,6 +64,16 @@ const BreederDetail = () => {
               <ArrowLeft className="h-3.5 w-3.5" />
               All breeders
             </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-2xl border-2"
+              onClick={() => window.location.reload()}
+              title="Refresh page"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>

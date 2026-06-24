@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, Minus, Plus } from "lucide-react";
+import { ArrowLeft, Minus, Plus, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TypeBadge } from "@/components/TypeBadge";
@@ -58,10 +58,22 @@ const StrainDetail = () => {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="container max-w-4xl pb-20 pt-8">
-        <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary">
-          <ArrowLeft className="h-4 w-4" />
-          Back to vault
-        </Link>
+        <div className="flex items-center justify-between">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm font-bold text-muted-foreground hover:text-primary">
+            <ArrowLeft className="h-4 w-4" />
+            Back to vault
+          </Link>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-9 w-9 rounded-xl border-2"
+            onClick={() => window.location.reload()}
+            title="Refresh page"
+          >
+            <RefreshCw className="h-4 w-4" />
+          </Button>
+        </div>
 
         <header className="mt-4 rounded-[2rem] border-2 border-border bg-card p-5 shadow-sm sm:p-7">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

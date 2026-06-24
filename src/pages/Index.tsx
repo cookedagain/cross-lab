@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2 } from "lucide-react";
+import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
@@ -316,6 +316,16 @@ const Index = () => {
               Rotation
             </Link>
             <AiVaultChat />
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-2xl border-2"
+              onClick={() => window.location.reload()}
+              title="Refresh page"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>
@@ -617,40 +627,6 @@ const Index = () => {
                               ))}
                             </div>
                           </div>
-
-                          {(() => {
-                            const split = estimateLineageSplit(seed);
-                            const cannabinoids = estimateCannabinoids(seed);
-                            const topHeight = seedHeightMetric(seed);
-                            return (
-                              <div className="mt-2.5">
-                                <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                                  Est. lean · potency · height
-                                </p>
-                                <div className="mb-2 flex h-2 overflow-hidden rounded-full bg-muted">
-                                  <div className="h-full bg-amber-400 dark:bg-amber-500" style={{ width: `${split.sativa}%` }} />
-                                  <div className="h-full bg-violet-500" style={{ width: `${split.indica}%` }} />
-                                </div>
-                                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold sm:grid-cols-4">
-                                  <span className="rounded-lg bg-amber-100 px-2 py-1 text-amber-800 dark:bg-amber-950/50 dark:text-amber-200">
-                                    Sativa {split.sativa}%
-                                  </span>
-                                  <span className="rounded-lg bg-violet-100 px-2 py-1 text-violet-800 dark:bg-violet-950/50 dark:text-violet-200">
-                                    Indica {split.indica}%
-                                  </span>
-                                  <span className="rounded-lg bg-emerald-100 px-2 py-1 text-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-200">
-                                    THC {cannabinoids.thc.min}–{cannabinoids.thc.max}%
-                                  </span>
-                                  <span className="rounded-lg bg-muted px-2 py-1 text-muted-foreground">
-                                    ~{topHeight}cm tall
-                                  </span>
-                                </div>
-                                <p className="mt-1.5 text-[10px] font-semibold leading-tight text-muted-foreground">
-                                  CBD {cannabinoids.cbd.min}–{cannabinoids.cbd.max}% · CBG {cannabinoids.cbg.min}–{cannabinoids.cbg.max}% · CBN {cannabinoids.cbn.min}–{cannabinoids.cbn.max}% · total {cannabinoids.total.min}–{cannabinoids.total.max}%
-                                </p>
-                              </div>
-                            );
-                          })()}
 
                           {/* Advanced Metrics Readout */}
                           <div className="mt-3 border-t border-border/40 pt-2.5">

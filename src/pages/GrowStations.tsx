@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, Boxes, Cpu, Sprout } from "lucide-react";
+import { ArrowLeft, Boxes, Cpu, Sprout, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CloneRegister from "@/components/CloneRegister";
 import BestParents from "@/components/BestParents";
@@ -9,6 +9,7 @@ import CrossPlanner from "@/components/CrossPlanner";
 import GrowCostCalculator from "@/components/GrowCostCalculator";
 import { CloneRegisterProvider } from "@/hooks/useCloneRegister";
 import { GROW_STATIONS } from "@/lib/growStations";
+import { Button } from "@/components/ui/button";
 
 const CATEGORY_TONE: Record<string, string> = {
   "<100W": "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-200 dark:border-teal-900",
@@ -39,6 +40,16 @@ const GrowStations = () => {
                 <ArrowLeft className="h-3.5 w-3.5" />
                 Seed vault
               </Link>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-10 w-10 rounded-2xl border-2"
+                onClick={() => window.location.reload()}
+                title="Refresh page"
+              >
+                <RefreshCw className="h-5 w-5" />
+              </Button>
               <ThemeToggle />
             </div>
           </div>

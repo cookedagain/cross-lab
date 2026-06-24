@@ -10,6 +10,7 @@ import {
   RotateCcw,
   Star,
   Trash2,
+  RefreshCw,
 } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CollapsibleSection from "@/components/CollapsibleSection";
@@ -179,6 +180,16 @@ const Rotation = () => {
               <ArrowLeft className="h-3.5 w-3.5" />
               Seed vault
             </Link>
+            <Button
+              type="button"
+              variant="outline"
+              size="icon"
+              className="h-10 w-10 rounded-2xl border-2"
+              onClick={() => window.location.reload()}
+              title="Refresh page"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </Button>
             <ThemeToggle />
           </div>
         </div>

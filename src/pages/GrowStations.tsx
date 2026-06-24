@@ -6,6 +6,7 @@ import BestParents from "@/components/BestParents";
 import RecommendedCrosses from "@/components/RecommendedCrosses";
 import BreedingLots from "@/components/BreedingLots";
 import CrossPlanner from "@/components/CrossPlanner";
+import GrowCostCalculator from "@/components/GrowCostCalculator";
 import { CloneRegisterProvider } from "@/hooks/useCloneRegister";
 import { GROW_STATIONS } from "@/lib/growStations";
 
@@ -90,6 +91,8 @@ const GrowStations = () => {
           </section>
 
           <CloneRegister />
+
+          <GrowCostCalculator />
 
           <BestParents />
 

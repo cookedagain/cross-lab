@@ -25,13 +25,13 @@ const DEFAULT_BOTTLE_PRICES: Record<CycoKey, number> = {
   silica: 90,
   ryzofuel: 220,
   b1boost: 110,
-  zyme: 110,
-  xl: 150,
-  swell: 120,
-  potashPlus: 90,
-  kleanse: 70,
-  drRepair: 90,
-  uptake: 90,
+  zyme: 10,
+  xl: 20,
+  swell: 25,
+  potashPlus: 30,
+  kleanse: 20,
+  drRepair: 25,
+  uptake: 30,
 };
 
 const GrowCostCalculator = () => {
@@ -75,7 +75,7 @@ const GrowCostCalculator = () => {
     const totalFlower = Math.max(1, flowerWeeks);
     const totalWeeks = 1 + totalVeg + 1 + totalFlower + 1; // Seedling + Veg + Transition + Flower + Flush
 
-    for (let w = 1; weekLoop: w <= totalWeeks; w++) {
+    for (let w = 1; w <= totalWeeks; w++) {
       let rates: Partial<Record<CycoKey, number>> = {};
 
       if (w === 1) {
@@ -153,7 +153,6 @@ const GrowCostCalculator = () => {
     const totalLightKwh = lightVegKwh + lightFlowerKwh;
 
     // Fan consumption (Runs 24h/day throughout)
-    const totalDays = vegDays + flowerDays;
     const totalFanKwh = (fanWatts * 24 * totalDays) / 1000;
 
     const totalKwh = totalLightKwh + totalFanKwh;
@@ -206,7 +205,7 @@ const GrowCostCalculator = () => {
                 key={preset.name}
                 type="button"
                 onClick={() => applyPreset(preset)}
-                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold text-muted-foreground transition hover:border-primary hover:text-primary"
+                className="rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold transition hover:border-primary hover:text-primary"
               >
                 {preset.name} ({preset.lightWattage}W)
               </button>
@@ -237,7 +236,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={lightWatts}
-                  onChange={(e) => setLightWatts(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setLightWatts(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -259,7 +258,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={fanWatts}
-                  onChange={(e) => setFanWatts(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setFanWatts(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -271,7 +270,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={vegWeeks}
-                  onChange={(e) => setVegWeeks(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setVegWeeks(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -281,7 +280,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={flowerWeeks}
-                  onChange={(e) => setFlowerWeeks(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setFlowerWeeks(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -292,7 +291,7 @@ const GrowCostCalculator = () => {
                   type="number"
                   step="0.01"
                   value={kwhRate}
-                  onChange={(e) => setKwhRate(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setKwhRate(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -311,7 +310,7 @@ const GrowCostCalculator = () => {
                   <Input
                     type="number"
                     value={nutrientCost}
-                    onChange={(e) => setNutrientCost(Math.max(0, Number(e.target.value)))}
+                    onChange={(event) => setNutrientCost(Number(event.target.value))}
                     className="h-10 rounded-xl font-semibold"
                   />
                 )}
@@ -322,7 +321,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={mediumCost}
-                  onChange={(e) => setMediumCost(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setMediumCost(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -332,7 +331,7 @@ const GrowCostCalculator = () => {
                 <Input
                   type="number"
                   value={otherCost}
-                  onChange={(e) => setOtherCost(Math.max(0, Number(e.target.value)))}
+                  onChange={(event) => setOtherCost(Number(event.target.value))}
                   className="h-10 rounded-xl font-semibold"
                 />
               </label>
@@ -355,7 +354,7 @@ const GrowCostCalculator = () => {
               <Input
                 type="number"
                 value={expectedYield}
-                onChange={(e) => setExpectedYield(Math.max(1, Number(e.target.value)))}
+                onChange={(event) => setExpectedYield(Math.max(1, Number(event.target.value)))}
                 className="h-10 rounded-xl font-semibold"
               />
             </label>

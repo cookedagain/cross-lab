@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Blend, Sparkles, HelpCircle, Info, Flame, Moon, Sun, Compass, AlertCircle } from "lucide-react";
 import { useRotation } from "@/hooks/useRotationStore";
 import { TypeBadge } from "@/components/TypeBadge";
+import CollapsibleSection from "@/components/CollapsibleSection";
 
 type StashItem = {
   id: string;

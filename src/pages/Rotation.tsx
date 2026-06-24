@@ -17,6 +17,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedProducts from "@/components/RecommendedProducts";
 import StashMixer from "@/components/StashMixer";
+import CannaReviewLookup from "@/components/CannaReviewLookup";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -533,6 +534,8 @@ Cannabinoids
                         </div>
                       </div>
                     </div>
+
+                    <CannaReviewLookup name={product.name} brand={product.brand} />
 
                     <div className="mt-3 flex items-center gap-2">
                       <span className="text-[11px] font-bold text-muted-foreground">Your rating:</span>

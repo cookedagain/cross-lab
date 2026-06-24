@@ -14,6 +14,7 @@ import {
 import ThemeToggle from "@/components/ThemeToggle";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedProducts from "@/components/RecommendedProducts";
+import StashMixer from "@/components/StashMixer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -89,6 +90,7 @@ const inferEffects = (product: ProductInfoInput) => {
 };
 
 const inferTreatmentUses = (product: ProductInfoInput) => {
+  const text = `${product.name} ${product.notes}`.toLowerCase();
   const effects = inferEffects(product).join(" ").toLowerCase();
   if (product.cbd >= 20 && product.thc <= 2) return ["Anxiety", "Inflammation", "Daytime baseline support"];
   if (/sleepy|relaxing|body|heavy/.test(effects)) return ["Insomnia", "Pain", "Muscle tension"];
@@ -423,6 +425,9 @@ const Rotation = () => {
           )}
         </CollapsibleSection>
 
+        {/* Stash Mixer Section */}
+        <StashMixer />
+
         <CollapsibleSection
           title="Previously used"
           icon={<History className="h-5 w-5" />}
@@ -486,7 +491,7 @@ const Rotation = () => {
                   )}
 
                   <div className="mt-3 rounded-2xl bg-background p-3">
-                    <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Product info</p>
+                    <p className="text-[10px] font-black uppercase tracking-wide text-primary">Product info</p>
                     <p className="mt-1 text-xs font-semibold leading-relaxed text-foreground">{getProductBlurb(product)}</p>
                     <div className="mt-3 flex flex-wrap gap-1.5">
                       <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">

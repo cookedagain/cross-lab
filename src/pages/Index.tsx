@@ -5,6 +5,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
+import RandomSeedPicker from "@/components/RandomSeedPicker";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedPickups from "@/components/RecommendedPickups";
 import { TypeBadge } from "@/components/TypeBadge";
@@ -350,6 +351,8 @@ const Index = () => {
         </div>
 
         <VaultAnalytics />
+
+        <RandomSeedPicker />
 
         <CollapsibleSection
           title="Vault Breakdown"

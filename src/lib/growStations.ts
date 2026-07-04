@@ -49,7 +49,7 @@ export const GROW_STATIONS: GrowStation[] = [
     medium: "2 × 5 gallon (~19L) buckets · coco/soil",
     mediumNote: "Two 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
     specs: [
-      { label: "Tent", value: "CLOUDLAB 422 — 60×60×120cm (2'×2'×4')" },
+      { label: "Tent", value: "CLOUDLAB 422 — 60×60×180cm (2'×2'×6')" },
       { label: "Light", value: "IONBOARD S22, 220W full-spectrum LED" },
       { label: "Fan", value: "CLOUDLINE T4 — 4\" inline (PWM)" },
       { label: "Filter", value: "4\" carbon filter + ducting" },

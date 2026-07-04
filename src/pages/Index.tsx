@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
+import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plug, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
@@ -315,6 +315,13 @@ const Index = () => {
             >
               <Pill className="h-3.5 w-3.5" />
               Rotation
+            </Link>
+            <Link
+              to="/integrations"
+              className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-3 py-1.5 text-xs font-black text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+            >
+              <Plug className="h-3.5 w-3.5" />
+              Integrations
             </Link>
             <AiVaultChat />
             <Button

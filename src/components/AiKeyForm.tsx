@@ -11,7 +11,7 @@ type AiKeyFormProps = {
 
 const AiKeyForm = ({
   title = "Connect AI",
-  description = "Paste your OpenAI API key to unlock the AI features.",
+  description = "Paste your Gemini API key to unlock the AI features.",
 }: AiKeyFormProps) => {
   const { saveKey } = useAiSettings();
   const [value, setValue] = useState("");
@@ -49,8 +49,8 @@ const AiKeyForm = ({
       </div>
       <p className="mt-3 flex items-start gap-1.5 text-[11px] font-semibold leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-        Your key is stored only in this browser and is sent straight to OpenAI — never to any other server.
-        Get one at platform.openai.com/api-keys.
+        Your key is stored only in this browser and is sent straight to Google — never to any other server.
+        Get one at ai.google.dev/gemini-api/docs/api-key.
       </p>
     </div>
   );

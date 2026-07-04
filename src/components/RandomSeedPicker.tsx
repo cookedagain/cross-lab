@@ -41,6 +41,7 @@ const RandomSeedPicker = () => {
   const [season, setSeason] = useState<Season>("Spring");
   const [selectedType, setSelectedType] = useState<SeedType | "Any">("Any");
   const [preserveStock, setPreserveStock] = useState(true);
+  const [pickedSeed, setPickedSeed] = useState<Seed | null>(null);
 
   const filteredSeeds = useMemo(() => {
     const inStock = vaultSeeds.filter(

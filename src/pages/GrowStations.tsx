@@ -2,6 +2,10 @@ import { Link } from "react-router-dom";
 import { ArrowLeft, Boxes, Cpu, Sprout, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import CloneRegister from "@/components/CloneRegister";
+import RandomSeedPicker from "@/components/RandomSeedPicker";
+import GrowSimulator from "@/components/GrowSimulator";
+import InteractiveBreedingLab from "@/components/InteractiveBreedingLab";
+import GrowingNextIdeas from "@/components/GrowingNextIdeas";
 import BestParents from "@/components/BestParents";
 import RecommendedCrosses from "@/components/RecommendedCrosses";
 import BreedingLots from "@/components/BreedingLots";
@@ -107,6 +111,12 @@ const GrowStations = () => {
             ))}
           </section>
 
+          <RandomSeedPicker />
+
+          <GrowSimulator />
+
+          <InteractiveBreedingLab />
+
           <CloneRegister />
 
           <GrowCostCalculator />
@@ -118,6 +128,8 @@ const GrowStations = () => {
           <BreedingLots />
 
           <CrossPlanner />
+
+          <GrowingNextIdeas />
 
           <div className="mt-6 rounded-3xl bg-muted/50 p-4 text-xs font-semibold leading-relaxed text-muted-foreground">
             Specs are taken from each kit's published contents. The VGrow runs DWC; the 2×2 and 4×4 run coco/soil

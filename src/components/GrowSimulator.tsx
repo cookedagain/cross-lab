@@ -4,7 +4,7 @@ import SeedSelect from "@/components/SeedSelect";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { TypeBadge } from "@/components/TypeBadge";
 import { useVault } from "@/hooks/useVaultStore";
-import { GROW_STATIONS } from "@/lib/growStations";
+import { GROW_STATIONS, scaleYieldForStation } from "@/lib/growStations";
 import { estimateAdvancedMetrics, estimateLineageSplit, estimateSeedGrowth } from "@/lib/crossName";
 import type { Seed } from "@/data/seeds";
 
@@ -54,6 +54,7 @@ const GrowSimulator = () => {
     const adv = estimateAdvancedMetrics(seed);
     const split = estimateLineageSplit(seed);
     const growth = estimateSeedGrowth(seed).find((item) => item.wattage === selectedStation.category) ?? estimateSeedGrowth(seed)[1];
+    const projectedYield = scaleYieldForStation(growth.yieldG, selectedStation.category);
     const vegWeeks = getVegWeeks(seed, selectedStation.category);
     const flowerWeeks = Math.ceil(adv.floweringWeeks + getSeasonAdjustment(season, adv.moldResilience, adv.stressResistance));
     const totalWeeks = seed.type === "Autoflower" ? Math.max(10, flowerWeeks + 2) : vegWeeks + flowerWeeks + 2;
@@ -96,7 +97,7 @@ const GrowSimulator = () => {
       getSeedCount(seed) <= 5 ? "Low stock: consider preserving remaining seeds before repeated runs." : "Stock level supports a normal run.",
     ];
 
-    return { adv, split, growth, vegWeeks, flowerWeeks, totalWeeks, phases, riskNotes };
+    return { adv, split, growth, projectedYield, vegWeeks, flowerWeeks, totalWeeks, phases, riskNotes };
   }, [seed, selectedStation, season, getSeedCount]);
 
   return (
@@ -176,8 +177,9 @@ const GrowSimulator = () => {
                 <p className="mt-1 font-display text-xl font-black">{simulation.growth.heightCm.min}–{simulation.growth.heightCm.max}cm</p>
               </div>
               <div className="rounded-2xl bg-card p-3">
-                <p className="flex items-center gap-1 text-[10px] font-black uppercase text-muted-foreground"><Trophy className="h-3 w-3" />Dry yield</p>
-                <p className="mt-1 font-display text-xl font-black">{simulation.growth.yieldG.min}–{simulation.growth.yieldG.max}g</p>
+                <p className="flex items-center gap-1 text-[10px] font-black uppercase text-muted-foreground"><Trophy className="h-3 w-3" />Full-station yield</p>
+                <p className="mt-1 font-display text-xl font-black">{simulation.projectedYield.min}–{simulation.projectedYield.max}g</p>
+                <p className="text-[10px] font-bold text-muted-foreground">dry flower estimate</p>
               </div>
               <div className="rounded-2xl bg-card p-3">
                 <p className="flex items-center gap-1 text-[10px] font-black uppercase text-muted-foreground"><Gauge className="h-3 w-3" />Lean</p>

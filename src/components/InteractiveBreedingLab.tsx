@@ -4,7 +4,7 @@ import SeedSelect from "@/components/SeedSelect";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { TypeBadge } from "@/components/TypeBadge";
 import { useVault } from "@/hooks/useVaultStore";
-import { GROW_STATIONS } from "@/lib/growStations";
+import { GROW_STATIONS, scaleYieldForStation } from "@/lib/growStations";
 import {
   TRAIT_GOALS,
   generateCrossNames,
@@ -71,6 +71,11 @@ const InteractiveBreedingLab = () => {
     if (!report) return null;
     return report.growthEstimates.find((estimate) => estimate.wattage === selectedStation.category) ?? report.growthEstimates[1];
   }, [report, selectedStation]);
+
+  const selectedStationYield = useMemo(() => {
+    if (!selectedGrowth) return null;
+    return scaleYieldForStation(selectedGrowth.yieldG, selectedStation.category);
+  }, [selectedGrowth, selectedStation]);
 
   const toggleGoal = (goal: TraitGoal) => {
     setSelectedGoals((current) =>
@@ -150,7 +155,7 @@ const InteractiveBreedingLab = () => {
         </div>
       </div>
 
-      {parentA && parentB && report && selectedGrowth ? (
+      {parentA && parentB && report && selectedGrowth && selectedStationYield ? (
         <div className="mt-5 space-y-4">
           <div className="grid gap-3 lg:grid-cols-3">
             {[parentA, parentB].map((seed) => {
@@ -255,8 +260,9 @@ const InteractiveBreedingLab = () => {
                   <p className="mt-1 font-display text-lg font-black">{selectedGrowth.widthCm.min}–{selectedGrowth.widthCm.max}cm</p>
                 </div>
                 <div className="rounded-2xl bg-card p-3">
-                  <p className="text-[10px] font-black uppercase text-muted-foreground">Yield</p>
-                  <p className="mt-1 font-display text-lg font-black">{selectedGrowth.yieldG.min}–{selectedGrowth.yieldG.max}g</p>
+                  <p className="text-[10px] font-black uppercase text-muted-foreground">Full-station yield</p>
+                  <p className="mt-1 font-display text-lg font-black">{selectedStationYield.min}–{selectedStationYield.max}g</p>
+                  <p className="text-[10px] font-bold text-muted-foreground">dry flower estimate</p>
                 </div>
               </div>
               <p className="mt-3 text-xs font-semibold leading-relaxed text-muted-foreground">{selectedGrowth.note}</p>

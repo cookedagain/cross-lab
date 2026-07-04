@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Dices, Sparkles, Sun, Snowflake, Flower, Leaf, ShieldAlert, Award, Flame, User } from "lucide-react";
 import { useVault } from "@/hooks/useVaultStore";
 import { estimateAdvancedMetrics, estimateLineageSplit, estimateSeedGrowth } from "@/lib/crossName";
+import { scaleYieldForStation } from "@/lib/growStations";
 import { getSeedRarity } from "@/lib/rarity";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
@@ -420,17 +421,18 @@ const RandomSeedPicker = () => {
             </div>
 
             <div className="rounded-2xl bg-card p-3">
-              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Est. Yield ({station})</p>
+              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">Full-Station Yield ({station})</p>
               {(() => {
                 const estimates = estimateSeedGrowth(pickedSeedDetails.seed);
                 const est = estimates.find((e) => e.wattage === station) ?? estimates[1];
+                const stationYield = scaleYieldForStation(est.yieldG, station);
                 return (
                   <>
                     <p className="mt-1 font-display text-lg font-black text-foreground">
-                      {est.yieldG.min}–{est.yieldG.max}g
+                      {stationYield.min}–{stationYield.max}g
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      H: {est.heightCm.min}–{est.heightCm.max}cm
+                      H: {est.heightCm.min}–{est.heightCm.max}cm per plant
                     </p>
                   </>
                 );

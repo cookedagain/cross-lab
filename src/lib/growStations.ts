@@ -21,6 +21,23 @@ export type GrowStation = {
   storeUrl: string;
 };
 
+export const GROW_STATION_YIELD_MULTIPLIER: Record<GrowStation["category"], number> = {
+  "<100W": 1,
+  "220W": 1.75,
+  "500W": 3.15,
+};
+
+export const scaleYieldForStation = (
+  yieldG: { min: number; max: number },
+  category: GrowStation["category"],
+) => {
+  const multiplier = GROW_STATION_YIELD_MULTIPLIER[category];
+  return {
+    min: Math.round(yieldG.min * multiplier),
+    max: Math.round(yieldG.max * multiplier),
+  };
+};
+
 export const GROW_STATIONS: GrowStation[] = [
   {
     id: "vgrow",

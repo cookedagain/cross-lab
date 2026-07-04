@@ -438,22 +438,22 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
       wattage: "<100W",
       heightCm: range(32, 58, sizeFactor),
       widthCm: range(24, 42, sizeFactor),
-      yieldG: range(18, 45, yieldFactor),
-      note: `Small-light / micro setup estimate. Expect tighter structure, reduced lateral spread and modest dry yield.${autoNote}${mutantNote}`,
+      yieldG: range(28, 75, yieldFactor),
+      note: `Small-light / micro setup estimate with a filled canopy and strong environment. Expect tighter structure and reduced lateral spread.${autoNote}${mutantNote}`,
     },
     {
       wattage: "220W",
       heightCm: range(55, 95, sizeFactor),
       widthCm: range(42, 72, sizeFactor),
-      yieldG: range(70, 160, yieldFactor),
+      yieldG: range(95, 225, yieldFactor),
       note: `Mid-power indoor estimate with a more complete expression of branching, terpene potential and yield.${autoNote}${mutantNote}`,
     },
     {
       wattage: "500W",
       heightCm: range(82, 145, sizeFactor),
       widthCm: range(66, 115, sizeFactor),
-      yieldG: range(170, 410, yieldFactor),
-      note: `High-power estimate. Larger phenos may push beyond this if haze, diesel, Durban or heavy-yield influence dominates.${autoNote}${mutantNote}`,
+      yieldG: range(180, 430, yieldFactor),
+      note: `High-power per-plant estimate. Larger phenos may push beyond this if haze, diesel, Durban or heavy-yield influence dominates.${autoNote}${mutantNote}`,
     },
   ];
 }
@@ -600,21 +600,21 @@ export function estimateSeedGrowth(seed: Seed): SeedGrowthEstimate[] {
       gear: "Vivosun VGrow smart box",
       heightCm: range(28, 52, sizeFactor),
       widthCm: range(20, 38, sizeFactor),
-      yieldG: range(12, 35, yieldFactor),
+      yieldG: range(22, 70, yieldFactor),
     },
     {
       wattage: "220W",
       gear: "AC Infinity 2×2",
       heightCm: range(50, 88, sizeFactor),
       widthCm: range(38, 64, sizeFactor),
-      yieldG: range(45, 110, yieldFactor),
+      yieldG: range(75, 180, yieldFactor),
     },
     {
       wattage: "500W",
       gear: "AC Infinity 4×4",
       heightCm: range(78, 138, sizeFactor),
       widthCm: range(62, 105, sizeFactor),
-      yieldG: range(120, 280, yieldFactor),
+      yieldG: range(140, 340, yieldFactor),
     },
   ];
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
-import { Dices, Sparkles, Sun, Snowflake, Flower, Leaf } from "lucide-react";
+import { Dices, Sparkles, Sun, Snowflake, Flower, Leaf, ShieldAlert, Award, Flame, User } from "lucide-react";
 import { useVault } from "@/hooks/useVaultStore";
 import { estimateAdvancedMetrics, estimateLineageSplit, estimateSeedGrowth } from "@/lib/crossName";
 import { getSeedRarity } from "@/lib/rarity";
@@ -43,6 +43,23 @@ const RandomSeedPicker = () => {
   const [preserveStock, setPreserveStock] = useState(true);
   const [pickedSeed, setPickedSeed] = useState<Seed | null>(null);
 
+  // Recommended/Advanced Filters
+  const [selectedBreeder, setSelectedBreeder] = useState<string>("Any");
+  const [easyGrowOnly, setEasyGrowOnly] = useState<boolean>(false);
+  const [frostMonsterOnly, setFrostMonsterOnly] = useState<boolean>(false);
+  const [loudTerpsOnly, setLoudTerpsOnly] = useState<boolean>(false);
+
+  // Get list of breeders currently in stock
+  const availableBreeders = useMemo(() => {
+    const breeders = new Set<string>();
+    vaultSeeds.forEach((seed) => {
+      if (getSeedCount(seed) > 0 && seed.breeder !== "Burn Pile") {
+        breeders.add(seed.breeder);
+      }
+    });
+    return ["Any", ...Array.from(breeders).sort()];
+  }, [vaultSeeds, getSeedCount]);
+
   const filteredSeeds = useMemo(() => {
     const inStock = vaultSeeds.filter(
       (seed) => seed.breeder !== "Burn Pile" && getSeedCount(seed) > 0
@@ -60,15 +77,35 @@ const RandomSeedPicker = () => {
         return false;
       }
 
+      // 3. Breeder Filter
+      if (selectedBreeder !== "Any" && seed.breeder !== selectedBreeder) {
+        return false;
+      }
+
       const adv = estimateAdvancedMetrics(seed);
 
-      // 3. Station suitability filter
+      // 4. Ease of Grow Filter
+      if (easyGrowOnly && adv.easeOfGrow < 4) {
+        return false;
+      }
+
+      // 5. Frost Monster Filter
+      if (frostMonsterOnly && adv.resinDensity < 4) {
+        return false;
+      }
+
+      // 6. Loud Terps Filter
+      if (loudTerpsOnly && adv.terpeneIntensity < 4) {
+        return false;
+      }
+
+      // 7. Station suitability filter
       if (station === "<100W") {
         // High stretch is tough in a micro box
         if (adv.stretchFactor === "High") return false;
       }
 
-      // 4. Season suitability filter
+      // 8. Season suitability filter
       const split = estimateLineageSplit(seed);
       if (season === "Summer") {
         // Summer needs mold resilience or sativa lean
@@ -80,7 +117,18 @@ const RandomSeedPicker = () => {
 
       return true;
     });
-  }, [vaultSeeds, getSeedCount, station, season, selectedType, preserveStock]);
+  }, [
+    vaultSeeds,
+    getSeedCount,
+    station,
+    season,
+    selectedType,
+    preserveStock,
+    selectedBreeder,
+    easyGrowOnly,
+    frostMonsterOnly,
+    loudTerpsOnly,
+  ]);
 
   const handlePick = () => {
     if (filteredSeeds.length === 0) {
@@ -241,6 +289,90 @@ const RandomSeedPicker = () => {
             <Dices className="mr-2 h-4 w-4" />
             Roll the Dice
           </Button>
+        </div>
+      </div>
+
+      {/* Recommended / Advanced Filters Section */}
+      <div className="mt-6 rounded-2xl border border-border bg-background p-4">
+        <p className="text-xs font-black uppercase tracking-wide text-primary mb-3">Recommended Filters & Options</p>
+        <div className="grid gap-4 sm:grid-cols-4">
+          {/* Breeder Filter */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+              <User className="h-3 w-3" /> Breeder
+            </label>
+            <select
+              value={selectedBreeder}
+              onChange={(e) => {
+                setSelectedBreeder(e.target.value);
+                setPickedSeed(null);
+              }}
+              className="w-full rounded-xl border-2 border-border bg-card px-3 py-2 text-xs font-bold focus:border-primary focus:outline-none"
+            >
+              {availableBreeders.map((breeder) => (
+                <option key={breeder} value={breeder}>
+                  {breeder}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Easy of Grow Toggle */}
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 cursor-pointer hover:border-primary/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={easyGrowOnly}
+              onChange={(e) => {
+                setEasyGrowOnly(e.target.checked);
+                setPickedSeed(null);
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-tight flex items-center gap-1">
+                <Award className="h-3.5 w-3.5 text-emerald-500" /> Beginner Friendly
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">High ease-of-grow rating</p>
+            </div>
+          </label>
+
+          {/* Frost Monster Toggle */}
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 cursor-pointer hover:border-primary/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={frostMonsterOnly}
+              onChange={(e) => {
+                setFrostMonsterOnly(e.target.checked);
+                setPickedSeed(null);
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-tight flex items-center gap-1">
+                <Sparkles className="h-3.5 w-3.5 text-sky-500" /> Frost Monster
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Maximum resin density</p>
+            </div>
+          </label>
+
+          {/* Loud Terps Toggle */}
+          <label className="flex items-center gap-2.5 rounded-xl border border-border bg-card p-3 cursor-pointer hover:border-primary/30 transition-colors">
+            <input
+              type="checkbox"
+              checked={loudTerpsOnly}
+              onChange={(e) => {
+                setLoudTerpsOnly(e.target.checked);
+                setPickedSeed(null);
+              }}
+              className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            />
+            <div className="min-w-0">
+              <p className="text-xs font-bold leading-tight flex items-center gap-1">
+                <Flame className="h-3.5 w-3.5 text-amber-500" /> Loud Terpenes
+              </p>
+              <p className="text-[10px] text-muted-foreground leading-tight mt-0.5">Intense aroma profile</p>
+            </div>
+          </label>
         </div>
       </div>
 

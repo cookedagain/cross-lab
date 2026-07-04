@@ -155,8 +155,8 @@ const Nutrients = () => {
           defaultOpen={false}
         >
           <div className="grid gap-2 sm:grid-cols-2">
-            {Object.values(CYCO_PRODUCTS).map((product) => (
-              <div key={product.key} className="flex items-start gap-3 rounded-2xl border border-border bg-background p-3">
+            {Object.entries(CYCO_PRODUCTS).map(([key, product]) => (
+              <div key={key} className="flex items-start gap-3 rounded-2xl border border-border bg-background p-3">
                 <span className="mt-1 h-3 w-3 shrink-0 rounded-full" style={{ backgroundColor: product.color }} />
                 <div>
                   <p className="text-sm font-bold">{product.name}</p>

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { BarChart3 } from "lucide-react";
+import { BarChart3, Gem } from "lucide-react";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import {
   Cell,
@@ -11,6 +11,9 @@ import {
 import { useVault } from "@/hooks/useVaultStore";
 import { estimateAdvancedMetrics, estimateCannabinoids } from "@/lib/crossName";
 import { SEED_TYPES, typeShort } from "@/lib/seedDisplay";
+import { getSeedRarity } from "@/lib/rarity";
+import { RarityBadge } from "@/components/RarityBadge";
+import StrainName from "@/components/StrainName";
 
 const TYPE_COLORS: Record<string, string> = {
   Feminized: "#ec4899",
@@ -89,7 +92,14 @@ const VaultAnalytics = () => {
 
     const totalSeeds = main.reduce((sum, seed) => sum + getSeedCount(seed), 0);
 
-    return { typeData, breederData, avgThc, avgFlower, totalSeeds, strains: main.length };
+    const mythicalSeeds = main
+      .map((seed) => ({ seed, rarity: getSeedRarity(seed) }))
+      .filter(({ rarity }) => rarity.tier === "Grail")
+      .sort((a, b) => b.rarity.score - a.rarity.score);
+
+    const seedsToHunt = mythicalSeeds.filter(({ seed }) => getSeedCount(seed) <= 3);
+
+    return { typeData, breederData, avgThc, avgFlower, totalSeeds, strains: main.length, seedsToHunt };
   }, [vaultSeeds, getSeedCount]);
 
   return (
@@ -166,6 +176,32 @@ const VaultAnalytics = () => {
           />
         </div>
       </div>
+
+      {data.seedsToHunt.length > 0 && (
+        <div className="mt-5 rounded-3xl border border-border bg-background p-4">
+          <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-muted-foreground">
+            <Gem className="h-4 w-4 text-fuchsia-500" />
+            Mythical Seeds to Hunt
+          </p>
+          <p className="mb-4 text-sm font-semibold text-muted-foreground">
+            These Grail-tier seeds are running low. Consider hunting for more or planning a grow.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            {data.seedsToHunt.map(({ seed, rarity }) => (
+              <div key={seed.id} className="flex items-center justify-between rounded-xl border p-3">
+                <div className="flex flex-col">
+                  <StrainName name={seed.name} className="text-sm font-bold" />
+                  <p className="text-xs font-semibold text-muted-foreground">{seed.breeder}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <RarityBadge rarity={rarity} />
+                  <span className="text-lg font-black text-red-500">{seed.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </CollapsibleSection>
   );
 };

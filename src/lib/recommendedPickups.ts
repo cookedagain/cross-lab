@@ -133,3 +133,51 @@ export function recommendPickups(
 
   return recommendations.sort((a, b) => b.score - a.score).slice(0, limit);
 }
+
+export type MythicalSeed = {
+  name: string;
+  breeder: string;
+  source: string; // e.g., "Seedsman", "Seed City", "Direct"
+  link: string;
+  reason: string;
+};
+
+export function getMythicalSeedsToHunt(): MythicalSeed[] {
+  return [
+    {
+      name: "Zkittlez",
+      breeder: "Terp Hogz",
+      source: "Seed City",
+      link: "https://www.seed-city.com/terp-hogz-genetics/zkittlez",
+      reason: "The original hype strain, a must-have for any serious collection.",
+    },
+    {
+      name: "Deep Chunk",
+      breeder: "Tom Hill",
+      source: "Direct/Collector",
+      link: "https://www.icmag.com/ic/showthread.php?t=100000",
+      reason: "Legendary pure indica line, essential for old-school breeding projects.",
+    },
+    {
+      name: "Durban Poison (Original)",
+      breeder: "African Seeds",
+      source: "Seedsman",
+      link: "https://www.seedsman.com/en/durban-poison-feminised-seeds",
+      reason: "Pure Sativa landrace, a cornerstone of modern genetics.",
+    },
+    {
+      name: "Grateful Breath",
+      breeder: "Gage Green Genetics",
+      source: "Collector",
+      link: "https://www.instagram.com/gagegreengenetics/",
+      reason: "Rare, highly sought-after cross known for unique terpene profiles.",
+    },
+    {
+      name: "Permanent Marker",
+      breeder: "Seed Junky Genetics",
+      source: "Various Banks",
+      link: "https://www.seedjunkygenetics.com/",
+      reason: "Modern flagship strain with intense potency and bag appeal.",
+    },
+  ];
+}

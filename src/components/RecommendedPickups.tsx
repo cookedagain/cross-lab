@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { ExternalLink, RefreshCw, ShoppingBag, Sparkles } from "lucide-react";
+import { ExternalLink, RefreshCw, ShoppingBag, Sparkles, Gem } from "lucide-react";
 import { useVault } from "@/hooks/useVaultStore";
 import { TRAIT_GOALS, type TraitGoal } from "@/lib/crossName";
 import {
@@ -7,12 +7,13 @@ import {
   fetchBrotanicalCatalog,
   type BrotanicalCatalog,
 } from "@/data/brotanical";
-import { recommendPickups } from "@/lib/recommendedPickups";
+import { recommendPickups, getMythicalSeedsToHunt, type MythicalSeed } from "@/lib/recommendedPickups";
 import { TypeBadge } from "@/components/TypeBadge";
 import CollapsibleSection from "@/components/CollapsibleSection";
 
 const RecommendedPickups = () => {
   const { vaultSeeds, seedWithCount } = useVault();
+  const mythicalSeeds = useMemo(() => getMythicalSeedsToHunt(), []);
   const [goals, setGoals] = useState<TraitGoal[]>([]);
   const [catalog, setCatalog] = useState<BrotanicalCatalog | null>(null);
   const [loading, setLoading] = useState(true);
@@ -58,6 +59,36 @@ const RecommendedPickups = () => {
       icon={<ShoppingBag className="h-5 w-5" />}
       description="Brotanical Gardens picks ranked against your vault — favouring new breeders, thin trait areas, and your selected goals."
     >
+      <div className="mb-8 rounded-3xl border border-fuchsia-500/50 bg-fuchsia-50/50 p-4 dark:bg-fuchsia-950/50">
+        <p className="mb-3 flex items-center gap-2 text-xs font-black uppercase tracking-wide text-fuchsia-700 dark:text-fuchsia-300">
+          <Gem className="h-4 w-4" />
+          Mythical Seeds to Hunt
+        </p>
+        <p className="mb-4 text-sm font-semibold text-fuchsia-900 dark:text-fuchsia-100">
+          These are highly sought-after, Grail-tier genetics from various banks and collectors. They are
+          essential for a complete vault, regardless of your current collection.
+        </p>
+        <div className="grid gap-3 sm:grid-cols-2">
+          {mythicalSeeds.map((seed) => (
+            <a
+              key={seed.name}
+              href={seed.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex flex-col justify-between rounded-xl border border-fuchsia-500/30 bg-white/50 p-3 transition hover:bg-white dark:bg-black/50 dark:hover:bg-black"
+            >
+              <div className="flex flex-col">
+                <p className="text-sm font-bold">{seed.name}</p>
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {seed.breeder} · <span className="font-black text-fuchsia-600 dark:text-fuchsia-400">{seed.source}</span>
+                </p>
+              </div>
+              <p className="mt-2 text-xs font-medium italic text-fuchsia-800 dark:text-fuchsia-200">{seed.reason}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+
       <a
         href={BROTANICAL_SITE}
         target="_blank"

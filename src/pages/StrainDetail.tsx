@@ -9,7 +9,9 @@ import CannabinoidPanel from "@/components/CannabinoidPanel";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
 import AiGrowNotes from "@/components/AiGrowNotes";
+import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
+import { confidenceMeta, getLineageConfidenceMeta } from "@/lib/confidence";
 import { useVault } from "@/hooks/useVaultStore";
 import {
   estimateAdvancedMetrics,
@@ -54,6 +56,7 @@ const StrainDetail = () => {
   const rarity = getSeedRarity(counted);
   const lineageTree = buildStrainLineageTree(seed.name);
   const hasLineage = lineageTreeDepth(lineageTree) > 0;
+  const lineageMeta = getLineageConfidenceMeta(seed.name);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -81,6 +84,7 @@ const StrainDetail = () => {
               <div className="mb-2 flex flex-wrap items-center gap-2">
                 <TypeBadge type={seed.type} />
                 <RarityBadge rarity={rarity} />
+                <ConfidenceBadge meta={confidenceMeta.catalogRecord} compact />
                 <span className="text-sm font-semibold text-muted-foreground">{seed.breeder}</span>
               </div>
               <h1 className="font-display text-3xl font-black tracking-tight">{seed.name}</h1>
@@ -110,7 +114,10 @@ const StrainDetail = () => {
           <div className={`rounded-3xl border p-5 lg:col-span-2 ${rarity.tone}`}>
             <div className="flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide">Rarity · {rarity.tier}</p>
+                <div className="mb-1 flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-black uppercase tracking-wide">Rarity · {rarity.tier}</p>
+                  <ConfidenceBadge meta={confidenceMeta.rarity} compact />
+                </div>
                 <p className="mt-1 text-sm leading-relaxed">
                   {rarity.reasons.length ? rarity.reasons.join(" · ") : "widely available stock"}
                 </p>
@@ -123,7 +130,10 @@ const StrainDetail = () => {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Terpene read</p>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-wide text-primary">Terpene read</p>
+              <ConfidenceBadge meta={confidenceMeta.terpeneProfile} compact />
+            </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.terpeneBlurb}</p>
             <div className="mt-4 space-y-2">
               {profile.terpenes.map((terpene) => (
@@ -141,7 +151,10 @@ const StrainDetail = () => {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5">
-            <p className="mb-2 text-xs font-black uppercase tracking-wide text-primary">Lineage & breeder</p>
+            <div className="mb-2 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-wide text-primary">Lineage & breeder</p>
+              <ConfidenceBadge meta={confidenceMeta.lineageSplit} compact />
+            </div>
             <p className="text-sm leading-relaxed text-muted-foreground">{profile.breederBlurb}</p>
             <WebLineageLookup name={seed.name} breeder={seed.breeder} />
             {profile.flags.length > 0 && (
@@ -167,7 +180,10 @@ const StrainDetail = () => {
 
           {hasLineage && (
             <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-              <p className="mb-3 text-xs font-black uppercase tracking-wide text-primary">Genetics tree</p>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <p className="text-xs font-black uppercase tracking-wide text-primary">Genetics tree</p>
+                <ConfidenceBadge meta={lineageMeta} compact />
+              </div>
               <GeneticsTree root={lineageTree} />
             </div>
           )}
@@ -177,7 +193,10 @@ const StrainDetail = () => {
           <AiGrowNotes seed={seed} count={count} />
 
           <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-            <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Est. dry yield · single plant</p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Est. dry yield · single plant</p>
+              <ConfidenceBadge meta={confidenceMeta.yieldEstimate} compact />
+            </div>
             <div className="grid gap-2 sm:grid-cols-3">
               {growth.map((env) => (
                 <div key={env.wattage} className="rounded-2xl border border-border bg-background p-3">
@@ -195,7 +214,10 @@ const StrainDetail = () => {
           </div>
 
           <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-            <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Advanced breeder metrics</p>
+            <div className="mb-3 flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">Advanced breeder metrics</p>
+              <ConfidenceBadge meta={confidenceMeta.advancedMetrics} compact />
+            </div>
             <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4">
               <div className="rounded-lg bg-background p-2"><span className="block text-[9px] font-black uppercase text-muted-foreground">Flowering</span>{adv.floweringWeeks} weeks</div>
               <div className="rounded-lg bg-background p-2"><span className="block text-[9px] font-black uppercase text-muted-foreground">Terpene</span><Stars value={adv.terpeneIntensity} /></div>
@@ -209,7 +231,10 @@ const StrainDetail = () => {
           </div>
 
           <div className={`rounded-3xl border p-5 lg:col-span-2 ${keeper.tone}`}>
-            <p className="text-xs font-black uppercase tracking-wide">{keeper.level} keep priority</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-xs font-black uppercase tracking-wide">{keeper.level} keep priority</p>
+              <ConfidenceBadge meta={confidenceMeta.keeperPriority} compact />
+            </div>
             <p className="mt-1 text-sm leading-relaxed">{keeper.reasons.join(" · ") || "standard working stock"}</p>
             <div className="mt-3 space-y-2 text-sm leading-relaxed">
               <p><span className="font-black">Keep seed:</span> {keeper.seedPlan}</p>

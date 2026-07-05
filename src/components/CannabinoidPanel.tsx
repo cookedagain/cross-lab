@@ -1,4 +1,6 @@
+import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { estimateCannabinoidPanel, CATEGORY_TONE } from "@/lib/cannabinoids";
+import { confidenceMeta } from "@/lib/confidence";
 import type { Seed } from "@/data/seeds";
 
 const CannabinoidPanel = ({ seed }: { seed: Seed }) => {
@@ -6,9 +8,12 @@ const CannabinoidPanel = ({ seed }: { seed: Seed }) => {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-      <p className="mb-1 text-xs font-black uppercase tracking-wide text-muted-foreground">
-        Natural cannabinoid panel (est. % dry weight)
-      </p>
+      <div className="mb-1 flex flex-wrap items-center gap-2">
+        <p className="text-xs font-black uppercase tracking-wide text-muted-foreground">
+          Natural cannabinoid panel (est. % dry weight)
+        </p>
+        <ConfidenceBadge meta={confidenceMeta.cannabinoidPanel} compact />
+      </div>
       <p className="mb-3 text-[11px] font-semibold text-muted-foreground">
         Categories are scaled per cannabinoid — planning estimates from name/lineage cues, not lab results.
       </p>

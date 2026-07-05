@@ -2,8 +2,10 @@ import { useState } from "react";
 import { Check, Copy, Loader2, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import AiKeyForm from "@/components/AiKeyForm";
+import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { useAiSettings } from "@/hooks/useAiSettings";
 import { generateGrowNotes } from "@/lib/aiFeatures";
+import { confidenceMeta } from "@/lib/confidence";
 import type { Seed } from "@/data/seeds";
 
 const TENTS = [
@@ -79,9 +81,10 @@ const AiGrowNotes = ({ seed, count }: { seed: Seed; count: number }) => {
 
   return (
     <div className="rounded-3xl border border-border bg-card p-5 lg:col-span-2">
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <Sparkles className="h-4 w-4 text-primary" />
         <p className="text-xs font-black uppercase tracking-wide text-primary">AI grow notes</p>
+        <ConfidenceBadge meta={confidenceMeta.aiGenerated} compact />
       </div>
 
       {!hasKey ? (

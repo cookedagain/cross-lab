@@ -13,7 +13,9 @@ import { RarityBadge } from "@/components/RarityBadge";
 import StrainName from "@/components/StrainName";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
+import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
+import { confidenceMeta, getLineageConfidenceMeta } from "@/lib/confidence";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -570,6 +572,7 @@ const Index = () => {
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
                               <RarityBadge rarity={getSeedRarity(seedWithCount(seed))} />
+                              <ConfidenceBadge meta={confidenceMeta.rarity} compact />
                               <TypeBadge type={seed.type} />
                               <div className="flex items-center rounded-full border border-border bg-card p-1">
                                 <Button
@@ -604,10 +607,11 @@ const Index = () => {
                           <WebLineageLookup name={seed.name} breeder={seed.breeder} compact />
 
                           <div className="mt-2.5">
-                            <div className="mb-1.5 flex items-center gap-1.5">
+                            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
                               <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
                                 Est. dry yield · single plant
                               </p>
+                              <ConfidenceBadge meta={confidenceMeta.yieldEstimate} compact />
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <button type="button" className="text-muted-foreground hover:text-primary">
@@ -640,9 +644,12 @@ const Index = () => {
 
                           {/* Advanced Metrics Readout */}
                           <div className="mt-3 border-t border-border/40 pt-2.5">
-                            <p className="mb-1.5 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                              Advanced Breeder Metrics
-                            </p>
+                            <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
+                              <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                Advanced Breeder Metrics
+                              </p>
+                              <ConfidenceBadge meta={confidenceMeta.advancedMetrics} compact />
+                            </div>
                             <div className="grid grid-cols-2 gap-2 text-[11px] font-semibold sm:grid-cols-4">
                               <div className="rounded-lg bg-card p-2">
                                 <span className="block text-[9px] font-black uppercase text-muted-foreground">Flowering</span>
@@ -684,9 +691,12 @@ const Index = () => {
                             if (lineageTreeDepth(tree) === 0) return null;
                             return (
                               <div className="mt-3 border-t border-border/40 pt-2.5">
-                                <p className="mb-2 text-[10px] font-black uppercase tracking-wide text-muted-foreground">
-                                  Genetics tree
-                                </p>
+                                <div className="mb-2 flex flex-wrap items-center gap-1.5">
+                                  <p className="text-[10px] font-black uppercase tracking-wide text-muted-foreground">
+                                    Genetics tree
+                                  </p>
+                                  <ConfidenceBadge meta={getLineageConfidenceMeta(seed.name)} compact />
+                                </div>
                                 <GeneticsTree root={tree} />
                               </div>
                             );
@@ -715,7 +725,10 @@ const Index = () => {
           <div className="mt-5 rounded-3xl border border-border bg-background p-4">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs font-black uppercase tracking-wide text-primary">Worth keeping seed / pollen for</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-xs font-black uppercase tracking-wide text-primary">Worth keeping seed / pollen for</p>
+                  <ConfidenceBadge meta={confidenceMeta.keeperPriority} compact />
+                </div>
                 <p className="text-sm text-muted-foreground">Auto-ranked by scarcity, breeder value, and sought-after lineage cues.</p>
               </div>
               <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Top {preservationShortlist.length}</span>

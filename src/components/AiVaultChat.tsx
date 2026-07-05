@@ -12,9 +12,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import AiKeyForm from "@/components/AiKeyForm";
+import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { useAiSettings } from "@/hooks/useAiSettings";
 import { useVault } from "@/hooks/useVaultStore";
 import { askVaultChat, type ChatTurn } from "@/lib/aiFeatures";
+import { confidenceMeta } from "@/lib/confidence";
 
 const QUICK_PROMPTS = [
   "Which keepers should I protect first?",
@@ -75,6 +77,9 @@ const AiVaultChat = () => {
             Vault sommelier
           </SheetTitle>
           <SheetDescription>Ask about your strains — answers are grounded in your vault.</SheetDescription>
+          <div className="pt-1">
+            <ConfidenceBadge meta={confidenceMeta.aiGenerated} />
+          </div>
         </SheetHeader>
 
         {!hasKey ? (

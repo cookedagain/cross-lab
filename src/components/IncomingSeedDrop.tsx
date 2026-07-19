@@ -18,7 +18,6 @@ const TYPE_STYLES: Record<IncomingSeedType, string> = {
   "Fem auto": "border-lime-200 bg-lime-100 text-lime-800 dark:border-lime-900 dark:bg-lime-950/50 dark:text-lime-200",
   "Reg photo": "border-blue-200 bg-blue-100 text-blue-800 dark:border-blue-900 dark:bg-blue-950/50 dark:text-blue-200",
   "Fem photo, triploid": "border-violet-200 bg-violet-100 text-violet-800 dark:border-violet-900 dark:bg-violet-950/50 dark:text-violet-200",
-  "Duplicate unknown": "border-slate-200 bg-slate-100 text-slate-700 dark:border-slate-700 dark:bg-slate-800/70 dark:text-slate-200",
 };
 
 const EMPTY_TYPE_BREAKDOWN: Record<IncomingSeedType, number> = {
@@ -26,7 +25,6 @@ const EMPTY_TYPE_BREAKDOWN: Record<IncomingSeedType, number> = {
   "Fem auto": 0,
   "Reg photo": 0,
   "Fem photo, triploid": 0,
-  "Duplicate unknown": 0,
 };
 
 const StatCard = ({ label, value, sub }: { label: string; value: string | number; sub?: string }) => (
@@ -79,13 +77,11 @@ const IncomingSeedDrop = () => {
     .filter((section) => section.entries.length > 0);
 
   const pendingEntries = pendingSections.flatMap((section) => section.entries);
-  const arrivedEntries = locatedEntries.filter(
-    ({ entry, id }) => entry.namedLine !== false && arrivedIds.has(id),
-  );
+  const arrivedEntries = locatedEntries.filter(({ id }) => arrivedIds.has(id));
 
   const pendingTotal = entriesTotal(pendingEntries);
   const movedTotal = arrivedEntries.reduce((sum, item) => sum + item.entry.count, 0);
-  const pendingNamedLines = pendingEntries.filter((entry) => entry.namedLine !== false).length;
+  const pendingNamedLines = pendingEntries.length;
   const pendingTypeBreakdown = buildTypeBreakdown(pendingEntries);
 
   return (
@@ -126,9 +122,6 @@ const IncomingSeedDrop = () => {
             <TypePill key={type} type={type} count={pendingTypeBreakdown[type]} />
           ))}
         </div>
-        <p className="mt-2 text-[11px] font-semibold leading-relaxed text-muted-foreground">
-          The L2T2 duplicate is counted as one pending seed, but it cannot be moved into the live vault until the exact duplicated line is known.
-        </p>
       </div>
 
       {arrivedEntries.length > 0 && (
@@ -179,7 +172,7 @@ const IncomingSeedDrop = () => {
                 <div>
                   <p className="font-display text-lg font-black leading-tight">{section.title}</p>
                   <p className="mt-0.5 text-xs font-semibold text-muted-foreground">
-                    {section.source} · {section.entries.filter((entry) => entry.namedLine !== false).length} pending named lines
+                    {section.source} · {section.entries.length} pending named lines
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -210,21 +203,18 @@ const IncomingSeedDrop = () => {
                   <tbody>
                     {section.entries.map((entry) => {
                       const id = getIncomingSeedEntryId(section, entry);
-                      const canMoveToVault = entry.namedLine !== false;
                       return (
                         <tr key={`${section.title}-${entry.cultivar}`} className="border-b border-border/50 last:border-0">
                           <td className="py-2 pr-3">
                             <Button
                               type="button"
                               size="sm"
-                              variant={canMoveToVault ? "default" : "outline"}
                               className="h-8 rounded-full text-xs font-bold"
-                              disabled={!canMoveToVault}
                               onClick={() => markIncomingArrived(id)}
-                              title={canMoveToVault ? "Move this line into the live vault" : "Resolve the exact duplicate line first"}
+                              title="Move this line into the live vault"
                             >
                               <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                              {canMoveToVault ? "Arrived" : "Resolve first"}
+                              Arrived
                             </Button>
                           </td>
                           <td className="px-3 py-2 font-bold text-foreground">{entry.cultivar}</td>

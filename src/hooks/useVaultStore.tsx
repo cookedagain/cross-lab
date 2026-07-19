@@ -130,7 +130,7 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     const arrived = new Set(incomingArrivedIds);
     return incomingSeedSections.flatMap((section) =>
       section.entries
-        .filter((entry) => entry.namedLine !== false && arrived.has(getIncomingSeedEntryId(section, entry)))
+        .filter((entry) => arrived.has(getIncomingSeedEntryId(section, entry)))
         .map((entry) => incomingSeedToSeed(section, entry)),
     );
   }, [incomingArrivedIds]);

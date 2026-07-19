@@ -1,13 +1,12 @@
 import type { Seed, SeedType } from "@/data/seeds";
 
-export type IncomingSeedType = "Fem photo" | "Fem auto" | "Reg photo" | "Fem photo, triploid" | "Duplicate unknown";
+export type IncomingSeedType = "Fem photo" | "Fem auto" | "Reg photo" | "Fem photo, triploid";
 
 export type IncomingSeedEntry = {
   cultivar: string;
   breeder: string;
   count: number;
   type: IncomingSeedType;
-  namedLine?: boolean;
 };
 
 export type IncomingSeedSection = {
@@ -24,7 +23,6 @@ const incomingSeedTypeMap: Record<IncomingSeedType, SeedType> = {
   "Fem auto": "Autoflower",
   "Reg photo": "Regular",
   "Fem photo, triploid": "Feminized",
-  "Duplicate unknown": "Unknown Photo",
 };
 
 const slugify = (value: string) =>
@@ -169,7 +167,7 @@ export const incomingSeedSections: IncomingSeedSection[] = [
   {
     title: "Ethos L2T2 Multipass",
     source: "Ethos L2T2 Multipass",
-    note: "Chart shows 11 named lines; the 12th seed is a duplicate of one of those lines, but the duplicate is not identified yet.",
+    note: "Eleven one-seed lines being received.",
     entries: [
       { cultivar: "Chama", breeder: "Ethos Genetics", count: 1, type: "Fem photo" },
       { cultivar: "Purple Nasty × Martian Candy OG", breeder: "Ethos Genetics", count: 1, type: "Fem photo" },
@@ -182,7 +180,6 @@ export const incomingSeedSections: IncomingSeedSection[] = [
       { cultivar: "Rocket Queen × Original “Z”", breeder: "Ethos Genetics", count: 1, type: "Fem photo" },
       { cultivar: "Chama × Original “Z”", breeder: "Ethos Genetics", count: 1, type: "Fem photo" },
       { cultivar: "Double Daddy Auto", breeder: "Ethos Genetics", count: 1, type: "Fem auto" },
-      { cultivar: "Unspecified duplicate of one L2T2 line", breeder: "Ethos Genetics", count: 1, type: "Duplicate unknown", namedLine: false },
     ],
   },
 ];
@@ -204,7 +201,7 @@ export const incomingCombinedTotal =
   incomingSeedSummary.multiverseIdentifiedSeeds + incomingSeedSummary.l2t2Seeds;
 
 export const incomingNamedLineTotal = incomingSeedSections.reduce(
-  (sum, section) => sum + section.entries.filter((entry) => entry.namedLine !== false).length,
+  (sum, section) => sum + section.entries.length,
   0,
 );
 
@@ -219,6 +216,5 @@ export const incomingTypeBreakdown = incomingSeedSections
       "Fem auto": 0,
       "Reg photo": 0,
       "Fem photo, triploid": 0,
-      "Duplicate unknown": 0,
     },
   );

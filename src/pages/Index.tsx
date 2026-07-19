@@ -7,6 +7,7 @@ import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
 import RandomSeedPicker from "@/components/RandomSeedPicker";
 import CollapsibleSection from "@/components/CollapsibleSection";
+import IncomingSeedDrop from "@/components/IncomingSeedDrop";
 import RecommendedPickups from "@/components/RecommendedPickups";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
@@ -358,6 +359,8 @@ const Index = () => {
         <div className="mt-6">
           <VaultBackup />
         </div>
+
+        <IncomingSeedDrop />
 
         <VaultAnalytics />
 

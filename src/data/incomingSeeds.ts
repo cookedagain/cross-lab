@@ -1,3 +1,5 @@
+import type { Seed, SeedType } from "@/data/seeds";
+
 export type IncomingSeedType = "Fem photo" | "Fem auto" | "Reg photo" | "Fem photo, triploid" | "Duplicate unknown";
 
 export type IncomingSeedEntry = {
@@ -16,6 +18,33 @@ export type IncomingSeedSection = {
 };
 
 const PRESERVATION_LINE = "Preservation Line";
+
+const incomingSeedTypeMap: Record<IncomingSeedType, SeedType> = {
+  "Fem photo": "Feminized",
+  "Fem auto": "Autoflower",
+  "Reg photo": "Regular",
+  "Fem photo, triploid": "Feminized",
+  "Duplicate unknown": "Unknown Photo",
+};
+
+const slugify = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+export const getIncomingSeedEntryId = (section: IncomingSeedSection, entry: IncomingSeedEntry) =>
+  `incoming-${slugify(section.source)}-${slugify(section.title)}-${slugify(entry.breeder)}-${slugify(entry.cultivar)}`;
+
+export const incomingSeedToSeed = (section: IncomingSeedSection, entry: IncomingSeedEntry): Seed => ({
+  id: getIncomingSeedEntryId(section, entry),
+  name: entry.cultivar,
+  breeder: entry.breeder,
+  type: incomingSeedTypeMap[entry.type],
+  count: entry.count,
+});
 
 export const incomingSeedSections: IncomingSeedSection[] = [
   {

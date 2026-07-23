@@ -1,15 +1,9 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/seeds";
-import {
-  getIncomingSeedEntryId,
-  incomingSeedSections,
-  incomingSeedToSeed,
-} from "@/data/incomingSeeds";
 import { showError, showSuccess } from "@/utils/toast";
 
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
-const INCOMING_ARRIVALS_STORAGE_KEY = "vaultlab-incoming-arrivals";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
 
@@ -39,10 +33,8 @@ export const clampSeedCount = (value: number) =>
 type VaultContextValue = {
   seedCounts: Record<string, number>;
   multipass: MultipassEntry[];
-  incomingArrivedIds: string[];
   lots: BreedingLot[];
   arrivedSeeds: Seed[];
-  arrivedIncomingSeeds: Seed[];
   vaultSeeds: Seed[];
   getSeedCount: (seed: Seed) => number;
   seedWithCount: (seed: Seed) => Seed;
@@ -51,8 +43,6 @@ type VaultContextValue = {
   addMultipass: (data: Omit<MultipassEntry, "id" | "arrived">) => void;
   removeMultipass: (id: string) => void;
   toggleArrived: (id: string) => void;
-  markIncomingArrived: (id: string) => void;
-  markIncomingPending: (id: string) => void;
   addLot: (data: Omit<BreedingLot, "id">) => void;
   removeLot: (id: string) => void;
   exportData: () => string;
@@ -86,11 +76,6 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     return Array.isArray(parsed) ? parsed : [];
   });
 
-  const [incomingArrivedIds, setIncomingArrivedIds] = useState<string[]>(() => {
-    const parsed = loadJSON<string[]>(INCOMING_ARRIVALS_STORAGE_KEY, []);
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
-  });
-
   const [lots, setLots] = useState<BreedingLot[]>(() => {
     const parsed = loadJSON<BreedingLot[]>(LOTS_STORAGE_KEY, []);
     return Array.isArray(parsed) ? parsed : [];
@@ -103,10 +88,6 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     window.localStorage.setItem(MULTIPASS_STORAGE_KEY, JSON.stringify(multipass));
   }, [multipass]);
-
-  useEffect(() => {
-    window.localStorage.setItem(INCOMING_ARRIVALS_STORAGE_KEY, JSON.stringify(incomingArrivedIds));
-  }, [incomingArrivedIds]);
 
   useEffect(() => {
     window.localStorage.setItem(LOTS_STORAGE_KEY, JSON.stringify(lots));
@@ -126,19 +107,7 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     [multipass],
   );
 
-  const arrivedIncomingSeeds = useMemo<Seed[]>(() => {
-    const arrived = new Set(incomingArrivedIds);
-    return incomingSeedSections.flatMap((section) =>
-      section.entries
-        .filter((entry) => arrived.has(getIncomingSeedEntryId(section, entry)))
-        .map((entry) => incomingSeedToSeed(section, entry)),
-    );
-  }, [incomingArrivedIds]);
-
-  const vaultSeeds = useMemo(
-    () => [...SEEDS, ...arrivedSeeds, ...arrivedIncomingSeeds],
-    [arrivedSeeds, arrivedIncomingSeeds],
-  );
+  const vaultSeeds = useMemo(() => [...SEEDS, ...arrivedSeeds], [arrivedSeeds]);
 
   const getSeedCount = (seed: Seed) => seedCounts[seed.id] ?? seed.count ?? 0;
   const seedWithCount = (seed: Seed): Seed => ({ ...seed, count: getSeedCount(seed) });
@@ -159,34 +128,18 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   const toggleArrived = (id: string) =>
     setMultipass((current) => current.map((entry) => (entry.id === id ? { ...entry, arrived: !entry.arrived } : entry)));
 
-  const markIncomingArrived = (id: string) => {
-    setIncomingArrivedIds((current) => (current.includes(id) ? current : [...current, id]));
-    showSuccess("Incoming line moved into the live vault.");
-  };
-
-  const markIncomingPending = (id: string) => {
-    setIncomingArrivedIds((current) => current.filter((item) => item !== id));
-    setSeedCounts((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
-    showSuccess("Incoming line moved back to pending.");
-  };
-
   const addLot = (data: Omit<BreedingLot, "id">) =>
     setLots((current) => [{ ...data, id: `lot-${Date.now()}-${Math.random().toString(36).slice(2, 7)}` }, ...current]);
 
   const removeLot = (id: string) => setLots((current) => current.filter((lot) => lot.id !== id));
 
-  const exportData = () => JSON.stringify({ version: 2, seedCounts, multipass, incomingArrivedIds, lots }, null, 2);
+  const exportData = () => JSON.stringify({ version: 1, seedCounts, multipass, lots }, null, 2);
 
   const importData = (json: string) => {
     try {
       const parsed = JSON.parse(json) as {
         seedCounts?: Record<string, unknown>;
         multipass?: MultipassEntry[];
-        incomingArrivedIds?: string[];
         lots?: BreedingLot[];
       };
       if (parsed.seedCounts) {
@@ -196,9 +149,6 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
         setSeedCounts({ ...DEFAULT_SEED_COUNTS, ...cleaned });
       }
       if (Array.isArray(parsed.multipass)) setMultipass(parsed.multipass);
-      if (Array.isArray(parsed.incomingArrivedIds)) {
-        setIncomingArrivedIds(parsed.incomingArrivedIds.filter((id) => typeof id === "string"));
-      }
       if (Array.isArray(parsed.lots)) setLots(parsed.lots);
       showSuccess("Vault data restored from backup.");
     } catch {
@@ -209,10 +159,8 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   const value: VaultContextValue = {
     seedCounts,
     multipass,
-    incomingArrivedIds,
     lots,
     arrivedSeeds,
-    arrivedIncomingSeeds,
     vaultSeeds,
     getSeedCount,
     seedWithCount,
@@ -221,8 +169,6 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     addMultipass,
     removeMultipass,
     toggleArrived,
-    markIncomingArrived,
-    markIncomingPending,
     addLot,
     removeLot,
     exportData,

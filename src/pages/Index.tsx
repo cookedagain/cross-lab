@@ -30,7 +30,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { VAULT_TOTALS, type Seed, type SeedType } from "@/data/seeds";
+import { type Seed, type SeedType } from "@/data/seeds";
 import { clampSeedCount, MULTIPASS_BREEDER, useVault } from "@/hooks/useVaultStore";
 import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
 import { getKeeperPriority } from "@/lib/keeper";
@@ -188,8 +188,8 @@ const Index = () => {
   const breederTypeTotals = useMemo(
     () => {
       const search = vaultSearch.trim().toLowerCase();
-      return VAULT_TOTALS.map((group) => {
-        const allSeeds = vaultSeeds.filter((seed) => seed.breeder === group.breeder);
+      return Array.from(new Set(vaultSeeds.map((seed) => seed.breeder))).map((breeder) => {
+        const allSeeds = vaultSeeds.filter((seed) => seed.breeder === breeder);
         const strains = allSeeds
           .filter((seed) => {
             const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
@@ -256,7 +256,7 @@ const Index = () => {
           total: strains.filter((seed) => seed.type === type).reduce((sum, seed) => sum + getSeedCount(seed), 0),
         })).filter((entry) => entry.total > 0);
         const total = strains.reduce((sum, seed) => sum + getSeedCount(seed), 0);
-        return { ...group, total, byType, strains };
+        return { breeder, total, byType, strains };
       }).filter((group) => group.strains.length > 0);
     },
     [activeTypes, seedCounts, vaultSearch, vaultSeeds, sortMode, minThc, maxFlowering, minResin, minTerpene, getSeedCount, seedWithCount],

@@ -34,7 +34,7 @@ const VaultBackup = () => {
         <div>
           <p className="text-xs font-black uppercase tracking-wide text-primary">Backup & restore</p>
           <p className="text-sm text-muted-foreground">
-            Save your seed counts, Multipass packs, and breeding lots to a file — or restore them on another device.
+            Save seed counts, incoming arrivals, Multipass packs, and breeding lots — or restore them on another device.
           </p>
         </div>
         <div className="flex shrink-0 gap-2">

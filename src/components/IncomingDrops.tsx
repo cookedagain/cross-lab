@@ -1,4 +1,4 @@
-import { Boxes, CheckCircle2, Clock3, PackageOpen, Users } from "lucide-react";
+import { Boxes, CheckCircle2, Clock3, PackageOpen, Store, Users } from "lucide-react";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -12,8 +12,9 @@ import {
 import {
   getIncomingDropId,
   INCOMING_DROPS,
-  INCOMING_DROP_BREEDER_TOTAL,
   INCOMING_DROP_TOTAL,
+  INCOMING_DROP_UNCONFIRMED_COUNT,
+  INCOMING_ORDER,
 } from "@/data/incomingDrops";
 import { useVault } from "@/hooks/useVaultStore";
 
@@ -21,126 +22,191 @@ const IncomingDrops = () => {
   const { incomingArrivedIds, setIncomingArrived } = useVault();
   const arrived = new Set(incomingArrivedIds);
   const arrivedDrops = INCOMING_DROPS.filter((drop) => arrived.has(getIncomingDropId(drop)));
-  const arrivedSeedTotal = arrivedDrops.reduce((total, drop) => total + drop.count, 0);
-  const pendingSeedTotal = INCOMING_DROP_TOTAL - arrivedSeedTotal;
+  const pendingDrops = INCOMING_DROPS.filter((drop) => !arrived.has(getIncomingDropId(drop)));
+  const arrivedSeedTotal = arrivedDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+  const pendingSeedTotal = pendingDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+  const pendingUnconfirmed = pendingDrops.filter((drop) => drop.count === null).length;
 
   return (
     <CollapsibleSection
-      title="Incoming Drops"
+      title="Incoming Order"
       icon={<PackageOpen className="h-5 w-5" />}
       description={
         INCOMING_DROPS.length > 0
-          ? "Check off a cultivar when it lands. It will immediately join the searchable main vault and all live totals."
-          : "The previous cart has been cleared. This section is ready for the revised cart."
+          ? "Paid seeds awaiting delivery. Check off a product when it lands to add it to the searchable main vault."
+          : "The incoming cart is empty and ready for the next order."
       }
       badge={
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-          {pendingSeedTotal} pending
+          {pendingDrops.length} pending
         </span>
       }
     >
-      <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-amber-600 dark:text-amber-400">
-            <Clock3 className="h-4 w-4" />
-            <p className="text-xs font-black uppercase tracking-wide">Pending seeds</p>
-          </div>
-          <p className="font-display text-3xl font-black">{pendingSeedTotal}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
-            <CheckCircle2 className="h-4 w-4" />
-            <p className="text-xs font-black uppercase tracking-wide">Vaulted seeds</p>
-          </div>
-          <p className="font-display text-3xl font-black">{arrivedSeedTotal}</p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Boxes className="h-4 w-4" />
-            <p className="text-xs font-black uppercase tracking-wide">Cultivars</p>
-          </div>
-          <p className="font-display text-3xl font-black">
-            {arrivedDrops.length}<span className="text-base text-muted-foreground"> / {INCOMING_DROPS.length}</span>
-          </p>
-        </div>
-        <div className="rounded-2xl border border-border bg-background p-4">
-          <div className="mb-2 flex items-center gap-2 text-primary">
-            <Users className="h-4 w-4" />
-            <p className="text-xs font-black uppercase tracking-wide">Breeders</p>
-          </div>
-          <p className="font-display text-3xl font-black">{INCOMING_DROP_BREEDER_TOTAL}</p>
-        </div>
-      </div>
-
       {INCOMING_DROPS.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-border bg-background px-6 py-10 text-center">
           <PackageOpen className="mx-auto h-8 w-8 text-muted-foreground" />
-          <p className="mt-3 font-display text-lg font-black">Incoming cart cleared</p>
-          <p className="mt-1 text-sm text-muted-foreground">No cultivars are currently logged.</p>
+          <p className="mt-3 font-display text-lg font-black">No incoming order</p>
+          <p className="mt-1 text-sm text-muted-foreground">No products are currently logged.</p>
         </div>
       ) : (
-        <div className="overflow-hidden rounded-2xl border border-border bg-background">
-          <Table>
-            <TableHeader>
-              <TableRow className="bg-muted/50 hover:bg-muted/50">
-                <TableHead className="w-24 text-center font-black">Arrived</TableHead>
-              <TableHead className="min-w-52 font-black">Breeder</TableHead>
-              <TableHead className="min-w-80 font-black">Cultivar / Product</TableHead>
-              <TableHead className="min-w-48 font-black">Type</TableHead>
-              <TableHead className="w-28 text-right font-black">Seeds</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {INCOMING_DROPS.map((drop) => {
-              const id = getIncomingDropId(drop);
-              const hasArrived = arrived.has(id);
+        <>
+          <div className="mb-5 rounded-3xl border-2 border-primary/20 bg-primary/5 p-5">
+            <div className="mb-4 flex items-center gap-2 text-primary">
+              <Store className="h-5 w-5" />
+              <p className="text-xs font-black uppercase tracking-[0.2em]">Order details</p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Supplier</p>
+                <p className="mt-1 font-display font-black">{INCOMING_ORDER.supplier}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Status</p>
+                <p className="mt-1 font-display font-black">{INCOMING_ORDER.status}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Order date</p>
+                <p className="mt-1 font-display font-black">{INCOMING_ORDER.orderDate}</p>
+              </div>
+              <div>
+                <p className="text-xs font-bold text-muted-foreground">Currency</p>
+                <p className="mt-1 font-display font-black">{INCOMING_ORDER.currency}</p>
+              </div>
+            </div>
+          </div>
 
-              return (
-                <TableRow key={id} className={hasArrived ? "bg-emerald-500/5" : undefined}>
-                  <TableCell className="text-center">
-                    <Checkbox
-                      checked={hasArrived}
-                      onCheckedChange={(checked) => setIncomingArrived(id, checked === true)}
-                      aria-label={`Mark ${drop.cultivar} as ${hasArrived ? "incoming" : "arrived"}`}
-                      className="h-6 w-6 rounded-md"
-                    />
-                  </TableCell>
-                  <TableCell className="font-bold">{drop.breeder}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display font-bold">{drop.cultivar}</span>
-                      {hasArrived && (
-                        <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-                          In vault
-                        </span>
-                      )}
-                    </div>
-                    {drop.lineage && <p className="mt-1 text-xs font-medium text-muted-foreground">{drop.lineage}</p>}
-                    <div className="mt-1.5 flex flex-wrap gap-1.5">
-                      {drop.pack && (
-                        <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                          {drop.pack}
-                        </span>
-                      )}
-                      {drop.flowering && (
-                        <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                          {drop.flowering}
-                        </span>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
-                      {drop.type}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-right font-display text-lg font-black">{drop.count}</TableCell>
+          <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                <Clock3 className="h-4 w-4" />
+                <p className="text-xs font-black uppercase tracking-wide">Confirmed pending</p>
+              </div>
+              <p className="font-display text-3xl font-black">{pendingSeedTotal}</p>
+              <p className="text-xs text-muted-foreground">known seeds</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4" />
+                <p className="text-xs font-black uppercase tracking-wide">Vaulted</p>
+              </div>
+              <p className="font-display text-3xl font-black">{arrivedSeedTotal}</p>
+              <p className="text-xs text-muted-foreground">known seeds</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center gap-2 text-primary">
+                <Boxes className="h-4 w-4" />
+                <p className="text-xs font-black uppercase tracking-wide">Products</p>
+              </div>
+              <p className="font-display text-3xl font-black">
+                {arrivedDrops.length}<span className="text-base text-muted-foreground"> / {INCOMING_DROPS.length}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">arrived</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <div className="mb-2 flex items-center gap-2 text-primary">
+                <Users className="h-4 w-4" />
+                <p className="text-xs font-black uppercase tracking-wide">Counts TBC</p>
+              </div>
+              <p className="font-display text-3xl font-black">
+                {pendingUnconfirmed}<span className="text-base text-muted-foreground"> / {INCOMING_DROP_UNCONFIRMED_COUNT}</span>
+              </p>
+              <p className="text-xs text-muted-foreground">packs still incoming</p>
+            </div>
+          </div>
+
+          <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
+            <b>{INCOMING_DROP_TOTAL} confirmed seeds</b> are recorded. The four TBC packs enter the vault at 0 seeds when checked off; update their count in the main vault after opening them.
+          </div>
+
+          <div className="overflow-hidden rounded-2xl border border-border bg-background">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-muted/50 hover:bg-muted/50">
+                  <TableHead className="w-24 text-center font-black">Arrived</TableHead>
+                  <TableHead className="min-w-52 font-black">Breeder</TableHead>
+                  <TableHead className="min-w-80 font-black">Cultivar / Product</TableHead>
+                  <TableHead className="min-w-48 font-black">Type</TableHead>
+                  <TableHead className="w-28 text-right font-black">Seeds</TableHead>
                 </TableRow>
-              );
-            })}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {INCOMING_DROPS.map((drop) => {
+                  const id = getIncomingDropId(drop);
+                  const hasArrived = arrived.has(id);
+                  const packLabel = `${drop.quantityPacks} ${drop.quantityPacks === 1 ? "pack" : "packs"}`;
+
+                  return (
+                    <TableRow key={id} className={hasArrived ? "bg-emerald-500/5" : undefined}>
+                      <TableCell className="text-center">
+                        <Checkbox
+                          checked={hasArrived}
+                          onCheckedChange={(checked) => setIncomingArrived(id, checked === true)}
+                          aria-label={`Mark ${drop.cultivar} as ${hasArrived ? "incoming" : "arrived"}`}
+                          className="h-6 w-6 rounded-md"
+                        />
+                      </TableCell>
+                      <TableCell className="font-bold">{drop.breeder}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="font-display font-bold">{drop.cultivar}</span>
+                          {hasArrived && (
+                            <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
+                              In vault
+                            </span>
+                          )}
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                            {packLabel}
+                          </span>
+                          {drop.pack && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {drop.pack}
+                            </span>
+                          )}
+                          {drop.cultivarCount && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {drop.cultivarCount} cultivars
+                            </span>
+                          )}
+                          {drop.seedsPerCultivar && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {drop.seedsPerCultivar} per cultivar
+                            </span>
+                          )}
+                          {drop.seedsPerPack && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {drop.seedsPerPack} per pack
+                            </span>
+                          )}
+                          {drop.note && (
+                            <span className="rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-0.5 text-[10px] font-black text-amber-700 dark:text-amber-300">
+                              {drop.note}
+                            </span>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {drop.type === "Unknown from cart" ? (
+                          <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-black text-muted-foreground">
+                            Type / sex TBC
+                          </span>
+                        ) : (
+                          <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
+                            {drop.sex} {drop.type}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-display text-lg font-black">
+                        {drop.count ?? <span className="text-sm text-amber-600 dark:text-amber-400">TBC</span>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
     </CollapsibleSection>
   );

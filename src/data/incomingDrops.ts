@@ -1,13 +1,17 @@
 import type { Seed, SeedType } from "@/data/seeds";
 
 export type IncomingOrder = {
+  id: string;
+  label: string;
   supplier: string;
   status: string;
-  orderDate: string;
-  currency: string;
+  source?: string;
+  orderDate?: string;
+  currency?: string;
 };
 
 export type IncomingDrop = {
+  orderId?: string;
   breeder: string;
   cultivar: string;
   type: "Photoperiod" | "Autoflower" | "Unknown from cart";
@@ -21,12 +25,25 @@ export type IncomingDrop = {
   note?: string;
 };
 
-export const INCOMING_ORDER: IncomingOrder = {
-  supplier: "Brotanical Gardens",
-  status: "Ordered / Incoming",
-  orderDate: "25 July 2026",
-  currency: "USD",
-};
+export const INCOMING_ORDERS: IncomingOrder[] = [
+  {
+    id: "brotanical-2026-07-25",
+    label: "Brotanical Gardens Order",
+    supplier: "Brotanical Gardens",
+    status: "Ordered / Incoming",
+    orderDate: "25 July 2026",
+    currency: "USD",
+  },
+  {
+    id: "l2t2-multipass",
+    label: "L2T2 Multipass Drop",
+    supplier: "ETHOS Genetics",
+    source: "L2T2 Multipass",
+    status: "Incoming",
+  },
+];
+
+export const DEFAULT_INCOMING_ORDER_ID = "brotanical-2026-07-25";
 
 export const INCOMING_DROPS: IncomingDrop[] = [
   {
@@ -34,32 +51,36 @@ export const INCOMING_DROPS: IncomingDrop[] = [
     cultivar: "Pocket Kingz (Cowboyz)",
     type: "Unknown from cart",
     sex: "Unknown from cart",
-    count: null,
+    count: 5,
     quantityPacks: 1,
+    note: "Minimum confirmed count",
   },
   {
     breeder: "Silly Wonka's Golden Beans / Ethos",
     cultivar: "Rainmaker RBx",
     type: "Photoperiod",
     sex: "Feminized",
-    count: null,
+    count: 5,
     quantityPacks: 1,
+    note: "Minimum confirmed count",
   },
   {
     breeder: "Silly Wonka's Golden Beans / Ethos",
     cultivar: "Rozé Cookie Dough",
     type: "Unknown from cart",
     sex: "Unknown from cart",
-    count: null,
+    count: 5,
     quantityPacks: 1,
+    note: "Minimum confirmed count",
   },
   {
     breeder: "Silly Wonka's Golden Beans / Ethos",
     cultivar: "The R3 Project",
     type: "Unknown from cart",
     sex: "Unknown from cart",
-    count: null,
+    count: 5,
     quantityPacks: 1,
+    note: "Minimum confirmed count",
   },
   {
     breeder: "Ethos Genetics",
@@ -202,6 +223,116 @@ export const INCOMING_DROPS: IncomingDrop[] = [
     count: 10,
     quantityPacks: 1,
   },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Chama",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Purple Nasty × Martian Candy OG",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Whiskey OG × Martian Candy OG",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Original Z RBX",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Fuego’Z",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Big Fruity",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Lemon Cherry Pie × Original Z",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Rainbow Haze",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Rocket Queen × Original Z",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Chama × Original Z",
+    type: "Unknown from cart",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
+  {
+    orderId: "l2t2-multipass",
+    breeder: "ETHOS Genetics",
+    cultivar: "Double Daddy Auto",
+    type: "Autoflower",
+    sex: "Unknown from cart",
+    count: 5,
+    quantityPacks: 1,
+    note: "Minimum confirmed count",
+  },
 ];
 
 export const getIncomingDropId = (drop: IncomingDrop) =>
@@ -222,7 +353,7 @@ export const incomingDropToSeed = (drop: IncomingDrop): Seed => {
   return {
     id: getIncomingDropId(drop),
     name: drop.cultivar,
-    breeder: drop.breeder,
+    breeder: drop.breeder === "ETHOS Genetics" ? "Ethos Genetics" : drop.breeder,
     type,
     count: drop.count ?? 0,
   };

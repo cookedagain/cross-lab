@@ -10,22 +10,22 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  DEFAULT_INCOMING_ORDER_ID,
   getIncomingDropId,
   INCOMING_DROPS,
   INCOMING_DROP_TOTAL,
-  INCOMING_DROP_UNCONFIRMED_COUNT,
-  INCOMING_ORDER,
+  INCOMING_ORDERS,
 } from "@/data/incomingDrops";
 import { useVault } from "@/hooks/useVaultStore";
 
 const IncomingDrops = () => {
   const { incomingArrivedIds, setIncomingArrived } = useVault();
   const arrived = new Set(incomingArrivedIds);
+  const orderById = new Map(INCOMING_ORDERS.map((order) => [order.id, order]));
   const arrivedDrops = INCOMING_DROPS.filter((drop) => arrived.has(getIncomingDropId(drop)));
   const pendingDrops = INCOMING_DROPS.filter((drop) => !arrived.has(getIncomingDropId(drop)));
   const arrivedSeedTotal = arrivedDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
   const pendingSeedTotal = pendingDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
-  const pendingUnconfirmed = pendingDrops.filter((drop) => drop.count === null).length;
 
   return (
     <CollapsibleSection
@@ -50,29 +50,43 @@ const IncomingDrops = () => {
         </div>
       ) : (
         <>
-          <div className="mb-5 rounded-3xl border-2 border-primary/20 bg-primary/5 p-5">
-            <div className="mb-4 flex items-center gap-2 text-primary">
-              <Store className="h-5 w-5" />
-              <p className="text-xs font-black uppercase tracking-[0.2em]">Order details</p>
-            </div>
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">Supplier</p>
-                <p className="mt-1 font-display font-black">{INCOMING_ORDER.supplier}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">Status</p>
-                <p className="mt-1 font-display font-black">{INCOMING_ORDER.status}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">Order date</p>
-                <p className="mt-1 font-display font-black">{INCOMING_ORDER.orderDate}</p>
-              </div>
-              <div>
-                <p className="text-xs font-bold text-muted-foreground">Currency</p>
-                <p className="mt-1 font-display font-black">{INCOMING_ORDER.currency}</p>
-              </div>
-            </div>
+          <div className="mb-5 grid gap-4 lg:grid-cols-2">
+            {INCOMING_ORDERS.map((order) => {
+              const orderDrops = INCOMING_DROPS.filter(
+                (drop) => (drop.orderId ?? DEFAULT_INCOMING_ORDER_ID) === order.id,
+              );
+              const orderSeeds = orderDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+
+              return (
+                <div key={order.id} className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-5">
+                  <div className="mb-4 flex items-center gap-2 text-primary">
+                    <Store className="h-5 w-5" />
+                    <p className="text-xs font-black uppercase tracking-[0.2em]">{order.label}</p>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground">Supplier</p>
+                      <p className="mt-1 font-display font-black">{order.supplier}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground">Status</p>
+                      <p className="mt-1 font-display font-black">{order.status}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground">{order.source ? "Source" : "Order date"}</p>
+                      <p className="mt-1 font-display font-black">{order.source ?? order.orderDate}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-muted-foreground">Confirmed seeds</p>
+                      <p className="mt-1 font-display font-black">
+                        {orderSeeds} <span className="text-xs text-muted-foreground">across {orderDrops.length} products</span>
+                      </p>
+                    </div>
+                  </div>
+                  {order.currency && <p className="mt-3 text-xs font-bold text-muted-foreground">Currency: {order.currency}</p>}
+                </div>
+              );
+            })}
           </div>
 
           <div className="mb-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -105,17 +119,15 @@ const IncomingDrops = () => {
             <div className="rounded-2xl border border-border bg-background p-4">
               <div className="mb-2 flex items-center gap-2 text-primary">
                 <Users className="h-4 w-4" />
-                <p className="text-xs font-black uppercase tracking-wide">Counts TBC</p>
+                <p className="text-xs font-black uppercase tracking-wide">Sources</p>
               </div>
-              <p className="font-display text-3xl font-black">
-                {pendingUnconfirmed}<span className="text-base text-muted-foreground"> / {INCOMING_DROP_UNCONFIRMED_COUNT}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">packs still incoming</p>
+              <p className="font-display text-3xl font-black">{INCOMING_ORDERS.length}</p>
+              <p className="text-xs text-muted-foreground">incoming drops</p>
             </div>
           </div>
 
           <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-            <b>{INCOMING_DROP_TOTAL} confirmed seeds</b> are recorded. The four TBC packs enter the vault at 0 seeds when checked off; update their count in the main vault after opening them.
+            <b>{INCOMING_DROP_TOTAL} confirmed minimum seeds</b> are recorded across both incoming sources. No unidentified L2T2 duplicate is included.
           </div>
 
           <div className="overflow-hidden rounded-2xl border border-border bg-background">
@@ -133,6 +145,7 @@ const IncomingDrops = () => {
                 {INCOMING_DROPS.map((drop) => {
                   const id = getIncomingDropId(drop);
                   const hasArrived = arrived.has(id);
+                  const order = orderById.get(drop.orderId ?? DEFAULT_INCOMING_ORDER_ID);
                   const packLabel = `${drop.quantityPacks} ${drop.quantityPacks === 1 ? "pack" : "packs"}`;
 
                   return (
@@ -156,6 +169,11 @@ const IncomingDrops = () => {
                           )}
                         </div>
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
+                          {order && (
+                            <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
+                              {order.label}
+                            </span>
+                          )}
                           <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                             {packLabel}
                           </span>
@@ -193,7 +211,7 @@ const IncomingDrops = () => {
                           </span>
                         ) : (
                           <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
-                            {drop.sex} {drop.type}
+                            {drop.sex === "Unknown from cart" ? drop.type : `${drop.sex} ${drop.type}`}
                           </span>
                         )}
                       </TableCell>

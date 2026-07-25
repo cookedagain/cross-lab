@@ -146,7 +146,9 @@ const IncomingDrops = () => {
                   const id = getIncomingDropId(drop);
                   const hasArrived = arrived.has(id);
                   const order = orderById.get(drop.orderId ?? DEFAULT_INCOMING_ORDER_ID);
-                  const packLabel = `${drop.quantityPacks} ${drop.quantityPacks === 1 ? "pack" : "packs"}`;
+                  const packLabel = drop.pack?.includes("Multipack")
+                    ? null
+                    : `${drop.quantityPacks} ${drop.quantityPacks === 1 ? "pack" : "packs"}`;
 
                   return (
                     <TableRow key={id} className={hasArrived ? "bg-emerald-500/5" : undefined}>
@@ -168,15 +170,18 @@ const IncomingDrops = () => {
                             </span>
                           )}
                         </div>
+                        {drop.lineage && <p className="mt-1 text-xs font-medium text-muted-foreground">{drop.lineage}</p>}
                         <div className="mt-1.5 flex flex-wrap gap-1.5">
                           {order && (
                             <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-black text-primary">
                               {order.label}
                             </span>
                           )}
-                          <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
-                            {packLabel}
-                          </span>
+                          {packLabel && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {packLabel}
+                            </span>
+                          )}
                           {drop.pack && (
                             <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                               {drop.pack}
@@ -195,6 +200,11 @@ const IncomingDrops = () => {
                           {drop.seedsPerPack && (
                             <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
                               {drop.seedsPerPack} per pack
+                            </span>
+                          )}
+                          {drop.flowering && (
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                              {drop.flowering}
                             </span>
                           )}
                           {drop.note && (

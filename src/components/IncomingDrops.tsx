@@ -207,7 +207,7 @@ const IncomingDrops = () => {
                       <TableCell>
                         {drop.type === "Unknown from cart" ? (
                           <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-black text-muted-foreground">
-                            Type / sex TBC
+                            {drop.sex === "Feminized" ? "Feminized · type TBC" : "Type / sex TBC"}
                           </span>
                         ) : (
                           <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">

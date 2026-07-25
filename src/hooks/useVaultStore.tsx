@@ -5,7 +5,7 @@ import { showError, showSuccess } from "@/utils/toast";
 
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
-const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v2";
+const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v3";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
 
@@ -83,7 +83,10 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
 
   const [incomingArrivedIds, setIncomingArrivedIds] = useState<string[]>(() => {
     const parsed = loadJSON<string[]>(INCOMING_ARRIVALS_STORAGE_KEY, []);
-    return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
+    const validIds = new Set(INCOMING_DROPS.map(getIncomingDropId));
+    return Array.isArray(parsed)
+      ? parsed.filter((id) => typeof id === "string" && validIds.has(id))
+      : [];
   });
 
   const [lots, setLots] = useState<BreedingLot[]>(() => {

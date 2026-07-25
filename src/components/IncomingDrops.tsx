@@ -28,7 +28,11 @@ const IncomingDrops = () => {
     <CollapsibleSection
       title="Incoming Drops"
       icon={<PackageOpen className="h-5 w-5" />}
-      description="Check off a cultivar when it lands. It will immediately join the searchable main vault and all live totals."
+      description={
+        INCOMING_DROPS.length > 0
+          ? "Check off a cultivar when it lands. It will immediately join the searchable main vault and all live totals."
+          : "The previous cart has been cleared. This section is ready for the revised cart."
+      }
       badge={
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
           {pendingSeedTotal} pending
@@ -68,11 +72,18 @@ const IncomingDrops = () => {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-border bg-background">
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className="w-24 text-center font-black">Arrived</TableHead>
+      {INCOMING_DROPS.length === 0 ? (
+        <div className="rounded-2xl border border-dashed border-border bg-background px-6 py-10 text-center">
+          <PackageOpen className="mx-auto h-8 w-8 text-muted-foreground" />
+          <p className="mt-3 font-display text-lg font-black">Incoming cart cleared</p>
+          <p className="mt-1 text-sm text-muted-foreground">No cultivars are currently logged.</p>
+        </div>
+      ) : (
+        <div className="overflow-hidden rounded-2xl border border-border bg-background">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50 hover:bg-muted/50">
+                <TableHead className="w-24 text-center font-black">Arrived</TableHead>
               <TableHead className="min-w-52 font-black">Breeder</TableHead>
               <TableHead className="min-w-80 font-black">Cultivar / Product</TableHead>
               <TableHead className="min-w-48 font-black">Type</TableHead>
@@ -127,9 +138,10 @@ const IncomingDrops = () => {
                 </TableRow>
               );
             })}
-          </TableBody>
-        </Table>
-      </div>
+            </TableBody>
+          </Table>
+        </div>
+      )}
     </CollapsibleSection>
   );
 };

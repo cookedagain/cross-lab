@@ -10,7 +10,21 @@ export type CannabinoidKey =
   | "cbg"
   | "cbga"
   | "cbn"
-  | "cbc";
+  | "cbc"
+  // Varin
+  | "cbdv"
+  | "cbgv"
+  | "cbcv"
+  // Phorol
+  | "thcp"
+  | "cbdp"
+  | "cbcp"
+  // Other
+  | "d8thc"
+  | "cbe"
+  | "cbl"
+  | "cbt"
+  | "cbnd";
 
 export type CannabinoidRange = { min: number; max: number };
 
@@ -26,30 +40,62 @@ type CannabinoidInfo = {
 };
 
 export const CANNABINOIDS: Record<CannabinoidKey, CannabinoidInfo> = {
+  // Major
   thc: { name: "THC", label: "Delta-9 THC", effect: "primary psychoactive, euphoric", color: "#16a34a", reference: 25 },
-  thca: { name: "THCA", label: "THC acid (raw)", effect: "non-intoxicating precursor, anti-inflammatory", color: "#15803d", reference: 28 },
-  thcv: { name: "THCV", label: "Tetrahydrocannabivarin", effect: "energetic, appetite-suppressing", color: "#65a30d", reference: 3 },
   cbd: { name: "CBD", label: "Cannabidiol", effect: "calming, non-intoxicating, balancing", color: "#0ea5e9", reference: 12 },
-  cbda: { name: "CBDA", label: "CBD acid (raw)", effect: "raw precursor, anti-nausea", color: "#0284c7", reference: 14 },
   cbg: { name: "CBG", label: "Cannabigerol", effect: "focus, mild, mother cannabinoid", color: "#a855f7", reference: 2 },
-  cbga: { name: "CBGA", label: "CBG acid (raw)", effect: "precursor to all cannabinoids", color: "#9333ea", reference: 2.5 },
-  cbn: { name: "CBN", label: "Cannabinol", effect: "sedative, formed by THC aging", color: "#a16207", reference: 1.5 },
   cbc: { name: "CBC", label: "Cannabichromene", effect: "mood support, mild, synergistic", color: "#dc2626", reference: 1.5 },
+  cbn: { name: "CBN", label: "Cannabinol", effect: "sedative, formed by THC aging", color: "#a16207", reference: 1.5 },
+  d8thc: { name: "Δ8-THC", label: "Delta-8 THC", effect: "mildly psychoactive, anti-nausea", color: "#22c55e", reference: 1 },
+  // Acid precursors
+  thca: { name: "THCA", label: "THC acid (raw)", effect: "non-intoxicating precursor, anti-inflammatory", color: "#15803d", reference: 28 },
+  cbda: { name: "CBDA", label: "CBD acid (raw)", effect: "raw precursor, anti-nausea", color: "#0284c7", reference: 14 },
+  cbga: { name: "CBGA", label: "CBG acid (raw)", effect: "precursor to all cannabinoids", color: "#9333ea", reference: 2.5 },
+  // Varin chain
+  thcv: { name: "THCV", label: "Tetrahydrocannabivarin", effect: "energetic, appetite-suppressing", color: "#65a30d", reference: 3 },
+  cbdv: { name: "CBDV", label: "Cannabidivarin", effect: "anti-convulsant, neuroprotective", color: "#06b6d4", reference: 1 },
+  cbgv: { name: "CBGV", label: "Cannabigerovarin", effect: "anti-inflammatory, synergistic", color: "#c084fc", reference: 0.5 },
+  cbcv: { name: "CBCV", label: "Cannabichromevarin", effect: "bone health, synergistic", color: "#f43f5e", reference: 0.5 },
+  // Phorol chain
+  thcp: { name: "THCP", label: "Tetrahydrocannabiphorol", effect: "highly potent, extended effects", color: "#ef4444", reference: 0.1 },
+  cbdp: { name: "CBDP", label: "Cannabidiphorol", effect: "potent CBD-like effects", color: "#3b82f6", reference: 0.1 },
+  cbcp: { name: "CBCP", label: "Cannabichromenephorol", effect: "potent mood support", color: "#ec4899", reference: 0.1 },
+  // Other trace
+  cbe: { name: "CBE", label: "Cannabielsoin", effect: "synergistic, CBD metabolite", color: "#f59e0b", reference: 0.3 },
+  cbl: { name: "CBL", label: "Cannabicyclol", effect: "trace degradation product", color: "#6b7280", reference: 0.2 },
+  cbt: { name: "CBT", label: "Cannabicitran", effect: "trace, synergistic potential", color: "#8b5cf6", reference: 0.4 },
+  cbnd: { name: "CBND", label: "Cannabinodiol", effect: "trace, sedative properties", color: "#ca8a04", reference: 0.3 },
 };
 
 export const CANNABINOID_ORDER: CannabinoidKey[] = [
+  // Major
   "thc",
-  "thca",
-  "thcv",
   "cbd",
-  "cbda",
   "cbg",
-  "cbga",
-  "cbn",
   "cbc",
+  "cbn",
+  "d8thc",
+  // Acid precursors
+  "thca",
+  "cbda",
+  "cbga",
+  // Varin chain
+  "thcv",
+  "cbdv",
+  "cbgv",
+  "cbcv",
+  // Phorol chain
+  "thcp",
+  "cbdp",
+  "cbcp",
+  // Other trace
+  "cbe",
+  "cbl",
+  "cbt",
+  "cbnd",
 ];
 
-const round = (value: number) => Math.round(value * 10) / 10;
+const round = (value: number) => Math.round(value * 100) / 100;
 
 // Classifies any cannabinoid value into a category, scaled per-cannabinoid so
 // that e.g. 1% THCV reads "High" while 1% THC reads "Trace".
@@ -86,6 +132,8 @@ export const estimateCannabinoidPanel = (seed: Seed): CannabinoidPanelEntry[] =>
 
   const thcvBoost = /durban|haze|malawi|thai|tangie|doug|power plant|cherry pie/i.test(text) ? 2.4 : 0.4;
   const cbcBoost = /tropical|thai|landrace|afghan|charas|hash/i.test(text) ? 0.9 : 0.5;
+  const phorolBoost = /FM2|italian/i.test(text) ? 0.1 : 0.02; // for THCP, CBDP, etc.
+  const d8Boost = /delta|aged|cured/i.test(text) ? 0.5 : 0.1;
 
   const ranges: Record<CannabinoidKey, CannabinoidRange> = {
     thc: base.thc,
@@ -97,6 +145,23 @@ export const estimateCannabinoidPanel = (seed: Seed): CannabinoidPanelEntry[] =>
     cbga: { min: round(base.cbg.min * 1.1), max: round(base.cbg.max * 1.25) },
     cbn: base.cbn,
     cbc: { min: round(cbcBoost * 0.4), max: round(cbcBoost) },
+
+    // Varin
+    cbdv: { min: round(thcvBoost * 0.1), max: round(thcvBoost * 0.25) },
+    cbgv: { min: round(thcvBoost * 0.05), max: round(thcvBoost * 0.15) },
+    cbcv: { min: round(cbcBoost * 0.1), max: round(cbcBoost * 0.2) },
+
+    // Phorol
+    thcp: { min: round(phorolBoost * 0.1), max: round(phorolBoost) },
+    cbdp: { min: round(phorolBoost * 0.1), max: round(phorolBoost) },
+    cbcp: { min: round(phorolBoost * 0.1), max: round(phorolBoost) },
+
+    // Other
+    d8thc: { min: round(d8Boost * 0.2), max: round(d8Boost) },
+    cbe: { min: 0.0, max: 0.3 },
+    cbl: { min: 0.0, max: 0.2 },
+    cbt: { min: 0.0, max: 0.4 },
+    cbnd: { min: 0.0, max: 0.3 },
   };
 
   return CANNABINOID_ORDER.map((key) => {

@@ -32,6 +32,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { type Seed, type SeedType } from "@/data/seeds";
+import {
+  getIncomingDropId,
+  INCOMING_DROPS,
+} from "@/data/incomingDrops";
 import { clampSeedCount, MULTIPASS_BREEDER, useVault } from "@/hooks/useVaultStore";
 import { SEED_TYPES, typeShort, typeStyles } from "@/lib/seedDisplay";
 import { getKeeperPriority } from "@/lib/keeper";
@@ -121,6 +125,13 @@ const seedCannabinoidMetric = (seed: Seed, key: CannabinoidKey) => {
   return entry?.range.max ?? 0;
 };
 
+const incomingDropSeedType = (drop: (typeof INCOMING_DROPS)[number]): SeedType | null => {
+  if (drop.type === "Regular") return "Regular";
+  if (drop.type === "Autoflower") return "Autoflower";
+  if (drop.type === "Photoperiod" && drop.sex === "Feminized") return "Feminized";
+  return null;
+};
+
 const Index = () => {
   const {
     seedCounts,
@@ -182,17 +193,34 @@ const Index = () => {
     setMinTerpene(1);
   };
 
+  const incomingArrivedIds = useMemo(() => {
+    return multipass
+      .filter((entry) => entry.arrived)
+      .map((entry) => entry.id);
+  }, [multipass]);
+
   const vaultTypeTotals = useMemo(
     () =>
-      SEED_TYPES.map((type) => ({
-        type,
-        total: vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).reduce(
-          (sum, seed) => sum + getSeedCount(seed),
-          0,
-        ),
-        strains: vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && seed.type === type).length,
-      })),
-    [seedCounts, vaultSeeds, getSeedCount],
+      SEED_TYPES.map((type) => {
+        const vaultedSeeds = vaultSeeds.filter(
+          (seed) => seed.breeder !== "Burn Pile" && seed.type === type,
+        );
+        const arrived = new Set(incomingArrivedIds);
+        const pendingIncoming = INCOMING_DROPS.filter(
+          (drop) =>
+            !arrived.has(getIncomingDropId(drop)) &&
+            incomingDropSeedType(drop) === type,
+        );
+
+        return {
+          type,
+          total:
+            vaultedSeeds.reduce((sum, seed) => sum + getSeedCount(seed), 0) +
+            pendingIncoming.reduce((sum, drop) => sum + (drop.count ?? 0), 0),
+          strains: vaultedSeeds.length + pendingIncoming.length,
+        };
+      }),
+    [incomingArrivedIds, seedCounts, vaultSeeds, getSeedCount],
   );
 
   const mainVaultTotal = useMemo(
@@ -376,7 +404,9 @@ const Index = () => {
                 <TypeBadge type={entry.type} />
               </div>
               <p className="font-display text-4xl font-black">{entry.total}</p>
-              <p className="mt-1 text-sm font-semibold opacity-80">{entry.strains} main-vault strains</p>
+              <p className="mt-1 text-sm font-semibold opacity-80">
+                {entry.strains} vault + incoming strains
+              </p>
             </div>
           ))}
         </section>

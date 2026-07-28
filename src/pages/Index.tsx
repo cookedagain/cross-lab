@@ -200,26 +200,32 @@ const Index = () => {
   }, [multipass]);
 
   const vaultTypeTotals = useMemo(
-    () =>
-      SEED_TYPES.map((type) => {
+    () => {
+      const arrived = new Set(incomingArrivedIds);
+
+      return SEED_TYPES.map((type) => {
         const vaultedSeeds = vaultSeeds.filter(
           (seed) => seed.breeder !== "Burn Pile" && seed.type === type,
         );
-        const arrived = new Set(incomingArrivedIds);
         const pendingIncoming = INCOMING_DROPS.filter(
           (drop) =>
             !arrived.has(getIncomingDropId(drop)) &&
             incomingDropSeedType(drop) === type,
         );
+        const vaultTotal = vaultedSeeds.reduce((sum, seed) => sum + getSeedCount(seed), 0);
+        const incomingTotal = pendingIncoming.reduce((sum, drop) => sum + (drop.count ?? 0), 0);
 
         return {
           type,
-          total:
-            vaultedSeeds.reduce((sum, seed) => sum + getSeedCount(seed), 0) +
-            pendingIncoming.reduce((sum, drop) => sum + (drop.count ?? 0), 0),
+          total: vaultTotal + incomingTotal,
+          vaultTotal,
+          incomingTotal,
+          vaultStrains: vaultedSeeds.length,
+          incomingStrains: pendingIncoming.length,
           strains: vaultedSeeds.length + pendingIncoming.length,
         };
-      }),
+      });
+    },
     [incomingArrivedIds, seedCounts, vaultSeeds, getSeedCount],
   );
 
@@ -405,8 +411,13 @@ const Index = () => {
               </div>
               <p className="font-display text-4xl font-black">{entry.total}</p>
               <p className="mt-1 text-sm font-semibold opacity-80">
-                {entry.strains} vault + incoming strains
+                {entry.vaultTotal} in vault · {entry.vaultStrains} strains
               </p>
+              {entry.incomingTotal > 0 && (
+                <p className="mt-1 text-sm font-black text-primary">
+                  +{entry.incomingTotal} coming soon · {entry.incomingStrains} strains
+                </p>
+              )}
             </div>
           ))}
         </section>

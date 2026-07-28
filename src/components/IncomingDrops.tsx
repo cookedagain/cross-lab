@@ -1,4 +1,5 @@
-import { Boxes, CheckCircle2, Clock3, PackageOpen, Store, Users } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ArrowDownUp, Boxes, CheckCircle2, Clock3, PackageOpen, Store, Users } from "lucide-react";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,17 +16,76 @@ import {
   INCOMING_DROPS,
   INCOMING_DROP_TOTAL,
   INCOMING_ORDERS,
+  type IncomingDrop,
 } from "@/data/incomingDrops";
 import { useVault } from "@/hooks/useVaultStore";
 
+type SortKey = "cultivar" | "breeder" | "type" | "count" | "arrived";
+type SortDirection = "asc" | "desc";
+
+const TYPE_ORDER: Record<IncomingDrop["type"], number> = {
+  Regular: 0,
+  Autoflower: 1,
+  Photoperiod: 2,
+  "Unknown from cart": 3,
+};
+
+const SORT_OPTIONS: { value: SortKey; label: string }[] = [
+  { value: "cultivar", label: "Cultivar A → Z" },
+  { value: "breeder", label: "Breeder A → Z" },
+  { value: "type", label: "Type" },
+  { value: "count", label: "Seed count" },
+  { value: "arrived", label: "Arrival status" },
+];
+
 const IncomingDrops = () => {
   const { incomingArrivedIds, setIncomingArrived } = useVault();
+  const [sortKey, setSortKey] = useState<SortKey>("cultivar");
+  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+
   const arrived = new Set(incomingArrivedIds);
   const orderById = new Map(INCOMING_ORDERS.map((order) => [order.id, order]));
   const arrivedDrops = INCOMING_DROPS.filter((drop) => arrived.has(getIncomingDropId(drop)));
   const pendingDrops = INCOMING_DROPS.filter((drop) => !arrived.has(getIncomingDropId(drop)));
   const arrivedSeedTotal = arrivedDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
   const pendingSeedTotal = pendingDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+
+  const sortedDrops = useMemo(() => {
+    return [...INCOMING_DROPS].sort((a, b) => {
+      let comparison = 0;
+
+      switch (sortKey) {
+        case "breeder":
+          comparison = a.breeder.localeCompare(b.breeder);
+          break;
+        case "type":
+          comparison = TYPE_ORDER[a.type] - TYPE_ORDER[b.type];
+          break;
+        case "count": {
+          const aCount = a.count ?? -1;
+          const bCount = b.count ?? -1;
+          comparison = aCount - bCount;
+          break;
+        }
+        case "arrived":
+          comparison =
+            Number(arrived.has(getIncomingDropId(a))) -
+            Number(arrived.has(getIncomingDropId(b)));
+          break;
+        case "cultivar":
+        default:
+          comparison = a.cultivar.localeCompare(b.cultivar);
+          break;
+      }
+
+      if (comparison === 0) comparison = a.cultivar.localeCompare(b.cultivar);
+      return sortDirection === "asc" ? comparison : -comparison;
+    });
+  }, [incomingArrivedIds, sortDirection, sortKey]);
+
+  const toggleSortDirection = () => {
+    setSortDirection((current) => (current === "asc" ? "desc" : "asc"));
+  };
 
   return (
     <CollapsibleSection
@@ -130,6 +190,39 @@ const IncomingDrops = () => {
             <b>{INCOMING_DROP_TOTAL} confirmed minimum seeds</b> are recorded across both incoming sources. No unidentified L2T2 duplicate is included.
           </div>
 
+          <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wide text-primary">Sort incoming drops</p>
+              <p className="mt-1 text-xs font-semibold text-muted-foreground">
+                Unknown seed counts stay at the end when sorting by count.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <label className="flex items-center gap-2 text-xs font-bold text-muted-foreground">
+                <span>Sort by</span>
+                <select
+                  value={sortKey}
+                  onChange={(event) => setSortKey(event.target.value as SortKey)}
+                  className="h-9 rounded-xl border border-border bg-card px-3 text-sm font-bold text-foreground outline-none focus:border-primary"
+                >
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <button
+                type="button"
+                onClick={toggleSortDirection}
+                className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-border bg-card px-3 text-xs font-black text-muted-foreground transition hover:border-primary hover:text-primary"
+              >
+                <ArrowDownUp className="h-4 w-4" />
+                {sortDirection === "asc" ? "Ascending" : "Descending"}
+              </button>
+            </div>
+          </div>
+
           <div className="overflow-hidden rounded-2xl border border-border bg-background">
             <Table>
               <TableHeader>
@@ -142,7 +235,7 @@ const IncomingDrops = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {INCOMING_DROPS.map((drop) => {
+                {sortedDrops.map((drop) => {
                   const id = getIncomingDropId(drop);
                   const hasArrived = arrived.has(id);
                   const order = orderById.get(drop.orderId ?? DEFAULT_INCOMING_ORDER_ID);
@@ -188,7 +281,7 @@ const IncomingDrops = () => {
                             </span>
                           )}
                           {drop.cultivarCount && (
-                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+                            <span className="rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-black text-muted-foreground">
                               {drop.cultivarCount} cultivars
                             </span>
                           )}

@@ -11,6 +11,7 @@ export type Seed = {
 type SeedEntry = {
   name: string;
   count: number;
+  type?: SeedType;
 };
 
 const raw: { breeder: string; seeds: SeedEntry[] }[] = [
@@ -170,6 +171,17 @@ const raw: { breeder: string; seeds: SeedEntry[] }[] = [
     ],
   },
   {
+    breeder: "7 East Genetics",
+    seeds: [{ name: "Freaks of Dank", count: 20 }],
+  },
+  {
+    breeder: "G13 Labs",
+    seeds: [
+      { name: "Cheeselicious", count: 3, type: "Unknown Photo" },
+      { name: "Pineapple Express × Runtz 13", count: 3, type: "Unknown Photo" },
+    ],
+  },
+  {
     breeder: "Burn Pile",
     seeds: [
       { name: "Amnesia Haze Auto", count: 4 },
@@ -239,9 +251,10 @@ const FEMINIZED_BREEDERS = new Set([
   "Brothers Grimm",
 ]);
 
-const REGULAR_BREEDERS = new Set(["Binchickens Genetics", "Terpyz Mutant Genetics"]);
+const REGULAR_BREEDERS = new Set(["Binchickens Genetics", "Terpyz Mutant Genetics", "7 East Genetics"]);
 
 const getSeedType = (breeder: string, seed: SeedEntry): SeedType => {
+  if (seed.type) return seed.type;
   if (/\bauto\b/i.test(seed.name)) return "Autoflower";
   if (breeder === "Ethos Genetics") return ETHOS_REGULAR.has(seed.name) ? "Regular" : "Feminized";
   if (REGULAR_BREEDERS.has(breeder)) return "Regular";

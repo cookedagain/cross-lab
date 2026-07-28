@@ -59,6 +59,15 @@ export const BREEDER_INFO: Record<string, BreederInfo> = {
     origin: "Australia",
     knownFor: ["Heavy yield", "Exodus Cheese", "Autos"],
   },
+  "7 East Genetics": {
+    blurb: "East Coast genetics focused on distinctive regular-seed lines and preservation-oriented breeding stock.",
+    knownFor: ["Regular seeds", "Freaks of Dank"],
+  },
+  "G13 Labs": {
+    blurb:
+      "G13 Labs banner for Cheeselicious and Pineapple Express × Runtz 13 seed lots associated with Greenspace AU breeding.",
+    knownFor: ["Cheeselicious", "Pineapple Express × Runtz 13", "Greenspace AU-bred stock"],
+  },
   "Burn Pile": {
     blurb:
       "Utility shelf only — white-label / potentially mislabelled stock kept for one-and-only smoke/test runs. Not a breeding or preservation source.",

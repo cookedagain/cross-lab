@@ -179,6 +179,8 @@ const BREEDER_FLAIR: Record<string, string[]> = {
   "Happy Valley Genetics": ["Valley", "Happy"],
   "Brothers Grimm": ["Grimm", "Fable"],
   "Greenspace AU": ["Greenspace", "Orbit"],
+  "7 East Genetics": ["7 East", "Dank", "Freaks"],
+  "G13 Labs": ["G13", "Greenspace AU"],
   "Burn Pile": ["Burn Pile", "House"],
 };
 

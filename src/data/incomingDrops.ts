@@ -14,7 +14,7 @@ export type IncomingDrop = {
   orderId?: string;
   breeder: string;
   cultivar: string;
-  type: "Photoperiod" | "Autoflower" | "Unknown from cart";
+  type: "Photoperiod" | "Autoflower" | "Regular" | "Unknown from cart";
   sex: "Feminized" | "Unknown from cart";
   count: number | null;
   quantityPacks: number;
@@ -390,51 +390,51 @@ export const INCOMING_DROPS: IncomingDrop[] = [
     orderId: "7-east-genetics-2026-07-28",
     breeder: "7 East Genetics",
     cultivar: "Palestinian Princess F2",
-    type: "Unknown from cart",
+    type: "Regular",
     sex: "Unknown from cart",
     count: 15,
     quantityPacks: 1,
-    note: "Paid product; type and sex not provided",
+    note: "Paid regular-seed product",
   },
   {
     orderId: "7-east-genetics-2026-07-28",
     breeder: "7 East Genetics",
     cultivar: "Lebanese Dragon BX1",
-    type: "Unknown from cart",
+    type: "Regular",
     sex: "Unknown from cart",
     count: 15,
     quantityPacks: 1,
-    note: "Paid product; type and sex not provided",
+    note: "Paid regular-seed product",
   },
   {
     orderId: "7-east-genetics-2026-07-28",
     breeder: "7 East Genetics",
     cultivar: "Legend of Laos",
-    type: "Unknown from cart",
+    type: "Regular",
     sex: "Unknown from cart",
     count: 15,
     quantityPacks: 1,
-    note: "Paid product; type and sex not provided",
+    note: "Paid regular-seed product",
   },
   {
     orderId: "7-east-genetics-2026-07-28",
     breeder: "7 East Genetics",
     cultivar: "Blueberry Bastard F4",
-    type: "Unknown from cart",
+    type: "Regular",
     sex: "Unknown from cart",
     count: 15,
     quantityPacks: 1,
-    note: "Paid product; type and sex not provided",
+    note: "Paid regular-seed product",
   },
   {
     orderId: "7-east-genetics-2026-07-28",
     breeder: "7 East Genetics",
     cultivar: "Purple Dragon Balls F5",
-    type: "Unknown from cart",
+    type: "Regular",
     sex: "Unknown from cart",
     count: 15,
     quantityPacks: 1,
-    note: "Paid product; type and sex not provided",
+    note: "Paid regular-seed product",
   },
   {
     orderId: "l2t2-multipass",
@@ -557,11 +557,13 @@ export const getIncomingDropId = (drop: IncomingDrop) =>
 
 export const incomingDropToSeed = (drop: IncomingDrop): Seed => {
   const type: SeedType =
-    drop.type === "Autoflower"
-      ? "Autoflower"
-      : drop.sex === "Feminized"
-        ? "Feminized"
-        : "Unknown Photo";
+    drop.type === "Regular"
+      ? "Regular"
+      : drop.type === "Autoflower"
+        ? "Autoflower"
+        : drop.sex === "Feminized"
+          ? "Feminized"
+          : "Unknown Photo";
 
   return {
     id: getIncomingDropId(drop),

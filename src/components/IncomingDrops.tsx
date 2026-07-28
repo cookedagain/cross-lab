@@ -219,6 +219,10 @@ const IncomingDrops = () => {
                           <span className="inline-flex rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-black text-muted-foreground">
                             {drop.sex === "Feminized" ? "Feminized · type TBC" : "Type / sex TBC"}
                           </span>
+                        ) : drop.type === "Regular" ? (
+                          <span className="inline-flex rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-1 text-xs font-black text-blue-700 dark:text-blue-300">
+                            Regular seeds
+                          </span>
                         ) : (
                           <span className="inline-flex rounded-full border border-primary/20 bg-primary/10 px-2.5 py-1 text-xs font-black text-primary">
                             {drop.sex === "Unknown from cart" ? drop.type : `${drop.sex} ${drop.type}`}

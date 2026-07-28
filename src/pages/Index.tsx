@@ -9,6 +9,7 @@ import RandomSeedPicker from "@/components/RandomSeedPicker";
 import IncomingDrops from "@/components/IncomingDrops";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedPickups from "@/components/RecommendedPickups";
+import CannabinoidDetailsTable from "@/components/CannabinoidDetailsTable";
 import { TypeBadge } from "@/components/TypeBadge";
 import { RarityBadge } from "@/components/RarityBadge";
 import StrainName from "@/components/StrainName";
@@ -807,6 +808,8 @@ const Index = () => {
             </div>
           </div>
         </CollapsibleSection>
+
+        <CannabinoidDetailsTable seeds={vaultSeeds} />
 
         <RecommendedPickups />
 

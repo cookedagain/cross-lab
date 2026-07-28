@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { cloneSlotSchema, motherSchema } from "@/lib/validation";
+import { readSecure, writeSecure } from "@/lib/secureStorage";
 import { showSuccess } from "@/utils/toast";
 
 const MOTHERS_KEY = "crosslab-clone-mothers";
@@ -63,20 +65,54 @@ type CloneRegisterValue = {
 const CloneRegisterContext = createContext<CloneRegisterValue | null>(null);
 
 export const CloneRegisterProvider = ({ children }: { children: ReactNode }) => {
-  const [mothers, setMothers] = useState<Mother[]>(() => loadJSON<Mother[]>(MOTHERS_KEY, []));
-  const [slots, setSlots] = useState<CloneSlot[]>(() => {
-    const stored = loadJSON<CloneSlot[]>(SLOTS_KEY, []);
-    if (!Array.isArray(stored) || stored.length !== CLONE_SLOT_COUNT) return emptySlots();
-    return stored;
+  const [mothers, setMothers] = useState<Mother[]>(() => {
+    const stored = loadJSON<unknown>(MOTHERS_KEY, []);
+    if (!Array.isArray(stored)) return [];
+    return stored.slice(0, 1000).flatMap((mother) => {
+      const result = motherSchema.safeParse(mother);
+      return result.success ? [result.data as Mother] : [];
+    });
   });
+  const [slots, setSlots] = useState<CloneSlot[]>(() => {
+    const stored = loadJSON<unknown>(SLOTS_KEY, []);
+    if (!Array.isArray(stored) || stored.length !== CLONE_SLOT_COUNT) return emptySlots();
+    const validated = stored.flatMap((slot) => {
+      const result = cloneSlotSchema.safeParse(slot);
+      return result.success ? [result.data as CloneSlot] : [];
+    });
+    return validated.length === CLONE_SLOT_COUNT ? validated : emptySlots();
+  });
+  const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(MOTHERS_KEY, JSON.stringify(mothers));
-  }, [mothers]);
+    let active = true;
+    Promise.all([readSecure<unknown>(MOTHERS_KEY, []), readSecure<unknown>(SLOTS_KEY, [])]).then(([storedMothers, storedSlots]) => {
+      if (!active) return;
+      if (Array.isArray(storedMothers)) {
+        setMothers(storedMothers.slice(0, 1000).flatMap((mother) => {
+          const result = motherSchema.safeParse(mother);
+          return result.success ? [result.data as Mother] : [];
+        }));
+      }
+      if (Array.isArray(storedSlots)) {
+        const validated = storedSlots.flatMap((slot) => {
+          const result = cloneSlotSchema.safeParse(slot);
+          return result.success ? [result.data as CloneSlot] : [];
+        });
+        if (validated.length === CLONE_SLOT_COUNT) setSlots(validated);
+      }
+      setStorageReady(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(SLOTS_KEY, JSON.stringify(slots));
-  }, [slots]);
+    if (storageReady) void writeSecure(MOTHERS_KEY, mothers);
+  }, [mothers, storageReady]);
+
+  useEffect(() => {
+    if (storageReady) void writeSecure(SLOTS_KEY, slots);
+  }, [slots, storageReady]);
 
   const addMother = (data: Omit<Mother, "id" | "dateAdded">) => {
     setMothers((current) => [

@@ -27,7 +27,8 @@ const QUICK_PROMPTS = [
 ];
 
 const AiVaultChat = () => {
-  const { hasKey } = useAiSettings();
+  const { hasKey, clearKey } = useAiSettings();
+
   const { vaultSeeds, getSeedCount } = useVault();
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [input, setInput] = useState("");
@@ -77,14 +78,15 @@ const AiVaultChat = () => {
             Vault sommelier
           </SheetTitle>
           <SheetDescription>Ask about your strains — answers are grounded in your vault.</SheetDescription>
-          <div className="pt-1">
+          <div className="flex items-center justify-between gap-2 pt-1">
             <ConfidenceBadge meta={confidenceMeta.aiGenerated} />
+            {hasKey && <button type="button" className="text-[10px] font-bold text-muted-foreground underline" onClick={clearKey}>Remove session key</button>}
           </div>
         </SheetHeader>
 
         {!hasKey ? (
           <div className="p-5">
-            <AiKeyForm description="Paste your OpenAI API key to chat with your vault." />
+            <AiKeyForm description="Paste your Gemini API key to chat with your vault for this session." />
           </div>
         ) : (
           <>

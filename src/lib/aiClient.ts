@@ -1,12 +1,10 @@
-// Lightweight AI client for Vault Lab.
-//
-// To keep things simple for a personal tool, the user supplies their own
-// Gemini API key, which is stored in localStorage and used to call the
-// Gemini API directly from the browser. No key ships with
-// the app and nothing is sent anywhere except Google.
+import { hasExternalDataConsent } from "@/lib/privacy";
 
-const KEY_STORAGE = "vault-lab-ai-key";
+const LEGACY_KEY_STORAGE = "vault-lab-ai-key";
 const KEY_EVENT = "vault-lab-ai-key-change";
+const MAX_MESSAGE_CHARS = 6000;
+const MAX_HISTORY_MESSAGES = 20;
+const MAX_TOTAL_CHARS = 24000;
 
 export const AI_MODEL = "gemini-2.5-flash";
 const BASE_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -14,30 +12,26 @@ const BASE_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
 export type AiRole = "system" | "user" | "assistant";
 export type AiMessage = { role: AiRole; content: string };
 
+let inMemoryApiKey = "";
+
 export function getStoredApiKey(): string {
-  try {
-    return localStorage.getItem(KEY_STORAGE) ?? "";
-  } catch {
-    return "";
-  }
+  return inMemoryApiKey;
 }
 
 export function setStoredApiKey(key: string) {
+  inMemoryApiKey = key.trim().slice(0, 300);
   try {
-    const trimmed = key.trim();
-    if (trimmed) {
-      localStorage.setItem(KEY_STORAGE, trimmed);
-    } else {
-      localStorage.removeItem(KEY_STORAGE);
-    }
+    // Remove keys saved by older versions immediately. Keys are intentionally
+    // held only in this tab's memory and are never persisted.
+    localStorage.removeItem(LEGACY_KEY_STORAGE);
     window.dispatchEvent(new Event(KEY_EVENT));
   } catch {
-    // ignore storage failures
+    // ignore browser storage/event failures
   }
 }
 
 export function hasApiKey(): boolean {
-  return getStoredApiKey().length > 0;
+  return inMemoryApiKey.length > 0;
 }
 
 export const AI_KEY_EVENT = KEY_EVENT;
@@ -49,50 +43,55 @@ export class MissingKeyError extends Error {
   }
 }
 
+export class PrivacyConsentError extends Error {
+  constructor() {
+    super("Privacy consent is required before sending vault data to an external service.");
+    this.name = "PrivacyConsentError";
+  }
+}
+
 type CallOptions = {
   temperature?: number;
   json?: boolean;
 };
 
-// Helper to convert OpenAI-style messages to Gemini-style content
-function convertMessagesToGeminiContent(messages: AiMessage[]) {
-  const contents = [];
-  let systemInstruction = "";
+const limitContent = (content: string) => content.trim().slice(0, MAX_MESSAGE_CHARS);
 
-  for (const message of messages) {
+function convertMessagesToGeminiContent(messages: AiMessage[]) {
+  const systemParts: string[] = [];
+  const contents: { role: "user" | "model"; parts: [{ text: string }] }[] = [];
+  let totalChars = 0;
+
+  for (const message of messages.slice(-MAX_HISTORY_MESSAGES)) {
+    const content = limitContent(message.content);
+    if (!content) continue;
     if (message.role === "system") {
-      // Gemini uses a systemInstruction field for system messages
-      systemInstruction = message.content;
+      systemParts.push(content);
       continue;
     }
-
-    // Map roles: 'user' -> 'user', 'assistant' -> 'model'
-    const role = message.role === "assistant" ? "model" : "user";
+    if (totalChars + content.length > MAX_TOTAL_CHARS) break;
+    totalChars += content.length;
     contents.push({
-      role: role,
-      parts: [{ text: message.content }],
+      role: message.role === "assistant" ? "model" : "user",
+      parts: [{ text: content }],
     });
   }
 
+  const systemInstruction = systemParts.length
+    ? systemParts.join("\n\n--- FIXED POLICY / UNTRUSTED DATA BOUNDARY ---\n\n")
+    : undefined;
   return { contents, systemInstruction };
 }
 
 export async function callAI(messages: AiMessage[], options: CallOptions = {}): Promise<string> {
   const key = getStoredApiKey();
   if (!key) throw new MissingKeyError();
+  if (!hasExternalDataConsent()) throw new PrivacyConsentError();
 
   const { contents, systemInstruction } = convertMessagesToGeminiContent(messages);
-
-  const endpoint = `${BASE_ENDPOINT}/${AI_MODEL}:generateContent?key=${key}`;
-
-  const config: any = {
-    temperature: options.temperature ?? 0.7,
-  };
-
-  if (options.json) {
-    // Use responseMimeType for JSON output
-    config.responseMimeType = "application/json";
-  }
+  const endpoint = `${BASE_ENDPOINT}/${AI_MODEL}:generateContent`;
+  const config: Record<string, unknown> = { temperature: options.temperature ?? 0.7 };
+  if (options.json) config.responseMimeType = "application/json";
 
   let response: Response;
   try {
@@ -100,13 +99,12 @@ export async function callAI(messages: AiMessage[], options: CallOptions = {}): 
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "x-goog-api-key": key,
       },
       body: JSON.stringify({
-        contents: contents,
-        config: {
-          ...config,
-          ...(systemInstruction ? { systemInstruction } : {}),
-        },
+        contents,
+        ...(systemInstruction ? { systemInstruction: { parts: [{ text: systemInstruction }] } } : {}),
+        generationConfig: config,
       }),
     });
   } catch {
@@ -131,6 +129,5 @@ export async function callAI(messages: AiMessage[], options: CallOptions = {}): 
   }
 
   const data = await response.json();
-  // Gemini response structure: data.candidates[0].content.parts[0].text
   return data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ?? "";
 }

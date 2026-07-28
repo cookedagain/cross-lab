@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { archivedProductSchema, rotationProductSchema } from "@/lib/validation";
+import { readSecure, writeSecure } from "@/lib/secureStorage";
 import { showSuccess } from "@/utils/toast";
 
 const STORAGE_KEY = "vaultlab-rotation-products";
@@ -67,20 +69,52 @@ const loadJSON = <T,>(key: string, fallback: T): T => {
 const makeId = () => `rotation-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const RotationProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<RotationProduct[]>(() =>
-    loadJSON<RotationProduct[]>(STORAGE_KEY, []).map((product) => ({ rating: 0, ...product })),
-  );
-  const [archived, setArchived] = useState<ArchivedProduct[]>(() =>
-    loadJSON<ArchivedProduct[]>(ARCHIVE_STORAGE_KEY, []),
-  );
+  const [products, setProducts] = useState<RotationProduct[]>(() => {
+    const stored = loadJSON<unknown>(STORAGE_KEY, []);
+    if (!Array.isArray(stored)) return [];
+    return stored.slice(0, 1000).flatMap((product) => {
+      const result = rotationProductSchema.safeParse({ rating: 0, ...product });
+      return result.success ? [result.data as RotationProduct] : [];
+    });
+  });
+  const [archived, setArchived] = useState<ArchivedProduct[]>(() => {
+    const stored = loadJSON<unknown>(ARCHIVE_STORAGE_KEY, []);
+    if (!Array.isArray(stored)) return [];
+    return stored.slice(0, 1000).flatMap((product) => {
+      const result = archivedProductSchema.safeParse(product);
+      return result.success ? [result.data as ArchivedProduct] : [];
+    });
+  });
+  const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(products));
-  }, [products]);
+    let active = true;
+    Promise.all([readSecure<unknown>(STORAGE_KEY, []), readSecure<unknown>(ARCHIVE_STORAGE_KEY, [])]).then(([storedProducts, storedArchived]) => {
+      if (!active) return;
+      if (Array.isArray(storedProducts)) {
+        setProducts(storedProducts.slice(0, 1000).flatMap((product) => {
+          const result = rotationProductSchema.safeParse({ rating: 0, ...product });
+          return result.success ? [result.data as RotationProduct] : [];
+        }));
+      }
+      if (Array.isArray(storedArchived)) {
+        setArchived(storedArchived.slice(0, 1000).flatMap((product) => {
+          const result = archivedProductSchema.safeParse(product);
+          return result.success ? [result.data as ArchivedProduct] : [];
+        }));
+      }
+      setStorageReady(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(ARCHIVE_STORAGE_KEY, JSON.stringify(archived));
-  }, [archived]);
+    if (storageReady) void writeSecure(STORAGE_KEY, products);
+  }, [products, storageReady]);
+
+  useEffect(() => {
+    if (storageReady) void writeSecure(ARCHIVE_STORAGE_KEY, archived);
+  }, [archived, storageReady]);
 
   const addProduct = (data: Omit<RotationProduct, "id">) => {
     setProducts((current) => [{ ...data, id: makeId() }, ...current]);

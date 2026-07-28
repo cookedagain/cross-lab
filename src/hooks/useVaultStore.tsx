@@ -1,6 +1,8 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/seeds";
 import { getIncomingDropId, INCOMING_DROPS, INCOMING_ORDERS, incomingDropToSeed } from "@/data/incomingDrops";
+import { backupSchema, multipassSchema, breedingLotSchema, seedCountsSchema } from "@/lib/validation";
+import { readSecure, writeSecure } from "@/lib/secureStorage";
 import { showError, showSuccess } from "@/utils/toast";
 
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
@@ -69,16 +71,18 @@ const loadJSON = <T,>(key: string, fallback: T): T => {
 
 export const VaultProvider = ({ children }: { children: ReactNode }) => {
   const [seedCounts, setSeedCounts] = useState<Record<string, number>>(() => {
-    const parsed = loadJSON<Record<string, unknown>>(INVENTORY_STORAGE_KEY, {});
-    const cleaned = Object.fromEntries(
-      Object.entries(parsed).map(([id, value]) => [id, clampSeedCount(Number(value))]),
-    );
-    return { ...DEFAULT_SEED_COUNTS, ...cleaned };
+    const parsed = loadJSON<unknown>(INVENTORY_STORAGE_KEY, {});
+    const result = seedCountsSchema.safeParse(parsed);
+    return { ...DEFAULT_SEED_COUNTS, ...(result.success ? result.data : {}) };
   });
 
   const [multipass, setMultipass] = useState<MultipassEntry[]>(() => {
-    const parsed = loadJSON<MultipassEntry[]>(MULTIPASS_STORAGE_KEY, []);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = loadJSON<unknown>(MULTIPASS_STORAGE_KEY, []);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 1000).flatMap((entry) => {
+      const result = multipassSchema.safeParse(entry);
+      return result.success ? [result.data as MultipassEntry] : [];
+    });
   });
 
   const [incomingArrivedIds, setIncomingArrivedIds] = useState<string[]>(() => {
@@ -90,25 +94,62 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   });
 
   const [lots, setLots] = useState<BreedingLot[]>(() => {
-    const parsed = loadJSON<BreedingLot[]>(LOTS_STORAGE_KEY, []);
-    return Array.isArray(parsed) ? parsed : [];
+    const parsed = loadJSON<unknown>(LOTS_STORAGE_KEY, []);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.slice(0, 1000).flatMap((lot) => {
+      const result = breedingLotSchema.safeParse(lot);
+      return result.success ? [result.data as BreedingLot] : [];
+    });
   });
+  const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
-    window.localStorage.setItem(INVENTORY_STORAGE_KEY, JSON.stringify(seedCounts));
-  }, [seedCounts]);
+    let active = true;
+    Promise.all([
+      readSecure<unknown>(INVENTORY_STORAGE_KEY, {}),
+      readSecure<unknown>(MULTIPASS_STORAGE_KEY, []),
+      readSecure<unknown>(INCOMING_ARRIVALS_STORAGE_KEY, []),
+      readSecure<unknown>(LOTS_STORAGE_KEY, []),
+    ]).then(([counts, storedMultipass, storedArrived, storedLots]) => {
+      if (!active) return;
+      const countResult = seedCountsSchema.safeParse(counts);
+      if (countResult.success) setSeedCounts({ ...DEFAULT_SEED_COUNTS, ...countResult.data });
+      if (Array.isArray(storedMultipass)) {
+        setMultipass(storedMultipass.slice(0, 1000).flatMap((entry) => {
+          const result = multipassSchema.safeParse(entry);
+          return result.success ? [result.data as MultipassEntry] : [];
+        }));
+      }
+      if (Array.isArray(storedArrived)) {
+        const validIds = new Set(INCOMING_DROPS.map(getIncomingDropId));
+        setIncomingArrivedIds(storedArrived.filter((id): id is string => typeof id === "string" && validIds.has(id)).slice(0, 1000));
+      }
+      if (Array.isArray(storedLots)) {
+        setLots(storedLots.slice(0, 1000).flatMap((lot) => {
+          const result = breedingLotSchema.safeParse(lot);
+          return result.success ? [result.data as BreedingLot] : [];
+        }));
+      }
+      setStorageReady(true);
+    });
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(MULTIPASS_STORAGE_KEY, JSON.stringify(multipass));
-  }, [multipass]);
+    if (storageReady) void writeSecure(INVENTORY_STORAGE_KEY, seedCounts);
+  }, [seedCounts, storageReady]);
 
   useEffect(() => {
-    window.localStorage.setItem(INCOMING_ARRIVALS_STORAGE_KEY, JSON.stringify(incomingArrivedIds));
-  }, [incomingArrivedIds]);
+    if (storageReady) void writeSecure(MULTIPASS_STORAGE_KEY, multipass);
+  }, [multipass, storageReady]);
 
   useEffect(() => {
-    window.localStorage.setItem(LOTS_STORAGE_KEY, JSON.stringify(lots));
-  }, [lots]);
+    if (storageReady) void writeSecure(INCOMING_ARRIVALS_STORAGE_KEY, incomingArrivedIds);
+  }, [incomingArrivedIds, storageReady]);
+
+  useEffect(() => {
+    if (storageReady) void writeSecure(LOTS_STORAGE_KEY, lots);
+  }, [lots, storageReady]);
 
   const arrivedSeeds = useMemo<Seed[]>(
     () =>
@@ -191,31 +232,24 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
 
   const importData = (json: string) => {
     try {
-      const parsed = JSON.parse(json) as {
-        seedCounts?: Record<string, unknown>;
-        multipass?: MultipassEntry[];
-        incomingArrivedIds?: string[];
-        incomingDrops?: {
-          arrivedIds?: string[];
-        };
-        lots?: BreedingLot[];
-      };
-      if (parsed.seedCounts) {
-        const cleaned = Object.fromEntries(
-          Object.entries(parsed.seedCounts).map(([id, value]) => [id, clampSeedCount(Number(value))]),
-        );
-        setSeedCounts({ ...DEFAULT_SEED_COUNTS, ...cleaned });
+      const parsed = JSON.parse(json) as unknown;
+      const result = backupSchema.safeParse(parsed);
+      if (!result.success) {
+        showError("That backup failed validation and was not imported.");
+        return;
       }
-      if (Array.isArray(parsed.multipass)) setMultipass(parsed.multipass);
-      const importedArrivedIds = parsed.incomingDrops?.arrivedIds ?? parsed.incomingArrivedIds;
-      if (Array.isArray(importedArrivedIds)) {
+      const data = result.data;
+      if (data.seedCounts) setSeedCounts({ ...DEFAULT_SEED_COUNTS, ...data.seedCounts });
+      if (data.multipass) setMultipass(data.multipass as MultipassEntry[]);
+      const importedArrivedIds = data.incomingDrops?.arrivedIds ?? data.incomingArrivedIds;
+
+      if (importedArrivedIds) {
         const validIds = new Set(INCOMING_DROPS.map(getIncomingDropId));
-        setIncomingArrivedIds(
-          importedArrivedIds.filter((id): id is string => typeof id === "string" && validIds.has(id)),
-        );
+        setIncomingArrivedIds(importedArrivedIds.filter((id) => validIds.has(id)));
       }
-      if (Array.isArray(parsed.lots)) setLots(parsed.lots);
-      showSuccess("Vault data restored from backup.");
+      if (data.lots) setLots(data.lots as BreedingLot[]);
+      showSuccess("Validated vault data restored from backup.");
+
     } catch {
       showError("That file could not be read as a CrossLab backup.");
     }

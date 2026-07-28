@@ -1,39 +1,35 @@
-// Quick CannaReviews lookup for rotation products.
-//
-// Browser-side scraping is unreliable, so this follows the same pattern as the
-// other scrapers in the app: it attempts a public search fetch, extracts a short
-// snippet + rating when it can, and always returns a usable search link. Results
-// are cached per product for 24 hours so it behaves like a daily refresh.
+import { hasExternalDataConsent } from "@/lib/privacy";
 
-const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
-const CACHE_KEY = "vaultlab-cannareviews-cache-v1";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // once a day
+const CANNAREVIEWS_BASE = "https://cannareviews.health";
+const CACHE_KEY = "vaultlab-cannareviews-cache-v2";
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const LOOKUP_TIMEOUT_MS = 8000;
+const MAX_QUERY_CHARS = 180;
 
-export const CANNAREVIEWS_SITE = "https://cannareviews.health";
+export const CANNAREVIEWS_SITE = CANNAREVIEWS_BASE;
 
-export const cannareviewsSearchUrl = (query: string) =>
-  `${CANNAREVIEWS_SITE}/?s=${encodeURIComponent(query)}`;
+const cleanQuery = (value: string) => value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_CHARS);
+export const cannareviewsSearchUrl = (query: string) => `${CANNAREVIEWS_BASE}/?s=${encodeURIComponent(cleanQuery(query))}`;
 
 export type CannaReviewResult = {
   status: "resolved" | "not-found" | "error";
   query: string;
-  rating?: number; // out of 5 when found
+  rating?: number;
   snippet?: string;
-  url: string; // always a usable link to view more
+  url: string;
   note: string;
   syncedAt: string;
 };
 
 type ReviewCache = Record<string, CannaReviewResult>;
-
-const cacheKeyFor = (name: string, brand?: string) =>
-  `${name} ${brand ?? ""}`.toLowerCase().replace(/\s+/g, " ").trim();
+const cacheKeyFor = (name: string, brand?: string) => cleanQuery(`${name} ${brand ?? ""}`).toLowerCase();
 
 const readCache = (): ReviewCache => {
   if (typeof window === "undefined") return {};
   try {
     const stored = window.localStorage.getItem(CACHE_KEY);
-    return stored ? (JSON.parse(stored) as ReviewCache) : {};
+    const parsed = stored ? JSON.parse(stored) : {};
+    return parsed && typeof parsed === "object" ? (parsed as ReviewCache) : {};
   } catch {
     return {};
   }
@@ -49,27 +45,18 @@ const writeCache = (cache: ReviewCache) => {
 };
 
 const isFresh = (syncedAt: string) => Date.now() - new Date(syncedAt).getTime() < CACHE_TTL_MS;
+const htmlToText = (html: string) => html.slice(0, 1000000)
+  .replace(/<script[\s\S]*?<\/script>/gi, " ")
+  .replace(/<style[\s\S]*?<\/style>/gi, " ")
+  .replace(/<[^>]+>/g, " ")
+  .replace(/&nbsp;/g, " ")
+  .replace(/&#39;/g, "'")
+  .replace(/&quot;/g, '"')
+  .replace(/\s+/g, " ")
+  .trim();
 
-const htmlToText = (html: string) =>
-  html
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&#39;/g, "'")
-    .replace(/&quot;/g, '"')
-    .replace(/&/g, "&")
-    .replace(/\s+/g, " ")
-    .trim();
-
-// Pull a rough star rating out of the page text if one is present.
 const extractRating = (text: string): number | undefined => {
-  const patterns = [
-    /([0-5](?:\.\d)?)\s*\/\s*5/,
-    /rated\s*([0-5](?:\.\d)?)/i,
-    /rating[:\s]*([0-5](?:\.\d)?)/i,
-  ];
-  for (const pattern of patterns) {
+  for (const pattern of [/([0-5](?:\.\d)?)\s*\/\s*5/, /rated\s*([0-5](?:\.\d)?)/i, /rating[:\s]*([0-5](?:\.\d)?)/i]) {
     const match = text.match(pattern);
     if (match) {
       const value = Number(match[1]);
@@ -80,65 +67,54 @@ const extractRating = (text: string): number | undefined => {
 };
 
 const buildSnippet = (text: string, query: string): string | undefined => {
-  const lowered = text.toLowerCase();
   const term = query.toLowerCase().split(" ")[0];
-  const index = lowered.indexOf(term);
+  const index = text.toLowerCase().indexOf(term);
   if (index === -1) return undefined;
-  const start = Math.max(0, index - 60);
-  const snippet = text.slice(start, start + 220).trim();
+  const snippet = text.slice(Math.max(0, index - 60), index + 160).trim();
   return snippet.length > 20 ? `…${snippet}…` : undefined;
 };
 
+const fetchWithTimeout = async (url: string) => {
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
+  try {
+    return await fetch(url, { signal: controller.signal, headers: { Accept: "text/html" } });
+  } finally {
+    window.clearTimeout(timer);
+  }
+};
+
 export async function lookupCannaReview(name: string, brand?: string): Promise<CannaReviewResult> {
+  if (!hasExternalDataConsent()) throw new Error("Privacy consent is required before external lookups.");
   const syncedAt = new Date().toISOString();
-  const query = `${name} ${brand ?? ""}`.trim();
+  const query = cleanQuery(`${name} ${brand ?? ""}`);
   const url = cannareviewsSearchUrl(query);
   const key = cacheKeyFor(name, brand);
-
   const cache = readCache();
   const cached = cache[key];
   if (cached && isFresh(cached.syncedAt)) return cached;
 
   try {
-    const target = cannareviewsSearchUrl(query);
-    const response = await fetch(`${ALL_ORIGINS_RAW}${encodeURIComponent(target)}`);
+    const response = await fetchWithTimeout(url);
     if (!response.ok) throw new Error("CannaReviews unreachable");
-
     const text = htmlToText(await response.text());
     const rating = extractRating(text);
     const snippet = buildSnippet(text, query);
-
     const hasResult = Boolean(rating || snippet) && !/nothing found|no results/i.test(text);
-
-    const result: CannaReviewResult = hasResult
-      ? {
-          status: "resolved",
-          query,
-          rating,
-          snippet,
-          url,
-          note: "Pulled from CannaReviews search results and cached for 24 hours.",
-          syncedAt,
-        }
-      : {
-          status: "not-found",
-          query,
-          url,
-          note: "No confident CannaReviews match found. Tap to search the site directly.",
-          syncedAt,
-        };
-
+    const result: CannaReviewResult = {
+      status: hasResult ? "resolved" : "not-found",
+      query,
+      ...(rating === undefined ? {} : { rating }),
+      ...(snippet ? { snippet } : {}),
+      url,
+      note: hasResult ? "Pulled directly from the CannaReviews site and cached for 24 hours. Treat scraped content as advisory." : "No confident match found. Tap to search the site directly.",
+      syncedAt,
+    };
     cache[key] = result;
     writeCache(cache);
     return result;
   } catch {
-    const result: CannaReviewResult = {
-      status: "error",
-      query,
-      url,
-      note: "Couldn't reach CannaReviews from the browser. Tap to open the search directly.",
-      syncedAt,
-    };
+    const result: CannaReviewResult = { status: "error", query, url, note: "CannaReviews could not be reached directly. Tap to open the search manually.", syncedAt };
     cache[key] = result;
     writeCache(cache);
     return result;

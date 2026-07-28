@@ -1,17 +1,21 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, PackageSearch, RefreshCw } from "lucide-react";
+import { ExternalLink, PackageSearch, RefreshCw, ShieldCheck } from "lucide-react";
 import { fetchBreederAvailability, type BreederAvailability as Availability } from "@/lib/breederCatalog";
 import { Button } from "@/components/ui/button";
+import { PRIVACY_NOTICE, useExternalDataConsent } from "@/lib/privacy";
 
 const dateLabel = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }) : "";
 
 const BreederAvailability = ({ breeder }: { breeder: string }) => {
+  const { consent, accept } = useExternalDataConsent();
   const [data, setData] = useState<Availability | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!consent) return;
     let active = true;
+
     setLoading(true);
     fetchBreederAvailability(breeder)
       .then((result) => {
@@ -23,10 +27,21 @@ const BreederAvailability = ({ breeder }: { breeder: string }) => {
     return () => {
       active = false;
     };
-  }, [breeder]);
+  }, [breeder, consent]);
+
+  if (!consent) {
+    return (
+      <section className="mt-8 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="flex items-start gap-2 text-sm font-bold"><ShieldCheck className="mt-0.5 h-4 w-4" /> External catalog lookup is disabled.</p>
+        <p className="mt-1 text-xs leading-relaxed">{PRIVACY_NOTICE}</p>
+        <Button type="button" size="sm" className="mt-3 rounded-xl font-bold" onClick={accept}>Enable lookup</Button>
+      </section>
+    );
+  }
 
   return (
     <section className="mt-8">
+
       <div className="mb-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <PackageSearch className="h-5 w-5 text-primary" />

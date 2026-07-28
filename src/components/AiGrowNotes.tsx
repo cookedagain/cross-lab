@@ -47,7 +47,8 @@ const parseNotes = (text: string): Section[] => {
 };
 
 const AiGrowNotes = ({ seed, count }: { seed: Seed; count: number }) => {
-  const { hasKey } = useAiSettings();
+  const { hasKey, clearKey } = useAiSettings();
+
   const [tent, setTent] = useState(TENTS[1]);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
@@ -85,10 +86,12 @@ const AiGrowNotes = ({ seed, count }: { seed: Seed; count: number }) => {
         <Sparkles className="h-4 w-4 text-primary" />
         <p className="text-xs font-black uppercase tracking-wide text-primary">AI grow notes</p>
         <ConfidenceBadge meta={confidenceMeta.aiGenerated} compact />
+        {hasKey && <button type="button" className="ml-auto text-[10px] font-bold text-muted-foreground underline" onClick={clearKey}>Remove session key</button>}
       </div>
 
       {!hasKey ? (
-        <AiKeyForm description="Paste your OpenAI API key to generate grow notes." />
+
+        <AiKeyForm description="Paste your Gemini API key to generate grow notes for this session." />
       ) : (
         <>
           <p className="mb-3 text-xs font-semibold text-muted-foreground">

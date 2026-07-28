@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
-import { RefreshCw, SearchCheck, SearchX } from "lucide-react";
+import { RefreshCw, SearchCheck, SearchX, ShieldCheck } from "lucide-react";
 import { lookupWebLineage, type WebLineageResult } from "@/lib/lineageScraper";
 import { Button } from "@/components/ui/button";
+import { PRIVACY_NOTICE, useExternalDataConsent } from "@/lib/privacy";
 
 type WebLineageLookupProps = {
   name: string;
@@ -18,12 +19,15 @@ const dateLabel = (iso?: string) =>
     : "";
 
 const WebLineageLookup = ({ name, breeder, compact = false }: WebLineageLookupProps) => {
+  const { consent, accept } = useExternalDataConsent();
   const [result, setResult] = useState<WebLineageResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
+    if (!consent) return;
     let active = true;
+
     setLoading(true);
     lookupWebLineage(name, breeder)
       .then((next) => {
@@ -35,11 +39,22 @@ const WebLineageLookup = ({ name, breeder, compact = false }: WebLineageLookupPr
     return () => {
       active = false;
     };
-  }, [name, breeder, nonce]);
+  }, [name, breeder, nonce, consent]);
+
+  if (!consent) {
+    return (
+      <div className="mt-2 rounded-xl border border-amber-300 bg-amber-50 p-2 text-[11px] text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="flex items-start gap-1.5 font-bold"><ShieldCheck className="mt-0.5 h-3 w-3" /> Web lineage lookup needs consent.</p>
+        <p className="mt-1 leading-relaxed">{PRIVACY_NOTICE}</p>
+        <Button type="button" size="sm" className="mt-2 h-7 rounded-lg px-2 text-[10px] font-bold" onClick={accept}>Enable lookup</Button>
+      </div>
+    );
+  }
 
   if (result?.status === "explicit-cross") return null;
 
   if (compact) {
+
     return (
       <div className="mt-2 rounded-xl bg-muted/70 p-2 text-[11px] font-semibold text-muted-foreground">
         {loading ? (

@@ -3,8 +3,9 @@ import { KeyRound, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { PRIVACY_NOTICE, useExternalDataConsent } from "@/lib/privacy";
 
-type AiKeyFormProps = {
+ type AiKeyFormProps = {
   title?: string;
   description?: string;
 };
@@ -14,9 +15,11 @@ const AiKeyForm = ({
   description = "Paste your Gemini API key to unlock the AI features.",
 }: AiKeyFormProps) => {
   const { saveKey } = useAiSettings();
+  const { consent, accept } = useExternalDataConsent();
   const [value, setValue] = useState("");
 
   const submit = () => {
+    if (!consent) return;
     if (value.trim()) saveKey(value);
   };
 
@@ -35,22 +38,30 @@ const AiKeyForm = ({
         <Input
           type="password"
           value={value}
-          onChange={(event) => setValue(event.target.value)}
+          onChange={(event) => setValue(event.target.value.slice(0, 300))}
           onKeyDown={(event) => {
             if (event.key === "Enter") submit();
           }}
-          placeholder="sk-..."
+          placeholder="AIza..."
           className="h-11 rounded-2xl font-mono text-sm"
           autoComplete="off"
         />
-        <Button type="button" className="h-11 rounded-2xl font-bold" onClick={submit} disabled={!value.trim()}>
-          Save key
+        <Button type="button" className="h-11 rounded-2xl font-bold" onClick={submit} disabled={!value.trim() || !consent}>
+          Use for this session
         </Button>
       </div>
+      {!consent && (
+        <div className="mt-3 rounded-2xl bg-amber-50 p-3 text-xs text-amber-950 dark:bg-amber-950/30 dark:text-amber-100">
+          <p className="font-bold">Review before enabling AI</p>
+          <p className="mt-1 leading-relaxed">{PRIVACY_NOTICE}</p>
+          <Button type="button" size="sm" className="mt-2 rounded-xl font-bold" onClick={accept}>
+            I understand and consent
+          </Button>
+        </div>
+      )}
       <p className="mt-3 flex items-start gap-1.5 text-[11px] font-semibold leading-relaxed text-muted-foreground">
         <Lock className="mt-0.5 h-3 w-3 shrink-0" />
-        Your key is stored only in this browser and is sent straight to Google — never to any other server.
-        Get one at ai.google.dev/gemini-api/docs/api-key.
+        The key stays in memory for this tab, is sent to Google only in a request header, and is removed when the tab closes or you remove it. Use a restricted, quota-limited key.
       </p>
     </div>
   );

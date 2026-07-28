@@ -9,8 +9,11 @@
 // Two breeders are intentionally excluded (per request): Greenspace and
 // Mediseedman. They report "no live source" so nothing breaks.
 
-const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+import { hasExternalDataConsent } from "@/lib/privacy";
+
+const ALLOWED_STORE_HOSTS = new Set(["brotanicalgardens.com", "sacredseedsaustralia.co"]);
 const BROTANICAL_BASE = "https://brotanicalgardens.com";
+
 const PRODUCTS_CACHE_PREFIX = "crosslab-store-products-v1:";
 const AVAILABILITY_CACHE_KEY = "crosslab-breeder-availability-v2";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000; // once a day
@@ -99,25 +102,28 @@ const isFresh = (syncedAt: string) => Date.now() - new Date(syncedAt).getTime() 
 // Fetches a Shopify store's full catalog (paginated), syncing at most once a
 // day. Returns null if the store could not be reached and nothing is cached.
 async function fetchStoreProducts(base: string): Promise<ProductsCache | null> {
+  const parsedBase = new URL(base);
+  if (parsedBase.protocol !== "https:" || !ALLOWED_STORE_HOSTS.has(parsedBase.hostname)) return null;
   const cached = readProductsCache(base);
   if (cached && isFresh(cached.syncedAt)) return cached;
 
   try {
     const all: ShopifyProduct[] = [];
     for (let page = 1; page <= MAX_PAGES; page++) {
-      const target = `${base.replace(/\/$/, "")}/products.json?limit=250&page=${page}`;
-      const response = await fetch(`${ALL_ORIGINS_RAW}${encodeURIComponent(target)}`);
+      const target = `${parsedBase.origin}/products.json?limit=250&page=${page}`;
+      const response = await fetch(target, { headers: { Accept: "application/json" } });
       if (!response.ok) throw new Error("store unreachable");
       const data = (await response.json()) as { products?: ShopifyProduct[] };
-      const products = data.products ?? [];
+      const products = Array.isArray(data.products) ? data.products.slice(0, 250) : [];
       all.push(...products);
-      if (products.length < 250) break; // last page reached
+      if (products.length < 250) break;
     }
 
-    const result: ProductsCache = { syncedAt: new Date().toISOString(), products: all };
+    const result: ProductsCache = { syncedAt: new Date().toISOString(), products: all.slice(0, MAX_PAGES * 250) };
     writeProductsCache(base, result);
     return result;
   } catch {
+
     // If a stale cache exists, fall back to it so the UI still shows something.
     return cached ?? null;
   }
@@ -181,7 +187,18 @@ const writeAvailabilityCache = (cache: AvailabilityCache) => {
 export async function fetchBreederAvailability(breeder: string): Promise<BreederAvailability> {
   const syncedAt = new Date().toISOString();
 
+  if (!hasExternalDataConsent()) {
+    return {
+      breeder,
+      status: "no-source",
+      items: [],
+      syncedAt,
+      note: "Privacy consent is required before checking external breeder catalogs.",
+    };
+  }
+
   if (EXCLUDED_BREEDERS.has(breeder)) {
+
     return {
       breeder,
       status: "no-source",

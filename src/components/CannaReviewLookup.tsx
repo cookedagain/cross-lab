@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { ExternalLink, RefreshCw, SearchCheck, SearchX, Star } from "lucide-react";
+import { ExternalLink, RefreshCw, SearchCheck, SearchX, ShieldCheck, Star } from "lucide-react";
 import { lookupCannaReview, type CannaReviewResult } from "@/lib/cannareviews";
+import { Button } from "@/components/ui/button";
+import { PRIVACY_NOTICE, useExternalDataConsent } from "@/lib/privacy";
 
 const dateLabel = (iso?: string) =>
   iso ? new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short" }) : "";
@@ -14,12 +16,15 @@ const StarRow = ({ value }: { value: number }) => (
 );
 
 const CannaReviewLookup = ({ name, brand }: { name: string; brand?: string }) => {
+  const { consent, accept } = useExternalDataConsent();
   const [result, setResult] = useState<CannaReviewResult | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
+    if (!consent) return;
     let active = true;
+
     setLoading(true);
     lookupCannaReview(name, brand)
       .then((next) => {
@@ -31,10 +36,21 @@ const CannaReviewLookup = ({ name, brand }: { name: string; brand?: string }) =>
     return () => {
       active = false;
     };
-  }, [name, brand, nonce]);
+  }, [name, brand, nonce, consent]);
+
+  if (!consent) {
+    return (
+      <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+        <p className="flex items-start gap-1.5 font-bold"><ShieldCheck className="mt-0.5 h-3.5 w-3.5" /> External lookup is disabled until you consent.</p>
+        <p className="mt-1 leading-relaxed">{PRIVACY_NOTICE}</p>
+        <Button type="button" size="sm" className="mt-2 rounded-xl font-bold" onClick={accept}>Enable lookup</Button>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-3 rounded-2xl border border-border bg-muted/40 p-3">
+
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wide text-primary">

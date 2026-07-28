@@ -1,3 +1,5 @@
+import { hasExternalDataConsent } from "@/lib/privacy";
+
 export type WebLineageResult = {
   status: "resolved" | "explicit-cross" | "not-found" | "error";
   parents?: [string, string];
@@ -6,9 +8,10 @@ export type WebLineageResult = {
   syncedAt: string;
 };
 
-const CACHE_KEY = "crosslab-web-lineage-cache-v3-brotanical";
+const CACHE_KEY = "crosslab-web-lineage-cache-v4-direct";
 const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
-const ALL_ORIGINS_RAW = "https://api.allorigins.win/raw?url=";
+const LOOKUP_TIMEOUT_MS = 8000;
+const MAX_QUERY_CHARS = 180;
 
 // Breeder / brand words that should never appear inside a parent name.
 const BREEDER_NOISE = [
@@ -147,14 +150,25 @@ const ETHOS_DOMAIN = "ethosgenetics.com";
 const isEthos = (breeder?: string) => /ethos/i.test(breeder ?? "");
 
 const fetchSearchText = async (query: string) => {
-  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(query)}`;
-  const response = await fetch(`${ALL_ORIGINS_RAW}${encodeURIComponent(url)}`);
-  if (!response.ok) throw new Error("Lineage search failed");
-  return htmlToText(await response.text());
+  const safeQuery = query.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_CHARS);
+  const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(safeQuery)}`;
+  const controller = new AbortController();
+  const timer = window.setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
+  try {
+    const response = await fetch(url, { signal: controller.signal, headers: { Accept: "text/html" } });
+    if (!response.ok) throw new Error("Lineage search failed");
+    return htmlToText((await response.text()).slice(0, 1000000));
+  } finally {
+    window.clearTimeout(timer);
+  }
 };
 
 export async function lookupWebLineage(name: string, breeder?: string): Promise<WebLineageResult> {
   const syncedAt = new Date().toISOString();
+
+  if (!hasExternalDataConsent()) {
+    return { status: "error", note: "Privacy consent is required before external lineage lookups.", syncedAt };
+  }
 
   if (hasExplicitCross(name)) {
     return {

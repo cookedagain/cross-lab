@@ -119,7 +119,7 @@ const getPairingTips = (parentA: Seed, parentB: Seed) => {
 
 const CrossPlanner = () => {
   const { seedCounts, vaultSeeds, getSeedCount, seedWithCount } = useVault();
-  const { hasKey } = useAiSettings();
+  const { hasKey, clearKey } = useAiSettings();
 
   const [parentA, setParentA] = useState<Seed | null>(null);
   const [parentB, setParentB] = useState<Seed | null>(null);
@@ -286,11 +286,12 @@ const CrossPlanner = () => {
             {aiLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Wand2 className="mr-2 h-4 w-4" />}
             AI name ideas
           </Button>
+          {hasKey && <button type="button" className="text-xs font-bold text-muted-foreground underline" onClick={clearKey}>Remove session key</button>}
         </div>
 
         {showKeyForm && !hasKey && (
           <div className="mt-4">
-            <AiKeyForm description="Paste your OpenAI API key to generate AI strain names." />
+            <AiKeyForm description="Paste your Gemini API key to generate AI strain names for this session." />
           </div>
         )}
 

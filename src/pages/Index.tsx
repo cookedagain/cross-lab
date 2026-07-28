@@ -622,6 +622,11 @@ const Index = () => {
                                 <StrainName name={seed.name} />
                               </Link>
                               <p className="mt-1 text-[11px] font-bold text-muted-foreground">Inventory count</p>
+                              {seed.note && (
+                                <p className="mt-1 text-[10px] font-semibold leading-tight text-amber-700 dark:text-amber-300">
+                                  {seed.note}
+                                </p>
+                              )}
                             </div>
                             <div className="flex shrink-0 flex-wrap items-center gap-2">
                               <RarityBadge rarity={getSeedRarity(seedWithCount(seed))} />

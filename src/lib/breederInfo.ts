@@ -65,8 +65,8 @@ export const BREEDER_INFO: Record<string, BreederInfo> = {
   },
   "G13 Labs": {
     blurb:
-      "G13 Labs banner for Cheeselicious and Pineapple Express × Runtz 13 seed lots associated with Greenspace AU breeding.",
-    knownFor: ["Cheeselicious", "Pineapple Express × Runtz 13", "Greenspace AU-bred stock"],
+      "G13 Labs banner for the Cheeselicious and Pineapple Express × Runtz 13 lots. Cheeselicious breeder attribution is unconfirmed; Pineapple Express × Runtz 13 is attributed to Greenspace AU.",
+    knownFor: ["Cheeselicious · breeder unknown", "Pineapple Express × Runtz 13", "Greenspace AU attribution"],
   },
   "Burn Pile": {
     blurb:

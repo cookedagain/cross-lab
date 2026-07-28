@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/seeds";
-import { getIncomingDropId, INCOMING_DROPS, incomingDropToSeed } from "@/data/incomingDrops";
+import { getIncomingDropId, INCOMING_DROPS, INCOMING_ORDERS, incomingDropToSeed } from "@/data/incomingDrops";
 import { showError, showSuccess } from "@/utils/toast";
 
 const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
@@ -172,7 +172,22 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
 
   const removeLot = (id: string) => setLots((current) => current.filter((lot) => lot.id !== id));
 
-  const exportData = () => JSON.stringify({ version: 2, seedCounts, multipass, incomingArrivedIds, lots }, null, 2);
+  const exportData = () =>
+    JSON.stringify(
+      {
+        version: 3,
+        seedCounts,
+        multipass,
+        lots,
+        incomingDrops: {
+          orders: INCOMING_ORDERS,
+          drops: INCOMING_DROPS,
+          arrivedIds: incomingArrivedIds,
+        },
+      },
+      null,
+      2,
+    );
 
   const importData = (json: string) => {
     try {
@@ -180,6 +195,9 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
         seedCounts?: Record<string, unknown>;
         multipass?: MultipassEntry[];
         incomingArrivedIds?: string[];
+        incomingDrops?: {
+          arrivedIds?: string[];
+        };
         lots?: BreedingLot[];
       };
       if (parsed.seedCounts) {
@@ -189,8 +207,12 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
         setSeedCounts({ ...DEFAULT_SEED_COUNTS, ...cleaned });
       }
       if (Array.isArray(parsed.multipass)) setMultipass(parsed.multipass);
-      if (Array.isArray(parsed.incomingArrivedIds)) {
-        setIncomingArrivedIds(parsed.incomingArrivedIds.filter((id) => typeof id === "string"));
+      const importedArrivedIds = parsed.incomingDrops?.arrivedIds ?? parsed.incomingArrivedIds;
+      if (Array.isArray(importedArrivedIds)) {
+        const validIds = new Set(INCOMING_DROPS.map(getIncomingDropId));
+        setIncomingArrivedIds(
+          importedArrivedIds.filter((id): id is string => typeof id === "string" && validIds.has(id)),
+        );
       }
       if (Array.isArray(parsed.lots)) setLots(parsed.lots);
       showSuccess("Vault data restored from backup.");

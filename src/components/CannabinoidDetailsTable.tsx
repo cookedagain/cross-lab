@@ -196,6 +196,11 @@ const CannabinoidDetailsTable = ({ seeds }: CannabinoidDetailsTableProps) => {
                     <p className="mt-0.5 text-[10px] font-semibold text-muted-foreground">
                       {seed.breeder}
                     </p>
+                    {seed.note && (
+                      <p className="mt-0.5 max-w-56 text-[10px] font-semibold leading-tight text-amber-700 dark:text-amber-300">
+                        {seed.note}
+                      </p>
+                    )}
                   </TableCell>
                   <TableCell className="px-3 py-2 font-semibold text-muted-foreground">
                     {seed.breeder}

@@ -6,12 +6,14 @@ export type Seed = {
   breeder: string;
   type: SeedType;
   count?: number;
+  note?: string;
 };
 
 type SeedEntry = {
   name: string;
   count: number;
   type?: SeedType;
+  note?: string;
 };
 
 const raw: { breeder: string; seeds: SeedEntry[] }[] = [
@@ -177,8 +179,18 @@ const raw: { breeder: string; seeds: SeedEntry[] }[] = [
   {
     breeder: "G13 Labs",
     seeds: [
-      { name: "Cheeselicious", count: 3, type: "Unknown Photo" },
-      { name: "Pineapple Express × Runtz 13", count: 3, type: "Unknown Photo" },
+      {
+        name: "Cheeselicious",
+        count: 3,
+        type: "Feminized",
+        note: "Breeder unknown; catalogued under the G13 Labs banner",
+      },
+      {
+        name: "Pineapple Express × Runtz 13",
+        count: 3,
+        type: "Feminized",
+        note: "Bred by Greenspace AU; catalogued under the G13 Labs banner",
+      },
     ],
   },
   {
@@ -202,7 +214,7 @@ const raw: { breeder: string; seeds: SeedEntry[] }[] = [
       { name: "White Widow", count: 5 },
       { name: "Alien OG", count: 4 },
       { name: "Afghan", count: 4 },
-      { name: "Jack Herer Photo", count: 3 },
+      { name: "Jack Herer Photo", count: 3, type: "Autoflower" },
     ],
   },
 ];
@@ -272,6 +284,7 @@ export const SEEDS: Seed[] = raw.flatMap((group) =>
     breeder: group.breeder,
     type: getSeedType(group.breeder, seed),
     count: seed.count,
+    note: seed.note,
   })),
 );
 

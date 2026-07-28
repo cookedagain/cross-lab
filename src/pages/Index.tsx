@@ -41,6 +41,12 @@ import {
   estimateSeedGrowth,
   estimateAdvancedMetrics,
 } from "@/lib/crossName";
+import {
+  CANNABINOID_ORDER,
+  CANNABINOIDS,
+  estimateCannabinoidPanel,
+  type CannabinoidKey,
+} from "@/lib/cannabinoids";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 type SortMode =
@@ -64,6 +70,10 @@ type SortMode =
   | "keeper-desc"
   | "name";
 
+type CannabinoidSortMode = `cannabinoid-${CannabinoidKey}-desc`;
+
+type SortModeWithCannabinoids = SortMode | CannabinoidSortMode;
+
 const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "count", label: "Seed count" },
   { mode: "rarity-desc", label: "Rarity high → low" },
@@ -86,6 +96,11 @@ const SORT_OPTIONS: { mode: SortMode; label: string }[] = [
   { mode: "name", label: "Name A → Z" },
 ];
 
+const CANNABINOID_SORT_OPTIONS: { mode: CannabinoidSortMode; label: string }[] = CANNABINOID_ORDER.map((key) => ({
+  mode: `cannabinoid-${key}-desc` as CannabinoidSortMode,
+  label: `${CANNABINOIDS[key].name} high → low`,
+}));
+
 const seedYieldMetric = (seed: Seed) => {
   const estimates = estimateSeedGrowth(seed);
   const top = estimates[estimates.length - 1];
@@ -100,6 +115,10 @@ const seedHeightMetric = (seed: Seed) => {
 
 const seedSativaMetric = (seed: Seed) => estimateLineageSplit(seed).sativa;
 const seedPotencyMetric = (seed: Seed) => estimateCannabinoids(seed).thc.max;
+const seedCannabinoidMetric = (seed: Seed, key: CannabinoidKey) => {
+  const entry = estimateCannabinoidPanel(seed).find((item) => item.key === key);
+  return entry?.range.max ?? 0;
+};
 
 const Index = () => {
   const {
@@ -117,7 +136,7 @@ const Index = () => {
 
   const [vaultSearch, setVaultSearch] = useState("");
   const [activeTypes, setActiveTypes] = useState<SeedType[]>([]);
-  const [sortMode, setSortMode] = useState<SortMode>("count");
+  const [sortMode, setSortMode] = useState<SortModeWithCannabinoids>("count");
   const [showFilters, setShowFilters] = useState(false);
   const [minThc, setMinThc] = useState(0);
   const [maxFlowering, setMaxFlowering] = useState(20);
@@ -206,6 +225,11 @@ const Index = () => {
             const advB = estimateAdvancedMetrics(b);
             const priorityA = getKeeperPriority(seedWithCount(a)).score;
             const priorityB = getKeeperPriority(seedWithCount(b)).score;
+
+            if (sortMode.startsWith("cannabinoid-")) {
+              const cannabinoidKey = sortMode.replace(/^cannabinoid-/, "").replace(/-desc$/, "") as CannabinoidKey;
+              return seedCannabinoidMetric(b, cannabinoidKey) - seedCannabinoidMetric(a, cannabinoidKey);
+            }
 
             switch (sortMode) {
               case "rarity-desc":
@@ -521,6 +545,31 @@ const Index = () => {
                   </button>
                 );
               })}
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-border/60 pt-3">
+              <span className="text-xs font-black uppercase tracking-wide text-muted-foreground">Cannabinoids:</span>
+              {CANNABINOID_SORT_OPTIONS.map((option) => {
+                const active = sortMode === option.mode;
+                return (
+                  <button
+                    key={option.mode}
+                    type="button"
+                    onClick={() => setSortMode(option.mode)}
+                    title="Sort by estimated maximum concentration"
+                    className={`inline-flex items-center gap-1 rounded-full border-2 px-3 py-1 text-xs font-bold transition ${
+                      active
+                        ? "border-primary bg-primary text-primary-foreground"
+                        : "border-border bg-card text-muted-foreground hover:border-primary hover:text-primary"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+              <span className="basis-full text-[10px] font-semibold text-muted-foreground">
+                Cannabinoid sorting uses the estimated upper end of each strain's concentration range, not lab results.
+              </span>
             </div>
           </div>
 

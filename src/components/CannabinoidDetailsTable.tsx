@@ -105,15 +105,15 @@ const CannabinoidDetailsTable = ({ seeds }: CannabinoidDetailsTableProps) => {
 
   return (
     <CollapsibleSection
-      title="Cannabinoid details"
+      title="Cannabinoid details · all noids"
       icon={<BarChart3 className="h-5 w-5" />}
-      defaultOpen={false}
+      defaultOpen={true}
       badge={
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-          {visibleRows.length} strains
+          {CANNABINOID_ORDER.length} noids · {visibleRows.length} strains
         </span>
       }
-      description="Windows Explorer-style details view. Click any cannabinoid column to sort by estimated concentration; the first click is highest to lowest."
+      description="All listed cannabinoids in a Windows Explorer-style details view. Click any cannabinoid column to sort by estimated concentration; the first click is highest to lowest."
     >
       <div className="rounded-3xl border border-border bg-background">
         <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">

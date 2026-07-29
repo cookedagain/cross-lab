@@ -93,7 +93,7 @@ export async function askVaultChat(
 ): Promise<string> {
   const safeQuestion = cleanUserText(question, MAX_CHAT_TURN_CHARS);
   if (!safeQuestion) throw new Error("Enter a question first.");
-  const roster = buildVaultRoster(seeds, getCount);
+  const roster = buildVaultRoster(seeds, getCount, safeQuestion);
   const safeHistory = history
     .slice(-MAX_CHAT_TURNS)
     .map((turn) => ({ role: turn.role, content: cleanUserText(turn.content, MAX_CHAT_TURN_CHARS) }))

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import AiKeyForm from "@/components/AiKeyForm";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
 import { useAiSettings } from "@/hooks/useAiSettings";
+import { useExternalDataConsent } from "@/lib/privacy";
 import { useVault } from "@/hooks/useVaultStore";
 import { askVaultChat, type ChatTurn } from "@/lib/aiFeatures";
 import { confidenceMeta } from "@/lib/confidence";
@@ -28,6 +29,7 @@ const QUICK_PROMPTS = [
 
 const AiVaultChat = () => {
   const { hasKey, clearKey } = useAiSettings();
+  const { consent } = useExternalDataConsent();
 
   const { vaultSeeds, getSeedCount } = useVault();
   const [messages, setMessages] = useState<ChatTurn[]>([]);
@@ -35,6 +37,14 @@ const AiVaultChat = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!consent) {
+      setMessages([]);
+      setInput("");
+      setError("");
+    }
+  }, [consent]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });

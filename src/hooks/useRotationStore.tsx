@@ -1,43 +1,19 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { archivedProductSchema, rotationProductSchema } from "@/lib/validation";
-import { readSecure, writeSecure } from "@/lib/secureStorage";
+import { readSecure, SECURE_STORAGE_EVENT, writeSecure } from "@/lib/secureStorage";
 import { showSuccess } from "@/utils/toast";
 
 const STORAGE_KEY = "vaultlab-rotation-products";
 const ARCHIVE_STORAGE_KEY = "vaultlab-rotation-archive";
 
-export const ROTATION_CATEGORIES = [
-  "Flower",
-  "Hash",
-  "Rosin",
-  "Vape",
-  "Oil",
-  "Edible",
-  "Other",
-] as const;
-
+export const ROTATION_CATEGORIES = ["Flower", "Hash", "Rosin", "Vape", "Oil", "Edible", "Other"] as const;
 export type RotationCategory = (typeof ROTATION_CATEGORIES)[number];
 
-export type RotationProduct = {
-  id: string;
-  name: string;
-  brand: string;
-  category: RotationCategory;
-  thc: number;
-  cbd: number;
-  startWeight: number;
-  remainingWeight: number;
-  notes: string;
-  rating: number;
-};
-
+export type RotationProduct = { id: string; name: string; brand: string; category: RotationCategory; thc: number; cbd: number; startWeight: number; remainingWeight: number; notes: string; rating: number };
 export type ArchivedProduct = RotationProduct & { archivedAt: string };
 
-export const clampWeight = (value: number) =>
-  Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 100) / 100);
-
-export const clampRating = (value: number) =>
-  Math.max(0, Math.min(5, Math.round(Number.isFinite(value) ? value : 0)));
+export const clampWeight = (value: number) => Math.max(0, Math.round((Number.isFinite(value) ? value : 0) * 100) / 100);
+export const clampRating = (value: number) => Math.max(0, Math.min(5, Math.round(Number.isFinite(value) ? value : 0)));
 
 type RotationContextValue = {
   products: RotationProduct[];
@@ -53,59 +29,45 @@ type RotationContextValue = {
 };
 
 const RotationContext = createContext<RotationContextValue | null>(null);
-
-const loadJSON = <T,>(key: string, fallback: T): T => {
-  if (typeof window === "undefined") return fallback;
-  try {
-    const stored = window.localStorage.getItem(key);
-    if (!stored) return fallback;
-    const parsed = JSON.parse(stored);
-    return Array.isArray(parsed) ? (parsed as T) : fallback;
-  } catch {
-    return fallback;
-  }
-};
-
 const makeId = () => `rotation-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
 export const RotationProvider = ({ children }: { children: ReactNode }) => {
-  const [products, setProducts] = useState<RotationProduct[]>(() => {
-    const stored = loadJSON<unknown>(STORAGE_KEY, []);
-    if (!Array.isArray(stored)) return [];
-    return stored.slice(0, 1000).flatMap((product) => {
-      const result = rotationProductSchema.safeParse({ rating: 0, ...product });
-      return result.success ? [result.data as RotationProduct] : [];
-    });
-  });
-  const [archived, setArchived] = useState<ArchivedProduct[]>(() => {
-    const stored = loadJSON<unknown>(ARCHIVE_STORAGE_KEY, []);
-    if (!Array.isArray(stored)) return [];
-    return stored.slice(0, 1000).flatMap((product) => {
-      const result = archivedProductSchema.safeParse(product);
-      return result.success ? [result.data as ArchivedProduct] : [];
-    });
-  });
+  const [products, setProducts] = useState<RotationProduct[]>([]);
+  const [archived, setArchived] = useState<ArchivedProduct[]>([]);
   const [storageReady, setStorageReady] = useState(false);
 
   useEffect(() => {
     let active = true;
-    Promise.all([readSecure<unknown>(STORAGE_KEY, []), readSecure<unknown>(ARCHIVE_STORAGE_KEY, [])]).then(([storedProducts, storedArchived]) => {
-      if (!active) return;
-      if (Array.isArray(storedProducts)) {
-        setProducts(storedProducts.slice(0, 1000).flatMap((product) => {
-          const result = rotationProductSchema.safeParse({ rating: 0, ...product });
-          return result.success ? [result.data as RotationProduct] : [];
-        }));
+    const load = async () => {
+      try {
+        const [storedProducts, storedArchived] = await Promise.all([
+          readSecure<unknown>(STORAGE_KEY, []),
+          readSecure<unknown>(ARCHIVE_STORAGE_KEY, []),
+        ]);
+        if (!active) return;
+        if (Array.isArray(storedProducts)) {
+          setProducts(storedProducts.slice(0, 1000).flatMap((product) => {
+            const result = rotationProductSchema.safeParse({ rating: 0, ...product });
+            return result.success ? [result.data as RotationProduct] : [];
+          }));
+        }
+        if (Array.isArray(storedArchived)) {
+          setArchived(storedArchived.slice(0, 1000).flatMap((product) => {
+            const result = archivedProductSchema.safeParse(product);
+            return result.success ? [result.data as ArchivedProduct] : [];
+          }));
+        }
+        setStorageReady(true);
+      } catch {
+        if (active) setStorageReady(false);
       }
-      if (Array.isArray(storedArchived)) {
-        setArchived(storedArchived.slice(0, 1000).flatMap((product) => {
-          const result = archivedProductSchema.safeParse(product);
-          return result.success ? [result.data as ArchivedProduct] : [];
-        }));
-      }
-      setStorageReady(true);
-    });
-    return () => { active = false; };
+    };
+    void load();
+    window.addEventListener(SECURE_STORAGE_EVENT, load);
+    return () => {
+      active = false;
+      window.removeEventListener(SECURE_STORAGE_EVENT, load);
+    };
   }, []);
 
   useEffect(() => {
@@ -120,72 +82,34 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
     setProducts((current) => [{ ...data, id: makeId() }, ...current]);
     showSuccess("Product added to rotation.");
   };
-
   const addProducts = (data: Omit<RotationProduct, "id">[]) => {
     if (data.length === 0) return;
     setProducts((current) => [...data.map((item) => ({ ...item, id: makeId() })), ...current]);
     showSuccess(`Imported ${data.length} products into rotation.`);
   };
+  const updateRemaining = (id: string, next: number) => setProducts((current) => current.map((product) => product.id === id ? { ...product, remainingWeight: clampWeight(next) } : product));
+  const updateRating = (id: string, next: number) => setProducts((current) => current.map((product) => product.id === id ? { ...product, rating: clampRating(next) } : product));
+  const removeProduct = (id: string) => setProducts((current) => current.filter((product) => product.id !== id));
+  const archiveProduct = (id: string) => setProducts((current) => {
+    const target = current.find((product) => product.id === id);
+    if (target) {
+      setArchived((list) => [{ ...target, archivedAt: new Date().toISOString() }, ...list]);
+      showSuccess("Moved to previously used.");
+    }
+    return current.filter((product) => product.id !== id);
+  });
+  const restoreProduct = (id: string) => setArchived((current) => {
+    const target = current.find((product) => product.id === id);
+    if (target) {
+      const { archivedAt: _archivedAt, ...rest } = target;
+      setProducts((list) => [rest, ...list]);
+      showSuccess("Restored to rotation.");
+    }
+    return current.filter((product) => product.id !== id);
+  });
+  const removeArchived = (id: string) => setArchived((current) => current.filter((product) => product.id !== id));
 
-  const updateRemaining = (id: string, next: number) =>
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === id ? { ...product, remainingWeight: clampWeight(next) } : product,
-      ),
-    );
-
-  const updateRating = (id: string, next: number) =>
-    setProducts((current) =>
-      current.map((product) =>
-        product.id === id ? { ...product, rating: clampRating(next) } : product,
-      ),
-    );
-
-  const removeProduct = (id: string) =>
-    setProducts((current) => current.filter((product) => product.id !== id));
-
-  const archiveProduct = (id: string) =>
-    setProducts((current) => {
-      const target = current.find((product) => product.id === id);
-      if (target) {
-        setArchived((list) => [{ ...target, archivedAt: new Date().toISOString() }, ...list]);
-        showSuccess("Moved to previously used.");
-      }
-      return current.filter((product) => product.id !== id);
-    });
-
-  const restoreProduct = (id: string) =>
-    setArchived((current) => {
-      const target = current.find((product) => product.id === id);
-      if (target) {
-        const { archivedAt, ...rest } = target;
-        setProducts((list) => [rest, ...list]);
-        showSuccess("Restored to rotation.");
-      }
-      return current.filter((product) => product.id !== id);
-    });
-
-  const removeArchived = (id: string) =>
-    setArchived((current) => current.filter((product) => product.id !== id));
-
-  return (
-    <RotationContext.Provider
-      value={{
-        products,
-        archived,
-        addProduct,
-        addProducts,
-        updateRemaining,
-        updateRating,
-        removeProduct,
-        archiveProduct,
-        restoreProduct,
-        removeArchived,
-      }}
-    >
-      {children}
-    </RotationContext.Provider>
-  );
+  return <RotationContext.Provider value={{ products, archived, addProduct, addProducts, updateRemaining, updateRating, removeProduct, archiveProduct, restoreProduct, removeArchived }}>{children}</RotationContext.Provider>;
 };
 
 export const useRotation = () => {

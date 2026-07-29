@@ -9,7 +9,7 @@
 // Two breeders are intentionally excluded (per request): Greenspace and
 // Mediseedman. They report "no live source" so nothing breaks.
 
-import { hasExternalDataConsent } from "@/lib/privacy";
+import { cleanExternalText, hasExternalDataConsent } from "@/lib/privacy";
 
 const ALLOWED_STORE_HOSTS = new Set(["brotanicalgardens.com", "sacredseedsaustralia.co"]);
 const BROTANICAL_BASE = "https://brotanicalgardens.com";
@@ -187,9 +187,11 @@ const writeAvailabilityCache = (cache: AvailabilityCache) => {
 export async function fetchBreederAvailability(breeder: string): Promise<BreederAvailability> {
   const syncedAt = new Date().toISOString();
 
-  if (!hasExternalDataConsent()) {
+  const safeBreeder = cleanExternalText(breeder);
+
+  if (!hasExternalDataConsent("breeder")) {
     return {
-      breeder,
+      breeder: safeBreeder,
       status: "no-source",
       items: [],
       syncedAt,
@@ -197,10 +199,9 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
     };
   }
 
-  if (EXCLUDED_BREEDERS.has(breeder)) {
-
+  if (EXCLUDED_BREEDERS.has(safeBreeder)) {
     return {
-      breeder,
+      breeder: safeBreeder,
       status: "no-source",
       items: [],
       syncedAt,
@@ -208,11 +209,11 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
     };
   }
 
-  const directShop = BREEDER_DIRECT_SHOPS[breeder];
-  const aliases = BREEDER_ALIASES[breeder];
+  const directShop = BREEDER_DIRECT_SHOPS[safeBreeder];
+  const aliases = BREEDER_ALIASES[safeBreeder];
   if (!directShop && !aliases) {
     return {
-      breeder,
+      breeder: safeBreeder,
       status: "no-source",
       items: [],
       syncedAt,
@@ -221,7 +222,7 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
   }
 
   const cache = readAvailabilityCache();
-  const cached = cache[breeder];
+  const cached = cache[safeBreeder];
   if (cached && isFresh(cached.syncedAt)) return cached;
 
   // A direct store is entirely this breeder's catalog; Brotanical is shared and
@@ -232,26 +233,26 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
   const catalog = await fetchStoreProducts(sourceBase);
   if (!catalog) {
     const result: BreederAvailability = {
-      breeder,
+      breeder: safeBreeder,
       status: "unreachable",
       items: [],
       storeUrl: sourceBase,
       syncedAt,
       note: `Could not reach ${sourceLabel} from the browser. Try again later.`,
     };
-    cache[breeder] = result;
+    cache[safeBreeder] = result;
     writeAvailabilityCache(cache);
     return result;
   }
 
   const items = catalog.products
     .filter((product) => (directShop || matchesBreeder(product, aliases!)) && !isMerch(product))
-    .map((product) => toItem(product, breeder))
+    .map((product) => toItem(product, safeBreeder))
     // In-stock first, then alphabetical.
     .sort((a, b) => Number(b.available) - Number(a.available) || a.title.localeCompare(b.title));
 
   const result: BreederAvailability = {
-    breeder,
+    breeder: safeBreeder,
     status: items.length > 0 ? "live" : "empty",
     items,
     storeUrl: sourceBase,
@@ -261,7 +262,7 @@ export async function fetchBreederAvailability(breeder: string): Promise<Breeder
         ? `Live from ${sourceLabel}, synced daily. Stock can change between syncs.`
         : `No current listings found for this breeder on ${sourceLabel}.`,
   };
-  cache[breeder] = result;
+  cache[safeBreeder] = result;
   writeAvailabilityCache(cache);
   return result;
 }

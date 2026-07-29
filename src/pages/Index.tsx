@@ -4,6 +4,7 @@ import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, Pac
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
+import PrivacyConsentCard from "@/components/PrivacyConsentCard";
 import VaultAnalytics from "@/components/VaultAnalytics";
 import RandomSeedPicker from "@/components/RandomSeedPicker";
 import IncomingDrops from "@/components/IncomingDrops";
@@ -424,6 +425,10 @@ const Index = () => {
 
         <div className="mt-6">
           <VaultBackup />
+        </div>
+
+        <div className="mt-4">
+          <PrivacyConsentCard compact />
         </div>
 
         <VaultAnalytics />

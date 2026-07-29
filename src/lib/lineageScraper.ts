@@ -1,4 +1,4 @@
-import { hasExternalDataConsent } from "@/lib/privacy";
+import { cleanExternalText, hasExternalDataConsent } from "@/lib/privacy";
 
 export type WebLineageResult = {
   status: "resolved" | "explicit-cross" | "not-found" | "error";
@@ -13,27 +13,14 @@ const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const LOOKUP_TIMEOUT_MS = 8000;
 const MAX_QUERY_CHARS = 180;
 
-// Breeder / brand words that should never appear inside a parent name.
 const BREEDER_NOISE = [
-  "ethos",
-  "genetics",
-  "seeds",
-  "seed",
-  "company",
-  "selections",
-  "humboldt",
-  "binchickens",
-  "terpyz",
-  "wolfpack",
-  "grimm",
-  "greenspace",
-  "leafly",
-  "seedfinder",
-  "allbud",
+  "ethos", "genetics", "seeds", "seed", "company", "selections", "humboldt",
+  "binchickens", "terpyz", "wolfpack", "grimm", "greenspace", "leafly",
+  "seedfinder", "allbud",
 ];
 
 const normalize = (value: string) =>
-  value
+  cleanExternalText(value, MAX_QUERY_CHARS)
     .toLowerCase()
     .replace(/\([^)]*\)/g, " ")
     .replace(/\b(f\d+|bx\d*|s\d+|r\d+|rbx|v\d+|auto|fem|reg|#\d+)\b/gi, " ")
@@ -42,7 +29,6 @@ const normalize = (value: string) =>
     .trim();
 
 const hasExplicitCross = (name: string) => /\s[×x]\s/i.test(` ${name} `);
-
 const cacheKeyFor = (name: string, breeder?: string) => normalize(`${name} ${breeder ?? ""}`);
 
 type LineageCache = Record<string, WebLineageResult>;
@@ -62,7 +48,7 @@ const writeCache = (cache: LineageCache) => {
   try {
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {
-    // ignore storage quota errors
+    // Ignore storage quota errors.
   }
 };
 
@@ -70,18 +56,16 @@ const fresh = (result: WebLineageResult) => Date.now() - new Date(result.syncedA
 
 const htmlToText = (html: string) =>
   html
+    .slice(0, 1000000)
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/&/g, "&")
     .replace(/&nbsp;/g, " ")
     .replace(/&#39;/g, "'")
     .replace(/&quot;/g, '"')
     .replace(/\s+/g, " ")
     .trim();
 
-// Removes filler words, breeder noise, and trailing junk tokens (stray single
-// letters, breeder tags, dangling suffixes) so the parent name stays clean.
 const cleanParent = (value: string) => {
   let cleaned = value
     .replace(/\b(strain|cannabis|marijuana|seeds?|genetics?|lineage|parents?|hybrid|cross(?:ed)?|created|bred|from|between|with|by|crossing)\b/gi, " ")
@@ -91,26 +75,17 @@ const cleanParent = (value: string) => {
     .replace(/^and\s+/i, "")
     .replace(/\s+and$/i, "");
 
-  // Drop breeder/brand noise words anywhere in the string.
   const noise = new RegExp(`\\b(${BREEDER_NOISE.join("|")})\\b`, "gi");
   cleaned = cleaned.replace(noise, " ").replace(/\s+/g, " ").trim();
 
-  // Trim trailing junk tokens: stray single letters or dangling generation tags
-  // left at the very end (e.g. "... BX3 i" -> "...").
   let tokens = cleaned.split(" ").filter(Boolean);
   while (tokens.length > 1) {
     const last = tokens[tokens.length - 1];
-    if (/^[a-z]$/i.test(last) || /^(bx\d*|rbx|s\d+|r\d+|v\d+|f\d+)$/i.test(last)) {
-      tokens.pop();
-      continue;
-    }
-    break;
+    if (/^[a-z]$/i.test(last) || /^(bx\d*|rbx|s\d+|r\d+|v\d+|f\d+)$/i.test(last)) tokens.pop();
+    else break;
   }
 
-  // Cap at a sensible number of words so we don't stitch two strains together.
-  if (tokens.length > 4) tokens = tokens.slice(0, 4);
-
-  return tokens.join(" ").trim();
+  return tokens.slice(0, 4).join(" ").trim();
 };
 
 const looksLikeParent = (candidate: string, strainName: string) => {
@@ -132,8 +107,7 @@ const explicitPairPatterns = [
 const extractParents = (text: string, strainName: string): [string, string] | null => {
   for (const pattern of explicitPairPatterns) {
     pattern.lastIndex = 0;
-    const matches = Array.from(text.matchAll(pattern));
-    for (const match of matches) {
+    for (const match of Array.from(text.matchAll(pattern))) {
       const first = cleanParent(match[1] ?? "");
       const second = cleanParent(match[2] ?? "");
       if (looksLikeParent(first, strainName) && looksLikeParent(second, strainName) && normalize(first) !== normalize(second)) {
@@ -146,18 +120,17 @@ const extractParents = (text: string, strainName: string): [string, string] | nu
 
 const BROTANICAL_DOMAIN = "brotanicalgardens.com";
 const ETHOS_DOMAIN = "ethosgenetics.com";
-
 const isEthos = (breeder?: string) => /ethos/i.test(breeder ?? "");
 
 const fetchSearchText = async (query: string) => {
-  const safeQuery = query.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_CHARS);
+  const safeQuery = cleanExternalText(query, MAX_QUERY_CHARS);
   const url = `https://duckduckgo.com/html/?q=${encodeURIComponent(safeQuery)}`;
   const controller = new AbortController();
   const timer = window.setTimeout(() => controller.abort(), LOOKUP_TIMEOUT_MS);
   try {
     const response = await fetch(url, { signal: controller.signal, headers: { Accept: "text/html" } });
     if (!response.ok) throw new Error("Lineage search failed");
-    return htmlToText((await response.text()).slice(0, 1000000));
+    return htmlToText(await response.text());
   } finally {
     window.clearTimeout(timer);
   }
@@ -166,35 +139,31 @@ const fetchSearchText = async (query: string) => {
 export async function lookupWebLineage(name: string, breeder?: string): Promise<WebLineageResult> {
   const syncedAt = new Date().toISOString();
 
-  if (!hasExternalDataConsent()) {
-    return { status: "error", note: "Privacy consent is required before external lineage lookups.", syncedAt };
+  if (!hasExternalDataConsent("lineage")) {
+    return { status: "error", note: "Lineage consent is required before searching.", syncedAt };
   }
 
   if (hasExplicitCross(name)) {
-    return {
-      status: "explicit-cross",
-      note: "This strain is already labelled as a cross, so no web lookup was needed.",
-      syncedAt,
-    };
+    return { status: "explicit-cross", note: "This strain is already labelled as a cross, so no web lookup was needed.", syncedAt };
   }
 
-  const key = cacheKeyFor(name, breeder);
+  const safeName = cleanExternalText(name);
+  const safeBreeder = cleanExternalText(breeder ?? "");
+  const key = cacheKeyFor(safeName, safeBreeder);
   const cache = readCache();
   const cached = cache[key];
   if (cached && fresh(cached)) return cached;
 
-  // Fallback chain. For Ethos Genetics strains we lead with the official
-  // ethosgenetics.com/genetics catalog; everything else uses Brotanical first.
   const tiers: { source: string; note: string; queries: string[] }[] = [];
 
-  if (isEthos(breeder)) {
+  if (isEthos(safeBreeder)) {
     tiers.push({
       source: "Ethos Genetics",
-      note: "Scraped from the official ethosgenetics.com/genetics catalog and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      note: "Scraped from public search results and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
       queries: [
-        `site:${ETHOS_DOMAIN}/genetics ${name} lineage parents`,
-        `site:${ETHOS_DOMAIN} ${name} genetics parents`,
-        `${name} ethos genetics lineage parents`,
+        `site:${ETHOS_DOMAIN}/genetics ${safeName} lineage parents`,
+        `site:${ETHOS_DOMAIN} ${safeName} genetics parents`,
+        `${safeName} ethos genetics lineage parents`,
       ],
     });
   }
@@ -202,27 +171,19 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   tiers.push(
     {
       source: "Brotanical Gardens",
-      note: "Scraped from Brotanical Gardens listings (including freebies) and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
+      note: "Scraped from public search results and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
       queries: [
-        `site:${BROTANICAL_DOMAIN} ${name} ${breeder ?? ""} lineage`,
-        `site:${BROTANICAL_DOMAIN} ${name} genetics parents`,
-        `site:${BROTANICAL_DOMAIN} freebies ${name} ${breeder ?? ""}`,
-      ],
-    },
-    {
-      source: "Leafly",
-      note: "Scraped from Leafly strain results and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
-      queries: [
-        `site:leafly.com ${name} ${breeder ?? ""} genetics parents`,
-        `site:leafly.com ${name} strain lineage`,
+        `site:${BROTANICAL_DOMAIN} ${safeName} ${safeBreeder} lineage`,
+        `site:${BROTANICAL_DOMAIN} ${safeName} genetics parents`,
+        `site:${BROTANICAL_DOMAIN} freebies ${safeName} ${safeBreeder}`,
       ],
     },
     {
       source: "web search",
       note: "Scraped from public web-search result text and cached for 24 hours. Treat as a lead to verify, not pack-label proof.",
       queries: [
-        `${name} ${breeder ?? ""} cannabis strain parents lineage`,
-        `${name} cannabis cross parents`,
+        `${safeName} ${safeBreeder} cannabis strain parents lineage`,
+        `${safeName} cannabis cross parents`,
       ],
     },
   );
@@ -230,16 +191,9 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   try {
     for (const tier of tiers) {
       for (const query of tier.queries) {
-        const text = await fetchSearchText(query);
-        const parents = extractParents(text, name);
+        const parents = extractParents(await fetchSearchText(query), safeName);
         if (parents) {
-          const result: WebLineageResult = {
-            status: "resolved",
-            parents,
-            source: tier.source,
-            note: tier.note,
-            syncedAt,
-          };
+          const result: WebLineageResult = { status: "resolved", parents, source: tier.source, note: tier.note, syncedAt };
           cache[key] = result;
           writeCache(cache);
           return result;
@@ -249,7 +203,7 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
 
     const result: WebLineageResult = {
       status: "not-found",
-      note: "No confident parent pair was found on Brotanical Gardens, Leafly, or general web results. Try adding breeder context or checking the pack label.",
+      note: "No confident parent pair was found. Try checking the pack label.",
       syncedAt,
     };
     cache[key] = result;
@@ -258,7 +212,7 @@ export async function lookupWebLineage(name: string, breeder?: string): Promise<
   } catch {
     const result: WebLineageResult = {
       status: "error",
-      note: "The public lineage lookup could not be reached from the browser. This will be more reliable once a backend route can be installed.",
+      note: "The public lineage lookup could not be reached from the browser.",
       syncedAt,
     };
     cache[key] = result;

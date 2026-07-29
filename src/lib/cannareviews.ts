@@ -1,4 +1,4 @@
-import { hasExternalDataConsent } from "@/lib/privacy";
+import { cleanExternalText, hasExternalDataConsent } from "@/lib/privacy";
 
 const CANNAREVIEWS_BASE = "https://cannareviews.health";
 const CACHE_KEY = "vaultlab-cannareviews-cache-v2";
@@ -8,8 +8,8 @@ const MAX_QUERY_CHARS = 180;
 
 export const CANNAREVIEWS_SITE = CANNAREVIEWS_BASE;
 
-const cleanQuery = (value: string) => value.replace(/[\u0000-\u001f\u007f]/g, " ").replace(/\s+/g, " ").trim().slice(0, MAX_QUERY_CHARS);
-export const cannareviewsSearchUrl = (query: string) => `${CANNAREVIEWS_BASE}/?s=${encodeURIComponent(cleanQuery(query))}`;
+export const cannareviewsSearchUrl = (query: string) =>
+  `${CANNAREVIEWS_BASE}/?s=${encodeURIComponent(cleanExternalText(query, MAX_QUERY_CHARS))}`;
 
 export type CannaReviewResult = {
   status: "resolved" | "not-found" | "error";
@@ -22,7 +22,7 @@ export type CannaReviewResult = {
 };
 
 type ReviewCache = Record<string, CannaReviewResult>;
-const cacheKeyFor = (name: string, brand?: string) => cleanQuery(`${name} ${brand ?? ""}`).toLowerCase();
+const cacheKeyFor = (name: string, brand?: string) => cleanExternalText(`${name} ${brand ?? ""}`, MAX_QUERY_CHARS).toLowerCase();
 
 const readCache = (): ReviewCache => {
   if (typeof window === "undefined") return {};
@@ -40,7 +40,7 @@ const writeCache = (cache: ReviewCache) => {
   try {
     window.localStorage.setItem(CACHE_KEY, JSON.stringify(cache));
   } catch {
-    // ignore quota errors
+    // Ignore storage quota errors.
   }
 };
 
@@ -85,9 +85,10 @@ const fetchWithTimeout = async (url: string) => {
 };
 
 export async function lookupCannaReview(name: string, brand?: string): Promise<CannaReviewResult> {
-  if (!hasExternalDataConsent()) throw new Error("Privacy consent is required before external lookups.");
+  if (!hasExternalDataConsent("cannareviews")) throw new Error("CannaReviews consent is required before searching.");
+
   const syncedAt = new Date().toISOString();
-  const query = cleanQuery(`${name} ${brand ?? ""}`);
+  const query = cleanExternalText(`${name} ${brand ?? ""}`, MAX_QUERY_CHARS);
   const url = cannareviewsSearchUrl(query);
   const key = cacheKeyFor(name, brand);
   const cache = readCache();
@@ -107,7 +108,7 @@ export async function lookupCannaReview(name: string, brand?: string): Promise<C
       ...(rating === undefined ? {} : { rating }),
       ...(snippet ? { snippet } : {}),
       url,
-      note: hasResult ? "Pulled directly from the CannaReviews site and cached for 24 hours. Treat scraped content as advisory." : "No confident match found. Tap to search the site directly.",
+      note: hasResult ? "Pulled directly from CannaReviews and cached for 24 hours. Treat scraped content as advisory." : "No confident match found. Tap to search the site directly.",
       syncedAt,
     };
     cache[key] = result;

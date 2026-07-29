@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { archivedProductSchema, rotationProductSchema } from "@/lib/validation";
-import { readSecure, SECURE_STORAGE_EVENT, writeSecure } from "@/lib/secureStorage";
+import {
+  isSecureStorageUnlocked,
+  readSecure,
+  SECURE_STORAGE_EVENT,
+  writeSecure,
+} from "@/lib/secureStorage";
 import { showSuccess } from "@/utils/toast";
 
 const STORAGE_KEY = "vaultlab-rotation-products";
@@ -38,30 +43,49 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     let active = true;
+
+    const clearSensitiveState = () => {
+      setProducts([]);
+      setArchived([]);
+      setStorageReady(false);
+    };
+
     const load = async () => {
+      if (!isSecureStorageUnlocked()) {
+        if (active) clearSensitiveState();
+        return;
+      }
+
       try {
         const [storedProducts, storedArchived] = await Promise.all([
           readSecure<unknown>(STORAGE_KEY, []),
           readSecure<unknown>(ARCHIVE_STORAGE_KEY, []),
         ]);
-        if (!active) return;
+        if (!active || !isSecureStorageUnlocked()) {
+          if (active) clearSensitiveState();
+          return;
+        }
+
         if (Array.isArray(storedProducts)) {
           setProducts(storedProducts.slice(0, 1000).flatMap((product) => {
             const result = rotationProductSchema.safeParse({ rating: 0, ...product });
             return result.success ? [result.data as RotationProduct] : [];
           }));
         }
+
         if (Array.isArray(storedArchived)) {
           setArchived(storedArchived.slice(0, 1000).flatMap((product) => {
             const result = archivedProductSchema.safeParse(product);
             return result.success ? [result.data as ArchivedProduct] : [];
           }));
         }
+
         setStorageReady(true);
       } catch {
-        if (active) setStorageReady(false);
+        if (active) clearSensitiveState();
       }
     };
+
     void load();
     window.addEventListener(SECURE_STORAGE_EVENT, load);
     return () => {
@@ -71,11 +95,11 @@ export const RotationProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
-    if (storageReady) void writeSecure(STORAGE_KEY, products);
+    if (storageReady && isSecureStorageUnlocked()) void writeSecure(STORAGE_KEY, products);
   }, [products, storageReady]);
 
   useEffect(() => {
-    if (storageReady) void writeSecure(ARCHIVE_STORAGE_KEY, archived);
+    if (storageReady && isSecureStorageUnlocked()) void writeSecure(ARCHIVE_STORAGE_KEY, archived);
   }, [archived, storageReady]);
 
   const addProduct = (data: Omit<RotationProduct, "id">) => {

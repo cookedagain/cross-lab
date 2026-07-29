@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { VaultProvider } from "@/hooks/useVaultStore";
 import { RotationProvider } from "@/hooks/useRotationStore";
+import VaultSessionGuard from "@/components/VaultSessionGuard";
 import Index from "./pages/Index";
 import StrainDetail from "./pages/StrainDetail";
 import Rotation from "./pages/Rotation";
@@ -24,17 +25,18 @@ const App = () => (
       <VaultProvider>
         <RotationProvider>
           <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/strain/:id" element={<StrainDetail />} />
-              <Route path="/rotation" element={<Rotation />} />
-              <Route path="/breeders" element={<Breeders />} />
-              <Route path="/breeders/:breeder" element={<BreederDetail />} />
-              <Route path="/stations" element={<GrowStations />} />
-              <Route path="/integrations" element={<Integrations />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <VaultSessionGuard>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/strain/:id" element={<StrainDetail />} />
+                <Route path="/rotation" element={<Rotation />} />
+                <Route path="/breeders" element={<Breeders />} />
+                <Route path="/breeders/:breeder" element={<BreederDetail />} />
+                <Route path="/stations" element={<GrowStations />} />
+                <Route path="/integrations" element={<Integrations />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </VaultSessionGuard>
           </BrowserRouter>
         </RotationProvider>
       </VaultProvider>

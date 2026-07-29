@@ -1,6 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { cloneSlotSchema, motherSchema } from "@/lib/validation";
-import { readSecure, SECURE_STORAGE_EVENT, writeSecure } from "@/lib/secureStorage";
+import {
+  isSecureStorageUnlocked,
+  readSecure,
+  SECURE_STORAGE_EVENT,
+  writeSecure,
+} from "@/lib/secureStorage";
 import { showSuccess } from "@/utils/toast";
 
 const MOTHERS_KEY = "crosslab-clone-mothers";
@@ -43,19 +48,36 @@ export const CloneRegisterProvider = ({ children }: { children: ReactNode }) => 
 
   useEffect(() => {
     let active = true;
+
+    const clearSensitiveState = () => {
+      setMothers([]);
+      setSlots(emptySlots());
+      setStorageReady(false);
+    };
+
     const load = async () => {
+      if (!isSecureStorageUnlocked()) {
+        if (active) clearSensitiveState();
+        return;
+      }
+
       try {
         const [storedMothers, storedSlots] = await Promise.all([
           readSecure<unknown>(MOTHERS_KEY, []),
           readSecure<unknown>(SLOTS_KEY, []),
         ]);
-        if (!active) return;
+        if (!active || !isSecureStorageUnlocked()) {
+          if (active) clearSensitiveState();
+          return;
+        }
+
         if (Array.isArray(storedMothers)) {
           setMothers(storedMothers.slice(0, 1000).flatMap((mother) => {
             const result = motherSchema.safeParse(mother);
             return result.success ? [result.data as Mother] : [];
           }));
         }
+
         if (Array.isArray(storedSlots)) {
           const validated = storedSlots.flatMap((slot) => {
             const result = cloneSlotSchema.safeParse(slot);
@@ -63,11 +85,13 @@ export const CloneRegisterProvider = ({ children }: { children: ReactNode }) => 
           });
           if (validated.length === CLONE_SLOT_COUNT) setSlots(validated);
         }
+
         setStorageReady(true);
       } catch {
-        if (active) setStorageReady(false);
+        if (active) clearSensitiveState();
       }
     };
+
     void load();
     window.addEventListener(SECURE_STORAGE_EVENT, load);
     return () => {
@@ -77,11 +101,11 @@ export const CloneRegisterProvider = ({ children }: { children: ReactNode }) => 
   }, []);
 
   useEffect(() => {
-    if (storageReady) void writeSecure(MOTHERS_KEY, mothers);
+    if (storageReady && isSecureStorageUnlocked()) void writeSecure(MOTHERS_KEY, mothers);
   }, [mothers, storageReady]);
 
   useEffect(() => {
-    if (storageReady) void writeSecure(SLOTS_KEY, slots);
+    if (storageReady && isSecureStorageUnlocked()) void writeSecure(SLOTS_KEY, slots);
   }, [slots, storageReady]);
 
   const addMother = (data: Omit<Mother, "id" | "dateAdded">) => {

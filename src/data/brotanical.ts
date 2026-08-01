@@ -36,10 +36,9 @@ const BROTANICAL_FEED_URL: string | null = null;
 
 export const BROTANICAL_SITE = "https://brotanicalgardens.com";
 
-// Brotanical Gardens runs on Shopify, whose search endpoint is /search?q=...
-// (the previous WordPress-style /?s=... URL 404'd).
+// Brotanical Gardens now uses WooCommerce product search.
 export const brotanicalSearchUrl = (query: string) =>
-  `${BROTANICAL_SITE}/search?q=${encodeURIComponent(query)}&type=product`;
+  `${BROTANICAL_SITE}/?s=${encodeURIComponent(query)}&post_type=product`;
 
 type RawItem = Omit<BrotanicalItem, "id" | "url">;
 

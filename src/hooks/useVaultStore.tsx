@@ -3,7 +3,7 @@ import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/see
 import { getIncomingDropId, INCOMING_DROPS, INCOMING_ORDERS, incomingDropToSeed } from "@/data/incomingDrops";
 import { showError, showSuccess } from "@/utils/toast";
 
-const INVENTORY_STORAGE_KEY = "crosslab-seed-counts";
+const INVENTORY_STORAGE_KEY = "crosslab-seed-counts-v2";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass";
 const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v3";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";

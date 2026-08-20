@@ -245,7 +245,7 @@ Hashpants / sd9007 / Overgrow|CSD S1|Boston Clone Company CSD clone × self; CSD
 
 const toSeedType = (gender: string): SeedType => {
   if (gender === "Feminized" || gender === "Regular" || gender === "Autoflower") return gender;
-  return "Unknown Photo";
+  return "Regular";
 };
 
 export const SEEDS: Seed[] = inventory.split("\n").map((row, index) => {

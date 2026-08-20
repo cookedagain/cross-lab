@@ -5,6 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { VaultProvider } from "@/hooks/useVaultStore";
 import { RotationProvider } from "@/hooks/useRotationStore";
+import CultivarDataSync from "@/components/CultivarDataSync";
 import Index from "./pages/Index";
 import StrainDetail from "./pages/StrainDetail";
 import Rotation from "./pages/Rotation";
@@ -22,6 +23,7 @@ const App = () => (
       <Toaster />
       <Sonner />
       <VaultProvider>
+        <CultivarDataSync />
         <RotationProvider>
           <BrowserRouter>
             <Routes>

@@ -38,6 +38,8 @@ const cacheKeyFor = (name: string, breeder?: string) => normalize(`${name} ${bre
 
 type LineageCache = Record<string, WebLineageResult>;
 
+const inFlightLookups = new Map<string, Promise<WebLineageResult>>();
+
 const readCache = (): LineageCache => {
   if (typeof window === "undefined") return {};
   try {
@@ -125,28 +127,39 @@ export async function lookupWebLineage(
   const cached = cache[key];
   if (!options.force && cached && fresh(cached)) return cached;
 
-  const params = new URLSearchParams({ name });
-  if (breeder) params.set("breeder", breeder);
+  const pending = inFlightLookups.get(key);
+  if (pending) return pending;
 
-  try {
-    const response = await fetch(`/api/lineage?${params.toString()}`);
-    if (!response.ok) throw new Error("Lineage lookup failed");
-    const data: unknown = await response.json();
-    if (!isWebLineageResult(data)) throw new Error("Invalid lineage response");
+  const lookup = (async (): Promise<WebLineageResult> => {
+    const params = new URLSearchParams({ name });
+    if (breeder) params.set("breeder", breeder);
 
-    const result: WebLineageResult = {
-      ...data,
-      searchedSources: data.searchedSources?.length ? data.searchedSources : getLineageSourceLinks(name, breeder),
-    };
-    cache[key] = result;
-    writeCache(cache);
-    return result;
-  } catch {
-    return {
-      status: "error",
-      searchedSources: getLineageSourceLinks(name, breeder),
-      note: "The automatic lookup could not be completed. The direct breeder-site searches below still work and Leafly is available last as a fallback.",
-      syncedAt,
-    };
-  }
+    try {
+      const response = await fetch(`/api/lineage?${params.toString()}`);
+      if (!response.ok) throw new Error("Lineage lookup failed");
+      const data: unknown = await response.json();
+      if (!isWebLineageResult(data)) throw new Error("Invalid lineage response");
+
+      const result: WebLineageResult = {
+        ...data,
+        searchedSources: data.searchedSources?.length ? data.searchedSources : getLineageSourceLinks(name, breeder),
+      };
+      const latestCache = readCache();
+      latestCache[key] = result;
+      writeCache(latestCache);
+      return result;
+    } catch {
+      return {
+        status: "error",
+        searchedSources: getLineageSourceLinks(name, breeder),
+        note: "The automatic lookup could not be completed. The direct breeder-site searches below still work and Leafly is available last as a fallback.",
+        syncedAt,
+      };
+    } finally {
+      inFlightLookups.delete(key);
+    }
+  })();
+
+  inFlightLookups.set(key, lookup);
+  return lookup;
 }

@@ -23,22 +23,23 @@ const App = () => (
       <Toaster />
       <Sonner />
       <VaultProvider>
-        <CultivarDataSync />
-        <RotationProvider>
-          <BrowserRouter>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/strain/:id" element={<StrainDetail />} />
-              <Route path="/rotation" element={<Rotation />} />
-              <Route path="/breeders" element={<Breeders />} />
-              <Route path="/breeders/:breeder" element={<BreederDetail />} />
-              <Route path="/stations" element={<GrowStations />} />
-              <Route path="/integrations" element={<Integrations />} />
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </BrowserRouter>
-        </RotationProvider>
+        <CultivarDataSync>
+          <RotationProvider>
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/strain/:id" element={<StrainDetail />} />
+                <Route path="/rotation" element={<Rotation />} />
+                <Route path="/breeders" element={<Breeders />} />
+                <Route path="/breeders/:breeder" element={<BreederDetail />} />
+                <Route path="/stations" element={<GrowStations />} />
+                <Route path="/integrations" element={<Integrations />} />
+                {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </RotationProvider>
+        </CultivarDataSync>
       </VaultProvider>
     </TooltipProvider>
   </QueryClientProvider>

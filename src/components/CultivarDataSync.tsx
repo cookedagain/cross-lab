@@ -1,4 +1,13 @@
-import { useEffect, useMemo, useRef } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useVault } from "@/hooks/useVaultStore";
 import { fetchBreederAvailability } from "@/lib/breederCatalog";
 import { lookupWebLineage } from "@/lib/lineageScraper";
@@ -8,6 +17,7 @@ const LAST_FULL_SYNC_KEY = "crosslab-cultivar-data-sync-v1";
 const LINEAGE_CONCURRENCY = 2;
 
 let activeSync: Promise<void> | null = null;
+let activeSyncIsFull = false;
 let lastFullSyncMemory = 0;
 
 const readLastFullSync = () => {
@@ -29,9 +39,18 @@ const writeLastFullSync = () => {
   }
 };
 
-const CultivarDataSync = () => {
+type CultivarDataSyncContextValue = {
+  isSyncing: boolean;
+  forceRecheck: () => Promise<void>;
+};
+
+const CultivarDataSyncContext = createContext<CultivarDataSyncContextValue | null>(null);
+
+const CultivarDataSync = ({ children }: { children: ReactNode }) => {
   const { vaultSeeds } = useVault();
   const timerRef = useRef<number | null>(null);
+  const syncRunsRef = useRef(0);
+  const [isSyncing, setIsSyncing] = useState(false);
   const cultivars = useMemo(
     () =>
       Array.from(
@@ -49,19 +68,8 @@ const CultivarDataSync = () => {
     [cultivars],
   );
 
-  useEffect(() => {
-    let active = true;
-
-    const scheduleNextSync = () => {
-      if (!active) return;
-      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
-      const remaining = Math.max(0, readLastFullSync() + RECHECK_INTERVAL_MS - Date.now());
-      timerRef.current = window.setTimeout(() => {
-        void runSync();
-      }, remaining);
-    };
-
-    const performSync = async (force: boolean) => {
+  const performSync = useCallback(
+    async (force: boolean) => {
       for (const breeder of breeders) {
         await fetchBreederAvailability(breeder);
       }
@@ -77,27 +85,59 @@ const CultivarDataSync = () => {
         },
       );
       await Promise.all(workers);
-    };
+    },
+    [breeders, cultivars],
+  );
 
-    const runSync = async () => {
-      const fullSyncDue = Date.now() - readLastFullSync() >= RECHECK_INTERVAL_MS;
-      const joinedExistingSync = activeSync !== null;
-      if (!activeSync) {
-        activeSync = performSync(fullSyncDue).finally(() => {
-          if (fullSyncDue) writeLastFullSync();
-          activeSync = null;
-        });
+  const runSync = useCallback(
+    async (force = false) => {
+      syncRunsRef.current += 1;
+      setIsSyncing(true);
+      try {
+        const fullSyncDue = force || Date.now() - readLastFullSync() >= RECHECK_INTERVAL_MS;
+        if (activeSync) {
+          const joinedFullSync = activeSyncIsFull;
+          await activeSync;
+          if (!fullSyncDue || joinedFullSync) return;
+        }
+
+        activeSyncIsFull = fullSyncDue;
+        activeSync = performSync(fullSyncDue)
+          .then(() => {
+            if (fullSyncDue) writeLastFullSync();
+          })
+          .finally(() => {
+            activeSync = null;
+            activeSyncIsFull = false;
+          });
+        await activeSync;
+      } finally {
+        syncRunsRef.current -= 1;
+        if (syncRunsRef.current === 0) setIsSyncing(false);
       }
-      await activeSync;
-      if (joinedExistingSync && active) await performSync(false);
-      scheduleNextSync();
+    },
+    [performSync],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const scheduleNextSync = () => {
+      if (!active) return;
+      if (timerRef.current !== null) window.clearTimeout(timerRef.current);
+      const remaining = Math.max(0, readLastFullSync() + RECHECK_INTERVAL_MS - Date.now());
+      timerRef.current = window.setTimeout(() => {
+        void runSync().finally(scheduleNextSync);
+      }, remaining);
     };
 
     const handleVisibilityChange = () => {
-      if (document.visibilityState === "visible") void runSync();
+      if (document.visibilityState === "visible") {
+        void runSync().finally(scheduleNextSync);
+      }
     };
 
-    void runSync();
+    void runSync().finally(scheduleNextSync);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
@@ -105,9 +145,19 @@ const CultivarDataSync = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       if (timerRef.current !== null) window.clearTimeout(timerRef.current);
     };
-  }, [breeders, cultivars]);
+  }, [runSync]);
 
-  return null;
+  return (
+    <CultivarDataSyncContext.Provider value={{ isSyncing, forceRecheck: () => runSync(true) }}>
+      {children}
+    </CultivarDataSyncContext.Provider>
+  );
+};
+
+export const useCultivarDataSync = () => {
+  const context = useContext(CultivarDataSyncContext);
+  if (!context) throw new Error("useCultivarDataSync must be used within CultivarDataSync");
+  return context;
 };
 
 export default CultivarDataSync;

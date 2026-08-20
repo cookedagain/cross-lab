@@ -16,6 +16,7 @@ import StrainName from "@/components/StrainName";
 import WebLineageLookup from "@/components/WebLineageLookup";
 import GeneticsTree from "@/components/GeneticsTree";
 import ConfidenceBadge from "@/components/ConfidenceBadge";
+import { useCultivarDataSync } from "@/components/CultivarDataSync";
 import { buildStrainLineageTree, lineageTreeDepth } from "@/lib/lineageTree";
 import { confidenceMeta, getLineageConfidenceMeta } from "@/lib/confidence";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,7 @@ import {
   estimateCannabinoidPanel,
   type CannabinoidKey,
 } from "@/lib/cannabinoids";
+import { showError, showSuccess } from "@/utils/toast";
 import { MadeWithDyad } from "@/components/made-with-dyad";
 
 type SortMode =
@@ -145,6 +147,7 @@ const Index = () => {
     removeMultipass,
     toggleArrived,
   } = useVault();
+  const { forceRecheck, isSyncing } = useCultivarDataSync();
 
   const [vaultSearch, setVaultSearch] = useState("");
   const [activeTypes, setActiveTypes] = useState<SeedType[]>([]);
@@ -175,6 +178,15 @@ const Index = () => {
     setNewPassParentA("");
     setNewPassParentB("");
     setNewPassCount(10);
+  };
+
+  const handleForceRecheck = async () => {
+    try {
+      await forceRecheck();
+      showSuccess("All cultivar data was rechecked.");
+    } catch {
+      showError("The cultivar recheck could not be completed.");
+    }
   };
 
   const incomingPasses = multipass.filter((entry) => !entry.arrived);
@@ -388,6 +400,17 @@ const Index = () => {
               Integrations
             </Link>
             <AiVaultChat />
+            <Button
+              type="button"
+              variant="outline"
+              className="h-10 rounded-2xl border-2 px-3 text-xs font-black"
+              onClick={() => void handleForceRecheck()}
+              disabled={isSyncing}
+              title="Force a fresh check of every cultivar"
+            >
+              <RefreshCw className={`mr-1.5 h-4 w-4 ${isSyncing ? "animate-spin" : ""}`} />
+              {isSyncing ? "Rechecking…" : "Force re-check"}
+            </Button>
             <Button
               type="button"
               variant="outline"

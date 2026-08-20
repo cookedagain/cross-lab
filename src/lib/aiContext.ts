@@ -71,8 +71,8 @@ function seedRosterLine(seed: Seed, count: number): string {
 
 export function buildVaultRoster(seeds: Seed[], getCount: (seed: Seed) => number): string {
   const active = seeds.filter((seed) => getCount(seed) > 0);
-  const main = active.filter((seed) => seed.breeder !== "Burn Pile");
-  const burn = active.filter((seed) => seed.breeder === "Burn Pile");
+  const main = active.filter((seed) => !seed.breeder.includes("Burn Pile"));
+  const burn = active.filter((seed) => seed.breeder.includes("Burn Pile"));
 
   const lines: string[] = [];
   lines.push(`MAIN VAULT (${main.length} strains):`);

@@ -54,7 +54,7 @@ const RandomSeedPicker = () => {
   const availableBreeders = useMemo(() => {
     const breeders = new Set<string>();
     vaultSeeds.forEach((seed) => {
-      if (getSeedCount(seed) > 0 && seed.breeder !== "Burn Pile") {
+      if (getSeedCount(seed) > 0 && !seed.breeder.includes("Burn Pile")) {
         breeders.add(seed.breeder);
       }
     });
@@ -63,7 +63,7 @@ const RandomSeedPicker = () => {
 
   const filteredSeeds = useMemo(() => {
     const inStock = vaultSeeds.filter(
-      (seed) => seed.breeder !== "Burn Pile" && getSeedCount(seed) > 0
+      (seed) => !seed.breeder.includes("Burn Pile") && getSeedCount(seed) > 0
     );
 
     return inStock.filter((seed) => {

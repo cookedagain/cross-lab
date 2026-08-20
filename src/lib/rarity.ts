@@ -36,7 +36,7 @@ const HYPE_CUES = [
 export const getSeedRarity = (seed: Seed): SeedRarity => {
   const reasons: string[] = [];
 
-  if (seed.breeder === "Burn Pile") {
+  if (seed.breeder.includes("Burn Pile")) {
     return {
       score: 0,
       tier: "Common",

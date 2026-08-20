@@ -27,7 +27,7 @@ const buildVaultProfile = (seeds: Seed[]): VaultProfile => {
   let hasAuto = false;
 
   for (const seed of seeds) {
-    if (seed.breeder === "Burn Pile") continue;
+    if (seed.breeder.includes("Burn Pile")) continue;
     breeders.add(seed.breeder);
     if (seed.type === "Regular") hasRegular = true;
     if (seed.type === "Autoflower") hasAuto = true;

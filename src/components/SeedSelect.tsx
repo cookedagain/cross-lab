@@ -50,7 +50,7 @@ const typeLabel = (seed: Seed) =>
 
 const countLabel = (seed: Seed, seedCounts: Record<string, number>) => {
   const count = seedCounts[seed.id];
-  if (seed.breeder === "Burn Pile") return count === undefined ? "burn pile · utility" : `${count} seeds · burn pile`;
+  if (seed.breeder.includes("Burn Pile")) return count === undefined ? "burn pile · utility" : `${count} seeds · burn pile`;
   if (count === undefined) return "unknown stock";
   if (count <= 3) return `${count} seeds · preserve`;
   if (count <= 6) return `${count} seeds · cautious`;

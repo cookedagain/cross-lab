@@ -21,7 +21,7 @@ const scoreTone = (score: number) => {
 };
 
 const getBreedingRoute = (a: Seed, b: Seed) => {
-  if (a.breeder === "Burn Pile" || b.breeder === "Burn Pile") {
+  if (a.breeder.includes("Burn Pile") || b.breeder.includes("Burn Pile")) {
     return "Burn Pile genetics should stay test/smoke-only. Avoid using this pairing for preservation or breeding records.";
   }
   if (a.type === "Regular" || b.type === "Regular") {
@@ -48,7 +48,7 @@ const InteractiveBreedingLab = () => {
   const [salt, setSalt] = useState(0);
 
   const usableSeeds = useMemo(
-    () => vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile" && getSeedCount(seed) > 0),
+    () => vaultSeeds.filter((seed) => !seed.breeder.includes("Burn Pile") && getSeedCount(seed) > 0),
     [vaultSeeds, getSeedCount],
   );
 

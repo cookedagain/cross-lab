@@ -18,7 +18,7 @@ export const StationSeedRecommendations = ({ category }: Props) => {
 
   const recommendations = useMemo(() => {
     const inStock = vaultSeeds.filter(
-      (seed) => seed.breeder !== "Burn Pile" && getSeedCount(seed) > 0
+      (seed) => !seed.breeder.includes("Burn Pile") && getSeedCount(seed) > 0
     );
 
     if (inStock.length === 0) return [];

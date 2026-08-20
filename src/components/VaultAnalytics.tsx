@@ -63,7 +63,7 @@ const VaultAnalytics = () => {
   const { vaultSeeds, getSeedCount } = useVault();
 
   const data = useMemo(() => {
-    const main = vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile");
+    const main = vaultSeeds.filter((seed) => !seed.breeder.includes("Burn Pile"));
 
     const typeData = SEED_TYPES.map((type) => ({
       name: typeShort[type],

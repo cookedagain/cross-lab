@@ -697,7 +697,7 @@ function getSelfingRecommendation(seed: Seed, seedCount?: number): SelfingRecomm
   const isLowStock = seedCount === undefined || seedCount <= 3;
   const isMediumStock = seedCount !== undefined && seedCount > 3 && seedCount <= 6;
 
-  if (seed.breeder === "Burn Pile") {
+  if (seed.breeder.includes("Burn Pile")) {
     return {
       priority: "Low",
       title: "One-and-only burn-pile run",
@@ -856,7 +856,7 @@ export function getCrossReport(
 
   const geneticNotes: GeneticNote[] = [];
   const flags = unique([...detectFlags(parentA), ...detectFlags(parentB)]);
-  const includesBurnPile = parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile";
+  const includesBurnPile = parentA.breeder.includes("Burn Pile") || parentB.breeder.includes("Burn Pile");
   if (includesBurnPile) {
     geneticNotes.push({ label: "Burn Pile one-and-done", note: "This pairing includes Burn Pile stock. Treat it as a one-and-only smoke/test run; do not save pollen, make seed, or use it for breeding because the source is white-label / potentially mislabelled." });
   }

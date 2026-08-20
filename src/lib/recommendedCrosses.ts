@@ -29,7 +29,7 @@ export function recommendCrosses(
   goals: TraitGoal[] = [],
   limit = 6,
 ): CrossRecommendation[] {
-  const usable = seeds.filter((seed) => seed.breeder !== "Burn Pile" && (seed.count ?? 0) > 0);
+  const usable = seeds.filter((seed) => !seed.breeder.includes("Burn Pile") && (seed.count ?? 0) > 0);
 
   let donors = usable.filter((seed) => seed.type === "Regular");
   const receivers = usable.filter((seed) => seed.type === "Feminized" || seed.type === "Regular");

@@ -24,7 +24,7 @@ export const getKeeperPriority = (seed: Seed): KeeperPriority => {
   const reasons: string[] = [];
   let score = 0;
 
-  if (seed.breeder === "Burn Pile") {
+  if (seed.breeder.includes("Burn Pile")) {
     return {
       score: 0,
       level: "Utility",

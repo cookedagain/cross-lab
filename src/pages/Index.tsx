@@ -205,7 +205,7 @@ const Index = () => {
 
       return SEED_TYPES.map((type) => {
         const vaultedSeeds = vaultSeeds.filter(
-          (seed) => seed.breeder !== "Burn Pile" && seed.type === type,
+          (seed) => !seed.breeder.includes("Burn Pile") && seed.type === type,
         );
         const pendingIncoming = INCOMING_DROPS.filter(
           (drop) =>
@@ -230,11 +230,11 @@ const Index = () => {
   );
 
   const mainVaultTotal = useMemo(
-    () => vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    () => vaultSeeds.filter((seed) => !seed.breeder.includes("Burn Pile")).reduce((sum, seed) => sum + getSeedCount(seed), 0),
     [seedCounts, vaultSeeds, getSeedCount],
   );
   const burnPileTotal = useMemo(
-    () => vaultSeeds.filter((seed) => seed.breeder === "Burn Pile").reduce((sum, seed) => sum + getSeedCount(seed), 0),
+    () => vaultSeeds.filter((seed) => seed.breeder.includes("Burn Pile")).reduce((sum, seed) => sum + getSeedCount(seed), 0),
     [seedCounts, vaultSeeds, getSeedCount],
   );
   const grandTotal = mainVaultTotal + burnPileTotal;
@@ -246,13 +246,15 @@ const Index = () => {
         const allSeeds = vaultSeeds.filter((seed) => seed.breeder === breeder);
         const strains = allSeeds
           .filter((seed) => {
-            const matchesSearch = !search || `${seed.name} ${seed.breeder}`.toLowerCase().includes(search);
+            const matchesSearch =
+              !search || `${seed.name} ${seed.breeder} ${seed.lineage ?? ""} ${seed.gender ?? ""}`.toLowerCase().includes(search);
             const matchesType = activeTypes.length === 0 || activeTypes.includes(seed.type);
             const adv = estimateAdvancedMetrics(seed);
             const matchesThc = seedPotencyMetric(seed) >= minThc;
             const matchesFlowering = adv.floweringWeeks <= maxFlowering;
             const matchesResin = adv.resinDensity >= minResin;
             const matchesTerpene = adv.terpeneIntensity >= minTerpene;
+
             return matchesSearch && matchesType && matchesThc && matchesFlowering && matchesResin && matchesTerpene;
           })
           .sort((a, b) => {

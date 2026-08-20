@@ -39,7 +39,7 @@ const GrowSimulator = () => {
   const [season, setSeason] = useState<Season>("Spring");
 
   const selectableSeeds = useMemo(
-    () => vaultSeeds.filter((item) => item.breeder !== "Burn Pile" && getSeedCount(item) > 0),
+    () => vaultSeeds.filter((item) => !item.breeder.includes("Burn Pile") && getSeedCount(item) > 0),
     [vaultSeeds, getSeedCount],
   );
 

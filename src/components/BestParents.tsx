@@ -86,7 +86,7 @@ const BestParents = () => {
   const [goal, setGoal] = useState<TraitGoal | null>(null);
 
   const counted = useMemo(
-    () => vaultSeeds.filter((seed) => seed.breeder !== "Burn Pile").map(seedWithCount),
+    () => vaultSeeds.filter((seed) => !seed.breeder.includes("Burn Pile")).map(seedWithCount),
     [vaultSeeds, seedWithCount],
   );
 

@@ -66,7 +66,7 @@ const SEED_TYPE_ADVICE: Record<SeedType, SeedTypeAdvice> = {
 };
 
 const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
-  if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
+  if (parentA.breeder.includes("Burn Pile") || parentB.breeder.includes("Burn Pile")) {
     return "Burn Pile involved: one-and-only run only. Do not plan pollen, seed making, preservation, or breeding work from white-label / potentially mislabelled stock.";
   }
   if (parentA.type === "Regular" || parentB.type === "Regular") {
@@ -83,7 +83,7 @@ const getPairingAdvice = (parentA: Seed, parentB: Seed) => {
 
 const getPairingTips = (parentA: Seed, parentB: Seed) => {
   const types = new Set([parentA.type, parentB.type]);
-  if (parentA.breeder === "Burn Pile" || parentB.breeder === "Burn Pile") {
+  if (parentA.breeder.includes("Burn Pile") || parentB.breeder.includes("Burn Pile")) {
     return [
       "Treat the Burn Pile plant as a one-and-only run: grow it, evaluate it, consume or discard it, and do not carry it forward.",
       "Do not keep pollen or make seed from it; white-label / potentially mislabelled stock is not reliable enough for your breeding map.",
@@ -213,7 +213,7 @@ const CrossPlanner = () => {
               <p className="text-sm font-semibold leading-relaxed">{getPairingAdvice(parentA, parentB)}</p>
               <div className="mt-4 grid gap-3 lg:grid-cols-2">
                 {[parentA, parentB].map((seed) => {
-                  const advice = seed.breeder === "Burn Pile"
+                  const advice = seed.breeder.includes("Burn Pile")
                     ? {
                         ...SEED_TYPE_ADVICE[seed.type],
                         pollen: "Burn Pile route: one-and-only run only. Do not collect pollen or make seeds from white-label / potentially mislabelled stock.",

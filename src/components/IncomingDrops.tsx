@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowDownUp, Boxes, CheckCircle2, Clock3, PackageOpen, Store, Users } from "lucide-react";
+import { AlertTriangle, ArrowDownUp, Boxes, CheckCircle2, Clock3, PackageOpen, Store, Users } from "lucide-react";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -15,7 +15,9 @@ import {
   getIncomingDropId,
   INCOMING_DROPS,
   INCOMING_DROP_TOTAL,
+  INCOMING_DROP_UNCONFIRMED_COUNT,
   INCOMING_ORDERS,
+  PROPOSED_ACQUISITIONS,
   type IncomingDrop,
 } from "@/data/incomingDrops";
 import { useVault } from "@/hooks/useVaultStore";
@@ -48,7 +50,7 @@ const IncomingDrops = () => {
   const arrivedDrops = INCOMING_DROPS.filter((drop) => arrived.has(getIncomingDropId(drop)));
   const pendingDrops = INCOMING_DROPS.filter((drop) => !arrived.has(getIncomingDropId(drop)));
   const arrivedSeedTotal = arrivedDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
-  const pendingSeedTotal = pendingDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+  const pendingSeedTotal = Math.max(0, INCOMING_DROP_TOTAL - arrivedSeedTotal);
 
   const sortedDrops = useMemo(() => {
     return [...INCOMING_DROPS].sort((a, b) => {
@@ -89,16 +91,16 @@ const IncomingDrops = () => {
 
   return (
     <CollapsibleSection
-      title="Incoming Order"
+      title="Incoming & Unreconciled"
       icon={<PackageOpen className="h-5 w-5" />}
       description={
         INCOMING_DROPS.length > 0
-          ? "Paid seeds awaiting delivery. Check off a product when it lands to add it to the searchable main vault."
-          : "The incoming cart is empty and ready for the next order."
+          ? "Count-known orders, requested manifest references, and count-TBD allocations. Only exact rows can move into the vault after a physical count."
+          : "The incoming tracker is empty and ready for the next confirmed allocation."
       }
       badge={
         <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">
-          {pendingDrops.length} pending
+          {pendingDrops.length} records · {pendingSeedTotal} known seeds
         </span>
       }
     >
@@ -110,12 +112,12 @@ const IncomingDrops = () => {
         </div>
       ) : (
         <>
-          <div className="mb-5 grid gap-4 lg:grid-cols-2">
+          <div className="mb-5 grid gap-4 lg:grid-cols-3">
             {INCOMING_ORDERS.map((order) => {
               const orderDrops = INCOMING_DROPS.filter(
                 (drop) => (drop.orderId ?? DEFAULT_INCOMING_ORDER_ID) === order.id,
               );
-              const orderSeeds = orderDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
+              const orderSeeds = order.confirmedSeedCount ?? orderDrops.reduce((total, drop) => total + (drop.count ?? 0), 0);
 
               return (
                 <div key={order.id} className="rounded-3xl border-2 border-primary/20 bg-primary/5 p-5">
@@ -123,7 +125,7 @@ const IncomingDrops = () => {
                     <Store className="h-5 w-5" />
                     <p className="text-xs font-black uppercase tracking-[0.2em]">{order.label}</p>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-1">
                     <div>
                       <p className="text-xs font-bold text-muted-foreground">Supplier</p>
                       <p className="mt-1 font-display font-black">{order.supplier}</p>
@@ -133,17 +135,18 @@ const IncomingDrops = () => {
                       <p className="mt-1 font-display font-black">{order.status}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-muted-foreground">{order.source ? "Source" : "Order date"}</p>
+                      <p className="text-xs font-bold text-muted-foreground">Source / shipment</p>
                       <p className="mt-1 font-display font-black">{order.source ?? order.orderDate}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-bold text-muted-foreground">Confirmed seeds</p>
+                      <p className="text-xs font-bold text-muted-foreground">Count-known seeds</p>
                       <p className="mt-1 font-display font-black">
-                        {orderSeeds} <span className="text-xs text-muted-foreground">across {orderDrops.length} products</span>
+                        {orderSeeds || "TBD"} <span className="text-xs text-muted-foreground">· {orderDrops.length} tracker records</span>
                       </p>
                     </div>
                   </div>
-                  {order.currency && <p className="mt-3 text-xs font-bold text-muted-foreground">Currency: {order.currency}</p>}
+                  {order.currency && <p className="mt-3 text-xs font-bold text-muted-foreground">{order.currency}</p>}
+                  {order.note && <p className="mt-3 text-xs font-semibold leading-relaxed text-muted-foreground">{order.note}</p>}
                 </div>
               );
             })}
@@ -169,25 +172,23 @@ const IncomingDrops = () => {
             <div className="rounded-2xl border border-border bg-background p-4">
               <div className="mb-2 flex items-center gap-2 text-primary">
                 <Boxes className="h-4 w-4" />
-                <p className="text-xs font-black uppercase tracking-wide">Products</p>
+                <p className="text-xs font-black uppercase tracking-wide">TBD allocations</p>
               </div>
-              <p className="font-display text-3xl font-black">
-                {arrivedDrops.length}<span className="text-base text-muted-foreground"> / {INCOMING_DROPS.length}</span>
-              </p>
-              <p className="text-xs text-muted-foreground">arrived</p>
+              <p className="font-display text-3xl font-black">{INCOMING_DROP_UNCONFIRMED_COUNT}</p>
+              <p className="text-xs text-muted-foreground">zero in totals</p>
             </div>
             <div className="rounded-2xl border border-border bg-background p-4">
               <div className="mb-2 flex items-center gap-2 text-primary">
                 <Users className="h-4 w-4" />
-                <p className="text-xs font-black uppercase tracking-wide">Sources</p>
+                <p className="text-xs font-black uppercase tracking-wide">Tracker groups</p>
               </div>
               <p className="font-display text-3xl font-black">{INCOMING_ORDERS.length}</p>
-              <p className="text-xs text-muted-foreground">incoming drops</p>
+              <p className="text-xs text-muted-foreground">{INCOMING_DROPS.length} records</p>
             </div>
           </div>
 
           <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-            <b>{INCOMING_DROP_TOTAL} confirmed minimum seeds</b> are recorded across both incoming sources. No unidentified L2T2 duplicate is included.
+            <b>{INCOMING_DROP_TOTAL} count-known incoming seeds</b>: 40 across four exact auction rows plus 400 across JohnnyPotseed's 40 packs. The 39 Johnny catalogue rows are requested references, not a confirmed manifest, and the {INCOMING_DROP_UNCONFIRMED_COUNT} TBD allocations add zero.
           </div>
 
           <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -238,6 +239,7 @@ const IncomingDrops = () => {
                 {sortedDrops.map((drop) => {
                   const id = getIncomingDropId(drop);
                   const hasArrived = arrived.has(id);
+                  const canReconcile = drop.recordKind === "exact" && drop.count !== null;
                   const order = orderById.get(drop.orderId ?? DEFAULT_INCOMING_ORDER_ID);
                   const packLabel = drop.pack?.includes("Multipack")
                     ? null
@@ -248,8 +250,10 @@ const IncomingDrops = () => {
                       <TableCell className="text-center">
                         <Checkbox
                           checked={hasArrived}
+                          disabled={!canReconcile}
                           onCheckedChange={(checked) => setIncomingArrived(id, checked === true)}
-                          aria-label={`Mark ${drop.cultivar} as ${hasArrived ? "incoming" : "arrived"}`}
+                          aria-label={canReconcile ? `Mark ${drop.cultivar} as ${hasArrived ? "incoming" : "physically audited"}` : `${drop.cultivar} requires a confirmed physical count`}
+                          title={canReconcile ? "Mark physically audited" : "Confirm the landed cultivar and count before moving it to the vault"}
                           className="h-6 w-6 rounded-md"
                         />
                       </TableCell>
@@ -260,6 +264,16 @@ const IncomingDrops = () => {
                           {hasArrived && (
                             <span className="rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
                               In vault
+                            </span>
+                          )}
+                          {drop.recordKind === "requested-reference" && (
+                            <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 dark:text-sky-300">
+                              Requested reference
+                            </span>
+                          )}
+                          {drop.recordKind === "tbd-allocation" && (
+                            <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700 dark:text-amber-300">
+                              Count TBD
                             </span>
                           )}
                         </div>
@@ -323,13 +337,33 @@ const IncomingDrops = () => {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-display text-lg font-black">
-                        {drop.count ?? <span className="text-sm text-amber-600 dark:text-amber-400">TBC</span>}
+                        {drop.count ?? <span className="text-sm text-amber-600 dark:text-amber-400">TBD</span>}
                       </TableCell>
                     </TableRow>
                   );
                 })}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="mt-5 rounded-3xl border border-dashed border-border bg-muted/30 p-4">
+            <div className="mb-3 flex items-center gap-2 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              <p className="text-xs font-black uppercase tracking-wide">Proposed or superseded · excluded from totals</p>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {PROPOSED_ACQUISITIONS.map((item) => (
+                <div key={item.title} className="rounded-2xl bg-background p-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-black">{item.title}</p>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-black uppercase text-muted-foreground">
+                      {item.status}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs font-semibold leading-relaxed text-muted-foreground">{item.note}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </>
       )}

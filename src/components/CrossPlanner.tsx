@@ -428,7 +428,7 @@ const CrossPlanner = () => {
                 <p className="mb-3 text-xs font-black uppercase tracking-wide text-muted-foreground">Cross size / dry-yield estimates</p>
                 <div className="grid gap-3 md:grid-cols-3">
                   {report.growthEstimates.map((estimate) => {
-                    const gear = estimate.wattage === "<100W" ? "Vivosun VGrow smart box" : estimate.wattage === "220W" ? "AC Infinity 2×2" : "AC Infinity 4×4";
+                    const gear = estimate.wattage === "<100W" ? "VIVOSUN vGrow smart box" : estimate.wattage === "280W" ? "AC Infinity 2×4" : "AC Infinity 4×4";
                     return (
                       <div key={estimate.wattage} className="rounded-2xl border border-border bg-card p-4">
                         <div className="flex items-center justify-between gap-2">

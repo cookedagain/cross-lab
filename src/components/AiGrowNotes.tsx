@@ -9,9 +9,9 @@ import { confidenceMeta } from "@/lib/confidence";
 import type { Seed } from "@/data/seeds";
 
 const TENTS = [
-  "Vivosun VGrow smart box (<100W)",
-  "AC Infinity 2×2 (220W)",
-  "AC Infinity 4×4 (500W)",
+  "VIVOSUN vGrow smart box (100W)",
+  "AC Infinity 2×4 with IONFRAME EVO3 (280W)",
+  "AC Infinity 4×4 with IONFRAME EVO6 (500W)",
 ];
 
 const SECTION_LABELS: Record<string, string> = {

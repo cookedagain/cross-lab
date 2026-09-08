@@ -10,7 +10,7 @@ import { Link } from "react-router-dom";
 import type { Seed } from "@/data/seeds";
 
 type Props = {
-  category: "<100W" | "220W" | "500W";
+  category: "<100W" | "280W" | "500W";
 };
 
 export const StationSeedRecommendations = ({ category }: Props) => {
@@ -57,41 +57,44 @@ export const StationSeedRecommendations = ({ category }: Props) => {
             score += 15;
             reasons.push("Fast flowering cycle");
           }
-        } else if (category === "220W") {
-          // AC Infinity 2x2 (2-plant, 220W, coco/soil)
+        } else if (category === "280W") {
+          // AC Infinity 2×4 (two-plant, approximately 280 W)
           if (adv.stretchFactor === "Medium" || adv.stretchFactor === "Low") {
             score += 30;
-            reasons.push("Compact-to-medium stretch fits 120cm tent height perfectly");
+            reasons.push("Compact-to-medium stretch suits controlled two-plant work");
           }
           if (adv.easeOfGrow >= 4) {
             score += 25;
-            reasons.push("Forgiving growth profile for hand-fed coco/soil");
+            reasons.push("Forgiving growth profile for breeding, reproduction, or quarantine work");
           }
           if (seed.type === "Feminized") {
             score += 15;
-            reasons.push("Feminized seeds guarantee female plants in a 2-plant setup");
+            reasons.push("Feminized stock uses limited two-plant space efficiently");
           }
           if (cann.thc.max >= 22) {
             score += 15;
           }
         } else {
-          // AC Infinity 4x4 (4-plant, 500W/730W, coco/soil)
-          score += 10; // Base
-          if (rarity.tier === "Grail" || rarity.tier === "Very Rare") {
-            score += 35;
-            reasons.push(`Premium ${rarity.tier} genetics deserve the flagship 730W IonFrame light`);
+          // AC Infinity 4×4 (four-plant, approximately 500 W, living-soil direction)
+          score += 10;
+          if (seed.name === "Martian Fuel GEN1" && seed.breeder === "Ethos Genetics") {
+            score += 100;
+            reasons.push("Current working calibration cultivar for the next main run");
+          }
+          if ((rarity.tier === "Grail" || rarity.tier === "Very Rare") && count <= 10) {
+            score -= 30;
           }
           if (adv.stretchFactor === "High") {
             score += 20;
-            reasons.push("Tall stretch can fully express in the 200cm tent height");
+            reasons.push("Tall stretch can express in the primary tent with canopy control");
           }
           if (cann.thc.max >= 25) {
-            score += 20;
+            score += 15;
             reasons.push("High potency potential");
           }
-          if (seed.type === "Regular") {
+          if (seed.type === "Regular" && count >= 10) {
             score += 15;
-            reasons.push("Regular seeds are great for hunting/sexing in a larger 4-plant space");
+            reasons.push("Population size supports hunting and sexing while preserving stock");
           }
         }
 

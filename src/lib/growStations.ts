@@ -1,9 +1,5 @@
 "use client";
 
-// Grow station equipment specs, built from the three kits actually in use.
-// Specs reflect the published kit contents. The VGrow runs DWC; the 2×2 and 4×4
-// run coco/soil in 5-gallon (~19L) grow buckets, hand-fed.
-
 export type StationSpec = {
   label: string;
   value: string;
@@ -13,17 +9,19 @@ export type GrowStation = {
   id: string;
   name: string;
   role: string;
-  category: "<100W" | "220W" | "500W";
+  status: "Owned" | "Purchased · install status to confirm";
+  category: "<100W" | "280W" | "500W";
+  powerLabel: string;
   controller: string;
   medium: string;
   mediumNote: string;
   specs: StationSpec[];
-  storeUrl: string;
+  storeUrl?: string;
 };
 
 export const GROW_STATION_YIELD_MULTIPLIER: Record<GrowStation["category"], number> = {
   "<100W": 1,
-  "220W": 1.75,
+  "280W": 1.75,
   "500W": 3.15,
 };
 
@@ -41,56 +39,55 @@ export const scaleYieldForStation = (
 export const GROW_STATIONS: GrowStation[] = [
   {
     id: "vgrow",
-    name: "Vivosun VGrow Smart Box (DWC)",
-    role: "Solo / micro grow · self-contained smart box",
+    name: "VIVOSUN vGrow Smart Box",
+    role: "Single-plant experiment, mother/clone source, or controlled DWC run",
+    status: "Owned",
     category: "<100W",
-    controller: "VIVOSUN GrowHub app + built-in smart controller",
-    medium: "~11L DWC reservoir",
-    mediumNote: "Single DWC bucket with airstone — top up daily, full change weekly.",
+    powerLabel: "100W",
+    controller: "Built-in VIVOSUN GrowHub smart controller",
+    medium: "15 L DWC reservoir",
+    mediumNote: "Historical DWC use; aggressive roots and restricted circulation are known risks.",
     specs: [
-      { label: "Footprint", value: "Self-contained box (~40×40cm grow area)" },
-      { label: "Light", value: "Built-in full-spectrum LED (~100W draw)" },
-      { label: "Airflow", value: "Built-in inline fan + carbon filtration" },
-      { label: "System", value: "Integrated DWC bucket with airstone" },
-      { label: "Smart", value: "App scheduling for light, fan & timers" },
+      { label: "Format", value: "Self-contained single-plant smart box" },
+      { label: "Light", value: "Built-in full-spectrum LED · approximately 100 W" },
+      { label: "Airflow", value: "Built-in fan and carbon filtration" },
+      { label: "Best use", value: "Mother, clone source, or controlled single-plant trial" },
     ],
-    storeUrl:
-      "https://vivosun.com/en-AU/vivosun-complete-hydroponic-grow-bundle-vgrow-dwc-kit-p164724949286366400-v164724949286366404",
+    storeUrl: "https://vivosun.com/en-AU/",
   },
   {
-    id: "ac2x2",
-    name: "AC Infinity Advanced 2×2 Kit (2 plant)",
-    role: "Two-plant tent · veg or compact flower",
-    category: "220W",
-    controller: "AC Infinity Controller 69 Pro+ (Wi-Fi/Bluetooth UIS)",
-    medium: "2 × 5 gallon (~19L) buckets · coco/soil",
-    mediumNote: "Two 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
+    id: "ac2x4",
+    name: "AC Infinity Advanced 2×4 Kit",
+    role: "Breeding, reproduction, quarantine, or two-plant work",
+    status: "Purchased · install status to confirm",
+    category: "280W",
+    powerLabel: "280W",
+    controller: "AC Infinity control ecosystem; two Controller AI+ units are owned across the lab",
+    medium: "Run-specific",
+    mediumNote: "Do not treat this tent as operational until installation is confirmed.",
     specs: [
-      { label: "Tent", value: "CLOUDLAB 422 — 60×60×180cm (2'×2'×6')" },
-      { label: "Light", value: "IONBOARD S22, 220W full-spectrum LED" },
-      { label: "Fan", value: "CLOUDLINE T4 — 4\" inline (PWM)" },
-      { label: "Filter", value: "4\" carbon filter + ducting" },
-      { label: "Controller", value: "Controller 69 Pro+ — Wi-Fi app automation" },
+      { label: "Tent", value: "2 × 4 ft AC Infinity Advanced kit" },
+      { label: "Light", value: "IONFRAME EVO3 · approximately 280 W" },
+      { label: "Intended canopy", value: "Two plants or a controlled regular population" },
+      { label: "Preferred role", value: "Breeding / reproduction / quarantine" },
     ],
-    storeUrl:
-      "https://www.quickbloomlights.com.au/products/advanced-2x2-grow-kit-by-ac-infinity-1-plant-kit?variant=48836132897082",
   },
   {
     id: "ac4x4",
-    name: "AC Infinity Advanced IonFrame 4×4 Kit (4 plant)",
-    role: "Main flower tent · up to 4 plants",
+    name: "AC Infinity 4×4 Primary Tent",
+    role: "Principal flower, production, and solventless-selection space",
+    status: "Owned",
     category: "500W",
-    controller: "AC Infinity Controller 69 Pro+ (Wi-Fi/Bluetooth UIS)",
-    medium: "4 × 5 gallon (~19L) buckets · coco/soil",
-    mediumNote: "Up to four 5-gallon grow buckets, hand-fed. Coco runs daily feed; soil feeds as the pots dry.",
+    powerLabel: "500W",
+    controller: "AC Infinity Controller AI+ with Cloudline T6 extraction and carbon filtration",
+    medium: "Living soil · working concept",
+    mediumNote: "Four approximately 50 L fabric pots with Easy As Organics; exact irrigation and amendment cycle remain open.",
     specs: [
-      { label: "Tent", value: "CLOUDLAB 644 — 120×120×200cm (4'×4'×6'7\")" },
-      { label: "Light", value: "IonFrame EVO8, 500W full-spectrum LED" },
-      { label: "Fan", value: "CLOUDLINE T6 — 6\" inline (PWM)" },
-      { label: "Filter", value: "6\" carbon filter + ducting" },
-      { label: "Controller", value: "Controller 69 Pro+ — Wi-Fi app automation" },
+      { label: "Tent", value: "Approximately 1,200 × 1,200 × 1,800 mm (4 × 4 × 6 ft)" },
+      { label: "Light", value: "IONFRAME EVO6 · approximately 500 W" },
+      { label: "Airflow", value: "Cloudline T6, carbon filter, oscillating fans, and trellis" },
+      { label: "Benchmark", value: "Four full-canopy plants" },
+      { label: "Next calibration", value: "ETHOS Martian Fuel GEN1 · not started" },
     ],
-    storeUrl:
-      "https://www.quickbloomlights.com.au/products/pre-order-only-advanced-ionframe-4x4-grow-kit-by-ac-infinity-4-plant-kit?variant=48651119690042",
   },
 ];

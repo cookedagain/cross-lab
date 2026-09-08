@@ -14,7 +14,7 @@ import { showSuccess } from "@/utils/toast";
 import type { Seed, SeedType } from "@/data/seeds";
 
 type Season = "Summer" | "Autumn" | "Winter" | "Spring";
-type StationCategory = "<100W" | "220W" | "500W";
+type StationCategory = "<100W" | "280W" | "500W";
 
 const SEASONS: { value: Season; label: string; icon: React.ReactNode; desc: string }[] = [
   { value: "Summer", label: "Summer", icon: <Sun className="h-4 w-4 text-amber-500" />, desc: "Favors high mold resilience & Sativa-leaning strains for heat/humidity." },
@@ -24,9 +24,9 @@ const SEASONS: { value: Season; label: string; icon: React.ReactNode; desc: stri
 ];
 
 const STATIONS: { value: StationCategory; label: string; desc: string }[] = [
-  { value: "<100W", label: "VGrow Smart Box (<100W)", desc: "Prefers compact/low-stretch strains and Autoflowers." },
-  { value: "220W", label: "AC Infinity 2×2 (220W)", desc: "Prefers compact-to-medium stretch and Feminized/Regulars." },
-  { value: "500W", label: "AC Infinity 4×4 (500W)", desc: "Prefers high stretch, high potency, and premium/rare genetics." },
+  { value: "<100W", label: "vGrow Smart Box (100W)", desc: "Best for a mother, clone source, or controlled single-plant trial." },
+  { value: "280W", label: "AC Infinity 2×4 (280W)", desc: "Breeding, reproduction, quarantine, or controlled two-plant work." },
+  { value: "500W", label: "AC Infinity 4×4 (500W)", desc: "Primary four-plant flower and solventless-selection space." },
 ];
 
 const SEED_TYPES: { value: SeedType | "Any"; label: string }[] = [
@@ -38,7 +38,7 @@ const SEED_TYPES: { value: SeedType | "Any"; label: string }[] = [
 
 const RandomSeedPicker = () => {
   const { vaultSeeds, getSeedCount, seedWithCount } = useVault();
-  const [station, setStation] = useState<StationCategory>("220W");
+  const [station, setStation] = useState<StationCategory>("280W");
   const [season, setSeason] = useState<Season>("Spring");
   const [selectedType, setSelectedType] = useState<SeedType | "Any">("Any");
   const [preserveStock, setPreserveStock] = useState(true);

@@ -391,7 +391,7 @@ export type LineageNode = {
 };
 
 export type GrowthEstimate = {
-  wattage: "<100W" | "220W" | "500W";
+  wattage: "<100W" | "280W" | "500W";
   heightCm: { min: number; max: number };
   widthCm: { min: number; max: number };
   yieldG: { min: number; max: number };
@@ -444,7 +444,7 @@ function estimateGrowth(parentA: Seed, parentB: Seed): GrowthEstimate[] {
       note: `Small-light / micro setup estimate with a filled canopy and strong environment. Expect tighter structure and reduced lateral spread.${autoNote}${mutantNote}`,
     },
     {
-      wattage: "220W",
+      wattage: "280W",
       heightCm: range(55, 95, sizeFactor),
       widthCm: range(42, 72, sizeFactor),
       yieldG: range(95, 225, yieldFactor),
@@ -581,7 +581,7 @@ export function estimateCannabinoids(seed: Seed): CannabinoidEstimate {
   };
 }
 
-export type GrowEnvironment = "<100W" | "220W" | "500W";
+export type GrowEnvironment = "<100W" | "280W" | "500W";
 
 export type SeedGrowthEstimate = {
   wattage: GrowEnvironment;
@@ -605,8 +605,8 @@ export function estimateSeedGrowth(seed: Seed): SeedGrowthEstimate[] {
       yieldG: range(22, 70, yieldFactor),
     },
     {
-      wattage: "220W",
-      gear: "AC Infinity 2×2",
+      wattage: "280W",
+      gear: "AC Infinity 2×4 · IONFRAME EVO3",
       heightCm: range(50, 88, sizeFactor),
       widthCm: range(38, 64, sizeFactor),
       yieldG: range(75, 180, yieldFactor),

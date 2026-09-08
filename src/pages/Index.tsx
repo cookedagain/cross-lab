@@ -138,6 +138,7 @@ const Index = () => {
   const {
     seedCounts,
     multipass,
+    incomingArrivedIds,
     vaultSeeds,
     getSeedCount,
     seedWithCount,
@@ -204,12 +205,6 @@ const Index = () => {
     setMinResin(1);
     setMinTerpene(1);
   };
-
-  const incomingArrivedIds = useMemo(() => {
-    return multipass
-      .filter((entry) => entry.arrived)
-      .map((entry) => entry.id);
-  }, [multipass]);
 
   const vaultTypeTotals = useMemo(
     () => {
@@ -363,8 +358,8 @@ const Index = () => {
               <Leaf className="h-6 w-6" />
             </span>
             <div>
-              <p className="font-display text-2xl font-black tracking-tight">Vault Lab</p>
-              <p className="text-sm text-muted-foreground">Vault-aware breeder planning with FEM / REG / AUTO labels</p>
+              <p className="font-display text-2xl font-black tracking-tight">CrossLab Seed Vault</p>
+              <p className="text-sm text-muted-foreground">Manning Madness · personal, non-commercial archive</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">

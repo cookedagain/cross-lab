@@ -22,7 +22,7 @@ const seasonTone: Record<Season, string> = {
 const getVegWeeks = (seed: Seed, category: string) => {
   if (seed.type === "Autoflower") return 3;
   if (category === "<100W") return 3;
-  if (category === "220W") return 4;
+  if (category === "280W") return 4;
   return 5;
 };
 
@@ -35,7 +35,7 @@ const getSeasonAdjustment = (season: Season, moldResilience: number, stressResis
 const GrowSimulator = () => {
   const { vaultSeeds, seedCounts, getSeedCount } = useVault();
   const [seed, setSeed] = useState<Seed | null>(null);
-  const [stationId, setStationId] = useState("ac2x2");
+  const [stationId, setStationId] = useState("ac2x4");
   const [season, setSeason] = useState<Season>("Spring");
 
   const selectableSeeds = useMemo(
@@ -73,8 +73,8 @@ const GrowSimulator = () => {
         note:
           selectedStation.category === "<100W"
             ? "Keep the canopy compact; this station favors low stretch and early shape control."
-            : selectedStation.category === "220W"
-              ? "Balanced tent height gives room for a controlled 1–2 plant canopy."
+            : selectedStation.category === "280W"
+              ? "Use the 2×4 for a controlled two-plant canopy, quarantine, or reproduction work."
               : "Use the 4×4 space for fuller structure and bigger lateral spread.",
       },
       {

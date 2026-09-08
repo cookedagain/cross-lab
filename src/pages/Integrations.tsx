@@ -27,9 +27,9 @@ const Integrations = () => {
 
       <main className="container max-w-4xl py-8">
         <div className="mb-8 rounded-3xl bg-muted/50 p-6">
-          <h2 className="font-display text-2xl font-black">Connecting AC Infinity & Vivosun</h2>
+          <h2 className="font-display text-2xl font-black">Connecting AC Infinity & VIVOSUN</h2>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            A reference guide for integrating AC Infinity (Controller 69 Pro) and Vivosun (GrowHub) into a local dashboard or mini-PC setup in your grow room.
+            A reference guide for the two owned AC Infinity Controller AI+ units and the VIVOSUN GrowHub ecosystem. The two planned Spectron 7 AI 4K cameras remain status-to-confirm.
           </p>
         </div>
 
@@ -45,7 +45,7 @@ const Integrations = () => {
             <ul className="space-y-3 text-sm font-medium text-muted-foreground">
               <li className="flex items-start gap-2">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-500" />
-                No official public developer API for the Controller 69 Pro.
+                No official public developer API is recorded for the Controller AI+.
               </li>
               <li className="flex items-start gap-2">
                 <Settings2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />

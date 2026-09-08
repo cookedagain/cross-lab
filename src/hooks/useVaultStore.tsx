@@ -3,9 +3,9 @@ import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/see
 import { getIncomingDropId, INCOMING_DROPS, INCOMING_ORDERS, incomingDropToSeed } from "@/data/incomingDrops";
 import { showError, showSuccess } from "@/utils/toast";
 
-const INVENTORY_STORAGE_KEY = "crosslab-seed-counts-v3";
-const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass-v2";
-const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v4";
+const INVENTORY_STORAGE_KEY = "crosslab-seed-counts-v4-2026-09-08";
+const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass-v3-2026-09-08";
+const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v5";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
 
@@ -126,7 +126,9 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
 
   const arrivedIncomingSeeds = useMemo<Seed[]>(() => {
     const arrived = new Set(incomingArrivedIds);
-    return INCOMING_DROPS.filter((drop) => arrived.has(getIncomingDropId(drop))).map(incomingDropToSeed);
+    return INCOMING_DROPS.filter(
+      (drop) => drop.recordKind === "exact" && drop.count !== null && arrived.has(getIncomingDropId(drop)),
+    ).map(incomingDropToSeed);
   }, [incomingArrivedIds]);
 
   const vaultSeeds = useMemo(
@@ -154,6 +156,12 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
     setMultipass((current) => current.map((entry) => (entry.id === id ? { ...entry, arrived: !entry.arrived } : entry)));
 
   const setIncomingArrived = (id: string, arrived: boolean) => {
+    const drop = INCOMING_DROPS.find((item) => getIncomingDropId(item) === id);
+    if (arrived && (!drop || drop.recordKind !== "exact" || drop.count === null)) {
+      showError("Confirm the landed cultivar and physical count before moving it into the vault.");
+      return;
+    }
+
     setIncomingArrivedIds((current) =>
       arrived ? (current.includes(id) ? current : [...current, id]) : current.filter((item) => item !== id),
     );
@@ -164,7 +172,7 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
         return next;
       });
     }
-    showSuccess(arrived ? "Incoming cultivar added to the main vault." : "Cultivar moved back to incoming.");
+    showSuccess(arrived ? "Physically audited cultivar added to the main vault." : "Cultivar moved back to incoming.");
   };
 
   const addLot = (data: Omit<BreedingLot, "id">) =>
@@ -175,7 +183,7 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   const exportData = () =>
     JSON.stringify(
       {
-        version: 3,
+        version: 4,
         seedCounts,
         multipass,
         lots,

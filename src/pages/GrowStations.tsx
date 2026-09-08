@@ -11,6 +11,7 @@ import RecommendedCrosses from "@/components/RecommendedCrosses";
 import BreedingLots from "@/components/BreedingLots";
 import CrossPlanner from "@/components/CrossPlanner";
 import GrowCostCalculator from "@/components/GrowCostCalculator";
+import CurrentLabStatus from "@/components/CurrentLabStatus";
 import { StationSeedRecommendations } from "@/components/StationSeedRecommendations";
 import { CloneRegisterProvider } from "@/hooks/useCloneRegister";
 import { GROW_STATIONS } from "@/lib/growStations";
@@ -18,7 +19,7 @@ import { Button } from "@/components/ui/button";
 
 const CATEGORY_TONE: Record<string, string> = {
   "<100W": "bg-teal-100 text-teal-800 border-teal-200 dark:bg-teal-950/40 dark:text-teal-200 dark:border-teal-900",
-  "220W": "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-teal-200 dark:border-emerald-900",
+  "280W": "bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-teal-200 dark:border-emerald-900",
   "500W": "bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200 dark:bg-fuchsia-950/40 dark:text-fuchsia-200 dark:border-fuchsia-900",
 };
 
@@ -61,22 +62,29 @@ const GrowStations = () => {
         </header>
 
         <main className="container max-w-5xl pb-20 pt-8">
+          <CurrentLabStatus />
+
           <section className="grid gap-4 lg:grid-cols-3">
             {GROW_STATIONS.map((station) => (
               <div key={station.id} className="rounded-[1.75rem] border-2 border-border bg-card p-5 shadow-sm flex flex-col justify-between">
                 <div>
-                  <div className="mb-3 flex items-start justify-between gap-2">
+                  <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
                     <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-wide ${CATEGORY_TONE[station.category]}`}>
-                      {station.category}
+                      {station.powerLabel}
                     </span>
-                    <a
-                      href={station.storeUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-black text-primary hover:underline"
-                    >
-                      Kit
-                    </a>
+                    <span className="rounded-full border border-border bg-muted px-2.5 py-1 text-[10px] font-black text-muted-foreground">
+                      {station.status}
+                    </span>
+                    {station.storeUrl && (
+                      <a
+                        href={station.storeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 text-[11px] font-black text-primary hover:underline"
+                      >
+                        Vendor
+                      </a>
+                    )}
                   </div>
 
                   <h2 className="font-display text-lg font-black leading-tight">{station.name}</h2>
@@ -132,8 +140,7 @@ const GrowStations = () => {
           <GrowingNextIdeas />
 
           <div className="mt-6 rounded-3xl bg-muted/50 p-4 text-xs font-semibold leading-relaxed text-muted-foreground">
-            Specs are taken from each kit's published contents. The VGrow runs DWC; the 2×2 and 4×4 run coco/soil
-            in 5-gallon grow buckets — adjust feed style to your medium and trust your EC/pH meter over any chart.
+            Current direction: living soil in the primary 4×4, not immediate RDWC. The 2×4 installation remains to be confirmed, and the vGrow's 15 L DWC history includes aggressive-root and circulation lessons. Equipment marked planned or considered is not treated as owned.
           </div>
         </main>
       </div>

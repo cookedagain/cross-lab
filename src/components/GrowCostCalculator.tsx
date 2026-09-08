@@ -11,9 +11,9 @@ import {
 import { CYCO_PRODUCTS, CYCO_SCHEDULE, type CycoKey } from "@/lib/cycoFeed";
 
 const PRESET_STATIONS = [
-  { name: "VGrow Smart Box", lightWattage: 100, fanWattage: 20, estYieldMin: 35, estYieldMax: 80, resSize: 11, resCount: 1, medium: "dwc" as const },
-  { name: "AC Infinity 2×2", lightWattage: 100, fanWattage: 30, estYieldMin: 45, estYieldMax: 110, resSize: 19, resCount: 1, medium: "coco" as const },
-  { name: "AC Infinity 4×4", lightWattage: 500, fanWattage: 70, estYieldMin: 120, estYieldMax: 400, resSize: 19, resCount: 4, medium: "soil" as const },
+  { name: "VGrow Smart Box", lightWattage: 100, fanWattage: 20, estYieldMin: 35, estYieldMax: 80, resSize: 15, resCount: 1, medium: "dwc" as const },
+  { name: "AC Infinity 2×4", lightWattage: 280, fanWattage: 40, estYieldMin: 90, estYieldMax: 220, resSize: 50, resCount: 2, medium: "soil" as const },
+  { name: "AC Infinity 4×4", lightWattage: 500, fanWattage: 70, estYieldMin: 120, estYieldMax: 400, resSize: 50, resCount: 4, medium: "soil" as const },
 ];
 
 const DEFAULT_BOTTLE_PRICES: Record<CycoKey, number> = {
@@ -50,8 +50,8 @@ const MIXING_GUIDE = {
     weekLabel: "per watering batch",
   },
   soil: {
-    label: "Soil",
-    note: "Use a lighter mix and only feed when the pot is ready.",
+    label: "Living soil",
+    note: "Current direction is water-first Easy As Organics; bottled-feed calculations are comparison-only, not the locked amendment plan.",
     perLiter: 0.25,
     weekLabel: "per watering batch",
   },
@@ -66,20 +66,20 @@ const formatWeekRange = (index: number) => {
 };
 
 const GrowCostCalculator = () => {
-  const [lightWatts, setLightWatts] = useState<number>(220);
-  const [fanWatts, setFanWatts] = useState<number>(40);
+  const [lightWatts, setLightWatts] = useState<number>(500);
+  const [fanWatts, setFanWatts] = useState<number>(70);
   const [vegWeeks, setVegWeeks] = useState<number>(4);
   const [flowerWeeks, setFlowerWeeks] = useState<number>(9);
-  const [kwhRate, setKwhRate] = useState<number>(0.32);
+  const [kwhRate, setKwhRate] = useState<number>(0.5);
   const [nutrientCost, setNutrientCost] = useState<number>(80);
   const [mediumCost, setMediumCost] = useState<number>(40);
   const [otherCost, setOtherCost] = useState<number>(30);
-  const [expectedYield, setExpectedYield] = useState<number>(150);
+  const [expectedYield, setExpectedYield] = useState<number>(260);
 
-  const [resSize, setResSize] = useState<number>(15);
-  const [resCount, setResCount] = useState<number>(1);
+  const [resSize, setResSize] = useState<number>(50);
+  const [resCount, setResCount] = useState<number>(4);
   const [changesPerWeek, setChangesPerWeek] = useState<number>(1);
-  const [mixMedium, setMixMedium] = useState<"dwc" | "coco" | "soil">("coco");
+  const [mixMedium, setMixMedium] = useState<"dwc" | "coco" | "soil">("soil");
   const [waterStartPh, setWaterStartPh] = useState<number>(7.2);
   const [targetPh, setTargetPh] = useState<number>(5.8);
   const [bottlePrices, setBottlePrices] = useState<Record<CycoKey, number>>(DEFAULT_BOTTLE_PRICES);

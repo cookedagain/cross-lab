@@ -6,7 +6,7 @@ const IDEAS = [
     title: "Pop Seed → Active Run",
     icon: <PackageCheck className="h-4 w-4" />,
     value: "Highest value",
-    note: "Turn a seed-picker result into a live grow: deduct 1 seed, assign it to VGrow/2×2/4×4, and start a run timeline automatically.",
+    note: "Turn a seed-picker result into a live grow: deduct 1 seed, assign it to vGrow/2×4/4×4, and start a run timeline automatically.",
   },
   {
     title: "Daily pH / EC Feed Log",

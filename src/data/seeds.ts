@@ -11,14 +11,29 @@ export type Seed = {
   note?: string;
 };
 
-// Canonical physical audit from CrossLab Seed Vault, updated 8 September 2026 AEST.
-// Only received and physically counted seeds belong in this ledger.
+// Canonical working physical ledger from CrossLab Seed Vault, updated 21 September 2026 AEST.
+// The 1,961-seed post-Pixie total is provisional until the pinned outbound parcel is physically reconciled.
 const inventory = `
+TheWiz / Overgrow; attribution @il_medical as reported|Black Domina|Not recorded|Unknown|11
+TheWiz / Overgrow; attribution @thewiz as reported|Wizards Cherry Pie|Not recorded|Regular|19
+TheWiz / Overgrow; attribution @neuro as reported|Williams Wonder F5|Not recorded|Unknown|19
+Pixie65 / Overgrow|DL|Not recorded; DL retained without expansion|Unknown|10
+Pixie65 / Overgrow|wally ducks fat mango x z99|No further lineage supplied beyond the exact recorded label|Regular|18
+Pixie65 / Overgrow; Dragon Flame Genetics (DFG) attribution|Orange Stash 'Lisa'|Orange Dreams 'Lisa' × Dragons Stash; DFG = Dragon Flame Genetics and is breeder/source attribution, not part of the cultivar name|Unknown|12
+Pixie65 / Overgrow|HDB / Hard Dick Blue's|HDB confirmed as Hard Dick Blue's; further lineage not recorded|Unknown|10
+Pixie65 / Overgrow|Hindu Kush 2026 (repro)|Not recorded; 2026 repro label supplied; reproducer not identified|Unknown|17
+Pixie65 / Overgrow|DLA 5 / Deep Line Alchemy — Bodhi|Artifact 1 {Red Vein F3 [Afghani]} × '88 G13 Hashplant; background only: v1=A1 clone, v2=A1 incense pheno, v3=Mexican Chocolate pheno, 2023 remix=in-work; received lot version not assigned|Unknown|10
+Pixie65 / Overgrow|MB × 88 / Motor Breath × 88 Hashplant|Motor Breath × 88 Hashplant|Unknown|10
+Pixie65 / Overgrow|Skunk#1 F4 (2023 repro)|Not recorded beyond Skunk#1 F4 (2023 repro); reproducer not identified|Regular|17
+Pixie65 / Overgrow; attribution @Landrace420 as reported|Exodus Cheese x Purest Indica|Exodus Cheese x Purest Indica|Regular|19
+Pixie65 / Overgrow; attribution @fuel as reported|Sour Diesel x Jack Herer — yellow sticker pack|Sour Diesel x Jack Herer; pack identifier: yellow sticker pack|Unknown|9
+Pixie65 / Overgrow; attribution @fuel as reported|Sour Diesel x Jack Herer — white sticker pack|Sour Diesel x Jack Herer; pack identifier: white sticker pack|Unknown|8
+Le_Rat / Overgrow|Blue Biskawit|Oreoz × Blue Afghani|Regular|9
+Choctaw / Overgrow|Alien Daydream|Splinter7 (Choclit Zulu × Lemon Alien) × Bodhi SSDD F2|Regular|11
 POKEYGTO / Overgrow|(Coast 2 Coast × Dank Side of the Moon) × Double Truffle OG|[(Gorilla Butter × Oreoz) × (Morning Vibes × Hell on Wheels)] × (Godfather OG × Double Truffle Shuffle)|Regular|17
 Shoreline Genetics / Overgrow|Deathstar BX2|Not recorded|Regular|11
 Shoreline Genetics / Overgrow|Golden Goat BX2|Not recorded|Regular|11
 Shoreline Genetics / Overgrow|Sour D — Pack 1|Not recorded|Regular|11
-Shoreline Genetics / Overgrow|Sour D — Pack 2|Not recorded|Regular|9
 Akamai / Overgrow|Snow Lotus IBL|Not recorded|Regular|16
 Akamai / Overgrow|Lavender Boogie F5|Not recorded|Regular|16
 Akamai / Overgrow|Wolf Pack F3|Not recorded|Regular|13
@@ -27,7 +42,7 @@ sd9007 / Overgrow|CSD S1|Boston Clone Company CSD clone S1; CSD expansion unveri
 sd9007 / Overgrow|Blue Fury × Freakshow BX|Blue Fury × Freakshow BX|Regular|13
 sd9007 / Overgrow|Santa Marta Colombian Gold 2025|Not recorded|Regular|17
 Ethos Genetics|End Game #3 × Grandpa's Cookies #10|End Game #3 × Grandpa's Cookies #10|Feminized|3
-Ethos Genetics|Durban Poison × Lilac Diesel #22|Durban Poison × Lilac Diesel #22|Feminized|11
+Ethos Genetics|Durban Poison × Lilac Diesel #22|Durban Poison × Lilac Diesel #22|Feminized|6
 Ethos Genetics|Uber Cherry|Not recorded|Feminized|3
 Ethos Genetics|Temple Kush F2 × Temple of the Dog BX|Temple Kush F2 × Temple of the Dog BX|Regular|9
 Ethos Genetics|Temple Kush F2 × California Black Rozé #10|Temple Kush F2 × California Black Rozé #10|Regular|9
@@ -97,7 +112,7 @@ Ethos Genetics|Krux × Grandpa's Cookies #6|Krux × Grandpa's Cookies #6|Feminiz
 Ethos Genetics|Grape Diamonds × Grandpa's Cookies #6|Grape Diamonds × Grandpa's Cookies #6|Feminized|2
 Ethos Genetics|Grandpa's Cookies #3 × Josh D OG BX3|Grandpa's Cookies #3 × Josh D OG BX3|Regular|20
 Ethos Genetics|Lilac Diesel × Pineapple Runtz Auto|Lilac Diesel × Pineapple Runtz Auto|Auto Fem|2
-Ethos Genetics|Cap Junkie × End Game #3|Cap Junkie × End Game #3|Feminized|9
+Ethos Genetics|Cap Junkie × End Game #3|Cap Junkie × End Game #3|Feminized|4
 Ethos Genetics|Blueberry Cookies|Not recorded|Feminized|2
 Ethos Genetics|Wrotten Fruit|Not recorded|Feminized|10
 Ethos Genetics|Auto V5 × Homogenous|Auto V5 × Homogenous|Auto Fem|4
@@ -126,15 +141,15 @@ Ethos Genetics|Trop Cherry OG R1|Trop Cherry × SFV OG|Feminized|5
 Ethos Genetics|10th Planet R1|Not recorded|Feminized|10
 Ethos Genetics|Pepe Silvia R1|Not recorded|Feminized|10
 Ethos Genetics|Liqueur R1|Not recorded|Feminized|10
-Ethos Genetics|Orange Velvet Underground RBx|Not recorded|Feminized|10
+Ethos Genetics|Orange Velvet Underground RBx|Not recorded|Feminized|5
 Ethos Genetics|Martian Fuel GEN1|Martian Candy OG × Banana Daddy AUTO IBL|Feminized|5
 Ethos Genetics|Pocket Rocket GEN1|Jet Fuel × Banana Daddy AUTO IBL|Feminized|5
-Ethos Genetics|Purple Sunset RBx2|Not recorded|Feminized|10
+Ethos Genetics|Purple Sunset RBx2|Not recorded|Feminized|5
 Ethos Genetics|Grape Balls of Fire RBx|Not recorded|Feminized|5
 Ethos Genetics|Cherry Zoap R1|Zoap × Cherry Pie|Feminized|5
 Ethos Genetics|Sun Dart R1|Zoap × Tahoe OG|Feminized|5
 Ethos Genetics|Planet of the Grapes Auto|Not recorded|Auto Fem|10
-Ethos Genetics|Mandarin Zkittlez R1|Not recorded|Feminized|10
+Ethos Genetics|Mandarin Zkittlez R1|Not recorded|Feminized|5
 Ethos Genetics|Chama|Not recorded|Feminized|5
 Ethos Genetics|Purple Nasty × Martian Candy OG|Purple Nasty × Martian Candy OG|Feminized|5
 Ethos Genetics|Whiskey OG × Martian Candy OG|Whiskey OG × Martian Candy OG|Feminized|5
@@ -151,7 +166,7 @@ Binchickens Genetics|Banksia Tar Kush F2 #6|Not recorded|Regular|35
 Binchickens Genetics|Banksia Tar Kush V1|Not recorded|Regular|25
 Binchickens Genetics|Dog Downunder ABC|Not recorded|Regular|18
 Binchickens Genetics|Wombat Breath ABC|Not recorded|Regular|16
-Binchickens Genetics|Deep Chunk|Not recorded|Regular|23
+Binchickens Genetics|Deep Chunk|Not recorded|Regular|12
 Binchickens Genetics|Ol Betsy × Chem91 × Deep Chunk|Ol Betsy × Chem91 × Deep Chunk|Regular|17
 Terpyz Mutant Genetics|Mentha de Croco|Not recorded|Regular|12
 Terpyz Mutant Genetics|Quackberry Rose|Not recorded|Regular|12
@@ -173,20 +188,19 @@ DNA Genetics|Kosher Cookies|Kosher Kush × Girl Scout Cookies|Feminized|1
 In-House Genetics|Random Platinum Cross|Not recorded|Regular|4
 In-House Genetics|Slurricane #44 RBX|Not recorded|Feminized|3
 In-House Genetics|GG #4 × Black Cherry Smoothie|GG #4 × Black Cherry Smoothie|Feminized|21
-In-House Genetics|ZoFire|Divine Zushi × Platinum Zushi|Feminized|19
+In-House Genetics|ZoFire|Divine Zushi × Platinum Zushi|Feminized|11
 In-House Genetics|Garlic Fusion|Not recorded|Feminized|12
 In-House Genetics|Slurricane #7 S1|Not recorded|Feminized|12
 WolfPack Selections|Fruit Funk|GMO × Guava Biscotti|Feminized|6
 Happy Valley Genetics|Game Over|Not recorded|Feminized|10
 Happy Valley Genetics|End Game #3 S1|Not recorded|Feminized|6
 Brothers Grimm|Bubble's Blueberry F4|Not recorded|Feminized|18
-Brothers Grimm|Ricky's Hash Plant|Not recorded|Feminized|20
+Brothers Grimm|Ricky's Hash Plant|Not recorded|Feminized|12
 Brothers Grimm|Julian's Black Tee Tangie|Not recorded|Feminized|20
 Greenspace AU|Heavy Bud|Not recorded|Feminized|5
 Greenspace AU|Super Bud|Not recorded|Feminized|5
 Greenspace AU|Exodus Cheese|Not recorded|Feminized|5
 Greenspace AU|Mango Smile Auto|Not recorded|Auto Fem|3
-Rare Dankness|Ghost Train Haze #1|Ghost OG × Nevil's Wreck|Feminized|5
 7 East Genetics|Freaks of Dank|Not recorded|Regular|20
 7 East Genetics|Palestinian Princess F2|Not recorded|Regular|15
 7 East Genetics|Lebanese Dragon BX1|Not recorded|Regular|15
@@ -214,7 +228,7 @@ Unknown / Burn Pile|Alien OG|Not recorded|Feminized|4
 Unknown / Burn Pile|Afghan|Not recorded|Feminized|4
 Unknown / Burn Pile|Jack Herer|Not recorded|Auto Fem|3
 Silly Wonka's Golden Beans / Ethos|Pocket Kingz (Cowboyz)|Not recorded|Feminized|6
-Silly Wonka's Golden Beans / Ethos|Rozé Cookie Dough|Not recorded|Feminized|25
+Silly Wonka's Golden Beans / Ethos|Rozé Cookie Dough|Not recorded|Feminized|20
 Silly Wonka's Golden Beans / Ethos|Rainmaker RBx|Not recorded|Feminized|5
 Unknown / Brotanical Gardens freebie|Animal Mintz Auto|Animal Cookies × SinMint Cookies|Auto Fem|7
 Ethos Genetics|Atomic Fuego R1|Not recorded|Feminized|10
@@ -256,7 +270,7 @@ export const SEEDS: Seed[] = inventory.split("\n").map((row, index) => {
   const parsedCount = Number.parseInt(countText, 10);
 
   return {
-    id: `vault-2026-09-08-${index + 1}-${breeder}-${name}`,
+    id: `vault-2026-09-21-${index + 1}-${breeder}-${name}`,
     breeder,
     name,
     lineage,

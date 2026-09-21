@@ -1,4 +1,5 @@
 import type { Seed } from "@/data/seeds";
+import { VAULT_LEDGER_STATUS } from "@/data/vaultStatus";
 import type { CrossName, NameCategory, TraitGoal } from "@/lib/crossName";
 import { AiMessage, callAI } from "@/lib/aiClient";
 import {
@@ -99,7 +100,12 @@ export async function askVaultChat(
     { role: "system", content: SYSTEM_PROMPT },
     {
       role: "system",
-      content: `Here is the user's current vault. Answer using only these strains and figures:\n\n${roster}`,
+      content:
+        `Ledger authority: ${VAULT_LEDGER_STATUS.authorityDate}. The displayed physical ledger is a WORKING / PROVISIONAL ` +
+        `${VAULT_LEDGER_STATUS.workingPhysicalSeeds}-seed, ${VAULT_LEDGER_STATUS.workingPhysicalRows}-row post-dispatch state. ` +
+        `Do not call it confirmed until the pinned ${VAULT_LEDGER_STATUS.provisionalOutboundSeeds}-seed Pixie65 parcel is recounted. ` +
+        `The pre-dispatch confirmed state was ${VAULT_LEDGER_STATUS.preOutboundSeeds} seeds across ${VAULT_LEDGER_STATUS.preOutboundRows} rows.\n\n` +
+        `Here is the working vault roster. Answer using only these cultivars and figures:\n\n${roster}`,
     },
     ...history.map((turn) => ({ role: turn.role, content: turn.content } as AiMessage)),
     { role: "user", content: question },

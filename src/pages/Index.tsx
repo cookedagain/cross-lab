@@ -7,7 +7,6 @@ import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
 import RandomSeedPicker from "@/components/RandomSeedPicker";
 import IncomingDrops from "@/components/IncomingDrops";
-import VaultLedgerStatus from "@/components/VaultLedgerStatus";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedPickups from "@/components/RecommendedPickups";
 import CannabinoidDetailsTable from "@/components/CannabinoidDetailsTable";
@@ -364,9 +363,9 @@ const Index = () => {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Working main vault {mainVaultTotal}</span>
+            <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-black text-primary">Main vault {mainVaultTotal}</span>
             <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-black text-orange-800 dark:bg-orange-950/50 dark:text-orange-200">Burn pile {burnPileTotal}</span>
-            <span className="rounded-full bg-amber-500/15 px-3 py-1 text-xs font-black text-amber-800 dark:text-amber-200">Working total {grandTotal}</span>
+            <span className="rounded-full bg-secondary px-3 py-1 text-xs font-black text-secondary-foreground">Grand total {grandTotal}</span>
             <Link
               to="/breeders"
               className="inline-flex items-center gap-1.5 rounded-full border-2 border-border bg-card px-3 py-1.5 text-xs font-black text-muted-foreground transition-colors hover:border-primary hover:text-primary"
@@ -423,8 +422,6 @@ const Index = () => {
       </header>
 
       <main className="container max-w-6xl pb-20 pt-8">
-        <VaultLedgerStatus />
-
         <section className="grid gap-4 md:grid-cols-3">
           {vaultTypeTotals.filter((entry) => entry.total > 0).map((entry) => (
             <div key={entry.type} className={`rounded-[1.75rem] border-2 p-5 shadow-sm ${typeStyles[entry.type]}`}>

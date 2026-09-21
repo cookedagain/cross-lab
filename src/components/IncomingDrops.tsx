@@ -112,7 +112,7 @@ const IncomingDrops = () => {
         </div>
       ) : (
         <>
-          <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div className="mb-5 grid gap-4 lg:grid-cols-3">
             {INCOMING_ORDERS.map((order) => {
               const orderDrops = INCOMING_DROPS.filter(
                 (drop) => (drop.orderId ?? DEFAULT_INCOMING_ORDER_ID) === order.id,
@@ -188,7 +188,7 @@ const IncomingDrops = () => {
           </div>
 
           <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-            <b>{INCOMING_DROP_TOTAL} count-known incoming seeds</b>: 20 across two LandraceWarden rows, 50 across five paid/not-sent @wizdom lots, and 400 across JohnnyPotseed's 40 packs. The 39 Johnny catalogue rows remain requested references rather than a confirmed manifest, while the {INCOMING_DROP_UNCONFIRMED_COUNT} TBD allocations add zero.
+            <b>{INCOMING_DROP_TOTAL} count-known incoming seeds</b>: 40 across four exact auction rows plus 400 across JohnnyPotseed's 40 packs. The 39 Johnny catalogue rows are requested references, not a confirmed manifest, and the {INCOMING_DROP_UNCONFIRMED_COUNT} TBD allocations add zero.
           </div>
 
           <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">

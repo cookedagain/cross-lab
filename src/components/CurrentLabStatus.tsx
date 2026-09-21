@@ -2,6 +2,7 @@ import {
   AlertTriangle,
   Archive,
   Camera,
+  CheckCircle2,
   Cpu,
   Droplets,
   FlaskConical,
@@ -16,20 +17,17 @@ const CurrentLabStatus = () => (
     <div className="rounded-[2rem] border-2 border-primary/20 bg-primary/5 p-5 shadow-sm">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Current authority · 21 September 2026 AEST</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">Current authority · 8 September 2026 AEST</p>
           <h2 className="mt-1 font-display text-2xl font-black">CrossLab Seed Vault · Manning Madness</h2>
           <p className="mt-1 text-sm font-semibold text-muted-foreground">
             Personal, non-commercial archive. Two More Weeks Labs remains the internal lab alias.
           </p>
         </div>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500/15 px-3 py-1.5 text-xs font-black text-amber-800 dark:text-amber-200">
-          <AlertTriangle className="h-4 w-4" />
-          Working · 1,961 physical · 242 rows
+        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/15 px-3 py-1.5 text-xs font-black text-emerald-700 dark:text-emerald-300">
+          <CheckCircle2 className="h-4 w-4" />
+          1,823 physical · 228 rows
         </span>
       </div>
-      <p className="mt-3 rounded-2xl bg-amber-500/10 p-3 text-xs font-semibold leading-relaxed text-amber-900 dark:text-amber-100">
-        The post-Pixie total is provisional pending a physical recount of the pinned 71-seed / 11-line outbound record. Pre-dispatch stock was fully reconciled at 2,032 seeds across 244 rows.
-      </p>
     </div>
 
     <div className="grid gap-4 lg:grid-cols-2">

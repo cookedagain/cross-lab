@@ -95,7 +95,7 @@ const IncomingDrops = () => {
       icon={<PackageOpen className="h-5 w-5" />}
       description={
         INCOMING_DROPS.length > 0
-          ? "Count-known orders, requested manifest references, and count-TBD allocations. Only exact rows can move into the vault after a physical count."
+          ? "Count-known orders, unresolved known-count lots, requested manifest references, and count-TBD allocations. Only exact cultivar rows can move into the vault after a physical count."
           : "The incoming tracker is empty and ready for the next confirmed allocation."
       }
       badge={
@@ -112,7 +112,7 @@ const IncomingDrops = () => {
         </div>
       ) : (
         <>
-          <div className="mb-5 grid gap-4 lg:grid-cols-3">
+          <div className="mb-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             {INCOMING_ORDERS.map((order) => {
               const orderDrops = INCOMING_DROPS.filter(
                 (drop) => (drop.orderId ?? DEFAULT_INCOMING_ORDER_ID) === order.id,
@@ -188,7 +188,7 @@ const IncomingDrops = () => {
           </div>
 
           <div className="mb-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-900 dark:text-amber-100">
-            <b>{INCOMING_DROP_TOTAL} count-known incoming seeds</b>: 40 across four exact auction rows plus 400 across JohnnyPotseed's 40 packs. The 39 Johnny catalogue rows are requested references, not a confirmed manifest, and the {INCOMING_DROP_UNCONFIRMED_COUNT} TBD allocations add zero.
+            <b>{INCOMING_DROP_TOTAL} count-known incoming seeds</b>: 20 from two LandraceWarden rows, 50 from five paid/not-sent @wizdom lots, and 400 across JohnnyPotseed's 40 packs. The 39 Johnny catalogue rows are requested references, the @wizdom dealer-choice cultivar remains unresolved, and the {INCOMING_DROP_UNCONFIRMED_COUNT} TBD allocations add zero. The 2,431 known-future floor remains conditional on the Pixie65 recount.
           </div>
 
           <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-border bg-background p-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
@@ -269,6 +269,11 @@ const IncomingDrops = () => {
                           {drop.recordKind === "requested-reference" && (
                             <span className="rounded-full bg-sky-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-sky-700 dark:text-sky-300">
                               Requested reference
+                            </span>
+                          )}
+                          {drop.recordKind === "count-known-unresolved" && (
+                            <span className="rounded-full bg-violet-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                              Count known · cultivar TBD
                             </span>
                           )}
                           {drop.recordKind === "tbd-allocation" && (

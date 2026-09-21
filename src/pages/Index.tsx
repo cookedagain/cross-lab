@@ -1,12 +1,13 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plug, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
+import { AlertTriangle, Boxes, ChevronDown, HelpCircle, Leaf, Library, Minus, PackageCheck, PackagePlus, Pill, Plug, Plus, RotateCcw, Search, ShieldAlert, SlidersHorizontal, Trash2, Undo2, RefreshCw } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
 import AiVaultChat from "@/components/AiVaultChat";
 import VaultBackup from "@/components/VaultBackup";
 import VaultAnalytics from "@/components/VaultAnalytics";
 import RandomSeedPicker from "@/components/RandomSeedPicker";
 import IncomingDrops from "@/components/IncomingDrops";
+import OutboundHistory from "@/components/OutboundHistory";
 import CollapsibleSection from "@/components/CollapsibleSection";
 import RecommendedPickups from "@/components/RecommendedPickups";
 import CannabinoidDetailsTable from "@/components/CannabinoidDetailsTable";
@@ -32,7 +33,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { type Seed, type SeedType } from "@/data/seeds";
+import { VAULT_AUTHORITY_DATE, VAULT_LEDGER_STATUS, type Seed, type SeedType } from "@/data/seeds";
 import {
   getIncomingDropId,
   INCOMING_DROPS,
@@ -422,6 +423,19 @@ const Index = () => {
       </header>
 
       <main className="container max-w-6xl pb-20 pt-8">
+        <div className="mb-5 flex flex-col gap-3 rounded-3xl border-2 border-amber-500/30 bg-amber-500/10 p-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-700 dark:text-amber-300" />
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-800 dark:text-amber-200">Authority · {VAULT_AUTHORITY_DATE}</p>
+              <p className="mt-1 text-sm font-bold text-amber-950 dark:text-amber-50">{VAULT_LEDGER_STATUS}</p>
+            </div>
+          </div>
+          <span className="shrink-0 rounded-full bg-amber-950 px-3 py-1 text-xs font-black text-amber-50 dark:bg-amber-100 dark:text-amber-950">
+            Baseline 1,961 provisional · 242 rows
+          </span>
+        </div>
+
         <section className="grid gap-4 md:grid-cols-3">
           {vaultTypeTotals.filter((entry) => entry.total > 0).map((entry) => (
             <div key={entry.type} className={`rounded-[1.75rem] border-2 p-5 shadow-sm ${typeStyles[entry.type]}`}>
@@ -451,6 +465,8 @@ const Index = () => {
         <RandomSeedPicker />
 
         <IncomingDrops />
+
+        <OutboundHistory />
 
         <CollapsibleSection
           title="Vault Breakdown"

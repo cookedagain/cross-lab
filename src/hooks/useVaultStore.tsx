@@ -3,9 +3,9 @@ import { DEFAULT_SEED_COUNTS, SEEDS, type Seed, type SeedType } from "@/data/see
 import { getIncomingDropId, INCOMING_DROPS, INCOMING_ORDERS, incomingDropToSeed } from "@/data/incomingDrops";
 import { showError, showSuccess } from "@/utils/toast";
 
-const INVENTORY_STORAGE_KEY = "crosslab-seed-counts-v4-2026-09-08";
+const INVENTORY_STORAGE_KEY = "crosslab-seed-counts-v5-2026-09-21";
 const MULTIPASS_STORAGE_KEY = "crosslab-ethos-multipass-v3-2026-09-08";
-const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v5";
+const INCOMING_ARRIVALS_STORAGE_KEY = "crosslab-incoming-drops-arrived-v6";
 const LOTS_STORAGE_KEY = "crosslab-breeding-lots";
 export const MULTIPASS_BREEDER = "Ethos Genetics";
 
@@ -183,7 +183,7 @@ export const VaultProvider = ({ children }: { children: ReactNode }) => {
   const exportData = () =>
     JSON.stringify(
       {
-        version: 4,
+        version: 5,
         seedCounts,
         multipass,
         lots,
